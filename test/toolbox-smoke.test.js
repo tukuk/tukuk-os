@@ -315,6 +315,121 @@ test('download: 4.7 GB at 100 Mbps is 6 m 16 s at line rate', () => {
   assert.ok(out.includes('6\u202fm 16\u202fs'), out.slice(0, 160));
 });
 
+// ── batch 3 (Nov 2026): math, life, and the design studio ──
+test('comb: C(52,5) is exactly 2,598,960 and P(52,5) is 311,875,200', () => {
+  const { dom } = runTool(bySlug('comb'));
+  const out = dom.get('cb-out')._html;
+  // A poker hand: 52·51·50·49·48 / 5! — hand-checked, and P = C × 5! = C × 120
+  assert.ok(out.includes('2,598,960'), out.slice(0, 160));
+  assert.ok(out.includes('311,875,200'), 'permutations must show too');
+  assert.ok(out.includes('× 120'), 'the C↔P gap must be explained as 5!');
+});
+
+test('gcd: Euclid on 1071 and 462 ends at 21, lcm 23,562', () => {
+  const { dom } = runTool(bySlug('gcd'));
+  const out = dom.get('gd-out')._html;
+  assert.ok(out.includes('gcd = 21'), out.slice(0, 200));
+  assert.ok(out.includes('1,071 = 2 × 462 + 147'), 'step 1 must be printed in full');
+  assert.ok(out.includes('23,562'), 'lcm = 1071×462÷21');
+  assert.ok(out.includes('51/22'), 'the reduce-to-lowest-terms bonus');
+});
+
+test('triangle: 3-4-5 is right scalene — 90.00°, area 6.000', () => {
+  const { dom } = runTool(bySlug('triangle'));
+  const out = dom.get('tr-out')._html;
+  assert.ok(out.includes('90.00°'), out.slice(0, 200));
+  assert.ok(out.includes('36.87°') && out.includes('53.13°'), 'the two acute angles');
+  assert.ok(out.includes('6.000'), 'Heron area = ½×3×4 exactly');
+  assert.ok(out.includes('right scalene'), 'classification');
+});
+
+test('readability: six monosyllabic words score 116.1 Flesch', () => {
+  const { dom } = runTool(bySlug('readability'));
+  const out = dom.get('rb-out')._html;
+  // 206.835 − 1.015×6 − 84.6×1 = 116.14 — the cat sentence is the easy extreme
+  assert.ok(out.includes('116.1'), out.slice(0, 200));
+  assert.ok(out.includes("children's books"), 'band label');
+  assert.ok(out.includes('-1.4'), 'Flesch–Kincaid grade below first year');
+});
+
+test('tdee: 30 y male 175 cm 70 kg sedentary → BMR 1,649, TDEE 1,979', () => {
+  const { dom } = runTool(bySlug('tdee'));
+  const out = dom.get('td-out')._html;
+  // Mifflin-St Jeor: 10×70 + 6.25×175 − 5×30 + 5 = 1,648.75; ×1.2 = 1,978.5
+  assert.ok(out.includes('1,649'), out.slice(0, 200));
+  assert.ok(out.includes('1,979'), 'maintenance line');
+  assert.ok(out.includes('1,479') && out.includes('2,479'), 'the ±500 kcal rows');
+});
+
+test('inflate: 1,000 at 3% over 10 years is 1,343.92', () => {
+  const { dom } = runTool(bySlug('inflate'));
+  const out = dom.get('xf-out')._html;
+  assert.ok(out.includes('1,343.92'), out.slice(0, 200)); // 1000×1.03^10
+  assert.ok(out.includes('1.3439'), 'compound factor');
+  assert.ok(out.includes('23.4') && out.includes('24.0'), 'exact doubling vs rule of 72');
+});
+
+test('cipher: Caesar shift 3 turns "Attack at dawn" into "Dwwdfn dw gdzq"', () => {
+  const { dom } = runTool(bySlug('cipher'));
+  const out = dom.get('cp-out')._html;
+  assert.ok(out.includes('Dwwdfn dw gdzq'), out.slice(0, 200));
+  assert.ok(out.includes('shift 3 mod 26'), 'the maths must be shown');
+  assert.ok(out.includes('12 of 14'), 'letter count vs passed-through characters');
+});
+
+test('paint: 5×4×2.4 room with 6 m² of openings needs 4.1 L at 10 m²/L', () => {
+  const { dom } = runTool(bySlug('paint'));
+  const out = dom.get('pt-out')._html;
+  // 2×(5+4)×2.4 = 43.2 gross; −6 = 37.2; ÷10 = 3.72; +10% waste rounded up = 4.1
+  assert.ok(out.includes('43.2 m²'), out.slice(0, 200));
+  assert.ok(out.includes('37.2 m²'), 'net area after openings');
+  assert.ok(out.includes('4.1 L'), 'buy quantity');
+  assert.ok(out.includes('8.2 L'), 'two-coat warning');
+});
+
+test('recipe: scaling 8→12 gives 3 cups flour, ¾ tsp salt, 4 ½ eggs', () => {
+  const { dom } = runTool(bySlug('recipe'));
+  const out = dom.get('rc-out')._html;
+  assert.ok(out.includes('3 cups flour'), out.slice(0, 200));
+  assert.ok(out.includes('¾ tsp salt'), '0.5×1.5 must land on the ¾ glyph');
+  assert.ok(out.includes('4 ½ eggs'), '3×1.5 as a mixed number');
+  assert.ok(out.includes('was 0.5 tsp salt'), 'the original line stays visible');
+});
+
+test('printsize: 3000×2000 px at 300 dpi prints 10 × 6.7 in', () => {
+  const { dom } = runTool(bySlug('printsize'));
+  const out = dom.get('py-out')._html;
+  assert.ok(out.includes('10 × 6.7 in'), out.slice(0, 200));
+  assert.ok(out.includes('25.4 × 16.9 cm'), 'centimetre conversion (×2.54)');
+  assert.ok(out.includes('6 megapixels'), 'resolution line');
+});
+
+test('electricity: 100 W × 8 h × 30 days at 0.50 is 24 kWh and 12', () => {
+  const { dom } = runTool(bySlug('electricity'));
+  const out = dom.get('el-out')._html;
+  assert.ok(/tl-big">12\b/.test(out), 'cost must be the headline — got: ' + out.slice(0, 160));
+  assert.ok(out.includes('24 kWh'), 'energy over the period');
+  assert.ok(out.includes('0.8 kWh · 0.4'), 'per-day row');
+  assert.ok(out.includes('292 kWh · 146'), 'all-year projection (8 h × 365 d)');
+});
+
+test('pace: 5 km in 25:00 is 5:00/km, 12.0 km/h, half at 1:45:29', () => {
+  const { dom } = runTool(bySlug('pace'));
+  const out = dom.get('pc-out')._html;
+  assert.ok(/tl-big">5:00\b/.test(out), 'pace headline');
+  assert.ok(out.includes('12.0 km/h'), 'speed');
+  assert.ok(out.includes('8:03'), 'per-mile equivalent (×1.609344)');
+  assert.ok(out.includes('1:45:29'), 'half marathon at even pace — 21.0975 km × 5 min');
+  assert.ok(out.includes('52:07'), 'Riegel 10K prediction (50:00 × 2^1.06)');
+});
+
+test('design: the studio boots with a real selection, not an empty page', () => {
+  const { dom } = runTool(bySlug('design'));
+  // The canvas has no 2D context in this shim, so the proof of life is the
+  // selection readout: two default layers are added and the headline wins.
+  assert.ok(dom.get('ds-sel').textContent.includes('layer 2: headline'), dom.get('ds-sel').textContent);
+});
+
 function bySlug(slug) {
   const t = TOOLKIT.find((x) => x.slug === slug);
   assert.ok(t, 'tool ' + slug + ' vanished from the registry');

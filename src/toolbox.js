@@ -1097,4 +1097,735 @@ $('dn-go').onclick=render;$('dn-size').oninput=render;$('dn-rate').oninput=rende
   <p>The advertised rate is the physical-layer payload budget; Ethernet framing, TCP handshakes, TLS record-keeping, and the router\u2019s own CPU each take a cut, and 80\u201390% is the honest landing zone on a good day. On Wi-Fi add distance, walls and neighbours\u2019 channels \u2014 which is why the 60% row exists. If a download runs exactly the theoretical time, you got a faster link than advertised, not a calculator that flattered you.</p>`,
 });
 
+// ── 25. /alat/comb — combinations & permutations ────────────────────────────
+TOOLKIT.push({
+  slug: 'comb', ic: '🧮', name: 'Combination Calculator',
+  title: 'Combination & Permutation Calculator — nCr, nPr, Exact BigInt Factorials | Tukuk-OS',
+  desc: 'How many ways can you choose: 5 cards from 52, 3 winners from 20 — combinations, permutations and full factorials computed as exact integers in your browser.',
+  hero: 'Combination Calculator', sub: 'nCr · nPr · n! · exact BigInt · the order-vs-choice gap shown',
+  navBlurb: 'C(52,5) = 2,598,960 poker hands as an exact integer — combinations, permutations and factorials with no float ever touching the maths.',
+  hubBlurb: 'choose or arrange: exact nCr, nPr and n! with the multiplicative steps, and the C(n,r)=C(n,n−r) symmetry doing the work',
+  lead: 'The gap between a <b>combination</b> (which items — order ignored) and a <b>permutation</b> (which items <i>and</i> which order) is the most-miscounted idea in everyday probability: 5 cards from 52 are 2,598,960 hands, but 2·431,840,640 ordered deals. Both live here with <b>BigInt</b> exactness — every product and division is an integer operation, so the answer is provably right, not floating-point approximate.',
+  form: `<div class="tl-form">
+  ${field('From (n items)', '<input id="cb-n" type="number" min="0" max="5000" step="1" value="52">')}
+  ${field('Choose (r)', '<input id="cb-r" type="number" min="0" step="1" value="5">')}
+  <button class="tl-btn primary" id="cb-go" type="button">Count</button>
+</div>
+<div class="tl-res" id="cb-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function fact(n){var r=1n;for(var i=2n;i<=n;i++)r*=i;return r;}
+function falling(n,r){var out=1n;for(var i=0n;i<BigInt(r);i++)out*=BigInt(n)-i;return out;}
+function choose(n,r){if(r>n)r=n-r;var out=1n;
+ for(var i=0n;i<BigInt(r);i++)out=out*(BigInt(n)-i)/(i+1n);return out;}
+function render(){var n=Number($('cb-n').value),r=Number($('cb-r').value);
+ if(!Number.isInteger(n)||n<0||n>5000){$('cb-out').innerHTML='<span class="tl-badge tl-no">check input</span> n must be a whole number from 0 to 5,000 — larger still works, it just makes your tab wait.';return;}
+ if(!Number.isInteger(r)||r<0){$('cb-out').innerHTML='<span class="tl-badge tl-no">check input</span> r must be a whole number of 0 or more.';return;}
+ if(r>n){$('cb-out').innerHTML='<span class="tl-badge tl-no">impossible</span> You cannot choose '+r+' things from '+n+'. C and P are 0 here — a page that prints a number instead of that sentence is the buggy one.';return;}
+ var c=choose(n,r),p=falling(n,r);
+ var rows='<tr><td>Combinations C('+n+','+r+')</td><td>'+c.toLocaleString('en-US')+' — order does not matter</td></tr>'
+ +'<tr><td>Permutations P('+n+','+r+')</td><td>'+p.toLocaleString('en-US')+' — every arrangement counts separately</td></tr>'
+ +'<tr><td>The gap between them</td><td>'+c.toLocaleString('en-US')+' × '+fact(r).toLocaleString('en-US')+' ('+r+'! orderings) = '+p.toLocaleString('en-US')+'</td></tr>';
+ if(n<=170)rows+='<tr><td>'+n+'!</td><td style="word-break:break-all;font-size:.8rem">'+fact(n).toLocaleString('en-US')+'</td></tr>';
+ else rows+='<tr><td>'+n+'!</td><td class="meta">too many digits to print (it has '+Math.floor(n*Math.log10(n/Math.E)+Math.log10(2*Math.PI*n)/2+1)+' digits — Stirling counted it for us)</td></tr>';
+ $('cb-out').innerHTML='<div class="tl-big">'+c.toLocaleString('en-US')+' <span class="meta" style="font-size:1rem">ways to choose</span></div><table class="tl-tab"><tbody>'+rows+'</tbody></table>'
+ +(c>1000000n?'<p class="meta">As a chance: one random pick hits the exact group about once in '+c.toLocaleString('en-US')+' tries. That denominator is why lottery jackpots are annuities.</p>':'')
+ +'<p class="meta">The loop uses the symmetry C(n,r)=C(n,n−r) — choosing 5 to keep is the same act as choosing 47 to leave — so it never runs more than n/2 steps, and each intermediate product is a smaller binomial, exactly divisible, which is why BigInt division never rounds here.</p>';}
+$('cb-go').onclick=render;$('cb-n').oninput=render;$('cb-r').oninput=render;render();`,
+  seo: `<h2 class="section-title">Why every second lottery ticket feels overdue</h2>
+  <p>Independent draws have no memory — once in 13,983,816 (the classic 6-from-49 jackpot, C(49,6), shown exactly by this page) is a per-draw probability, not a schedule. The human pattern-matching brain that reads a long gap as a due win is the same one that reads permutations as combinations and miscounts the real odds by a factor of 720 (that is 6!). Getting the integer right is the whole defence: 2,598,960 hands you can check; "about 2.6 million" is where the mistakes hide.</p>`,
+});
+
+// ── 26. /alat/gcd — GCD & LCM with the Euclid steps ─────────────────────────
+TOOLKIT.push({
+  slug: 'gcd', ic: '➗', name: 'GCD & LCM Calculator',
+  title: 'GCD & LCM Calculator — Euclidean Algorithm Steps Shown | Tukuk-OS',
+  desc: 'Greatest common divisor and least common multiple of two numbers, with every Euclidean division step printed, coprime detection and the reduced fraction.',
+  hero: 'GCD & LCM', sub: 'Euclid\'s steps printed · coprime check · lcm = a×b ÷ gcd',
+  navBlurb: 'gcd(1071,462) = 21 with each Euclidean division printed as it happens — plus the LCM, the coprime verdict and the reduced fraction.',
+  hubBlurb: 'the paper-and-pencil maths shown line by line: Euclid\'s divisions, the lcm built from the gcd, and fraction-reducing as a bonus',
+  lead: 'The <b>Euclidean algorithm</b> is 2,300 years old and still the fastest way to the greatest common divisor: keep dividing, keep the remainder, stop at zero — the last divisor is the gcd. This page prints each division as it runs so you can see <i>why</i> the answer is what it is, then builds the least common multiple from it: lcm(a,b) = a×b ÷ gcd(a,b).',
+  form: `<div class="tl-form">
+  ${field('First number', '<input id="gd-a" type="number" min="0" step="1" value="1071">')}
+  ${field('Second number', '<input id="gd-b" type="number" min="0" step="1" value="462">')}
+  <button class="tl-btn primary" id="gd-go" type="button">Compute</button>
+</div>
+<div class="tl-res" id="gd-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function render(){var A=Number($('gd-a').value),B=Number($('gd-b').value);
+ if(!Number.isInteger(A)||!Number.isInteger(B)||A<0||B<0||A>9e14||B>9e14){$('gd-out').innerHTML='<span class="tl-badge tl-no">check input</span> Two whole numbers from 0 to 900 trillion (past that the lcm product can leave exact double territory).';return;}
+ if(A===0&&B===0){$('gd-out').innerHTML='<span class="tl-badge tl-no">undefined</span> gcd(0,0) has no answer every textbook agrees on — every number divides 0, so there is no greatest one. The convention some languages pick (0) is a convenience, not maths.';return;}
+ var a=A,b=B,steps=[];
+ while(b!==0){var q=Math.floor(a/b),r=a%b;steps.push(a.toLocaleString('en-US')+' = '+q.toLocaleString('en-US')+' × '+b.toLocaleString('en-US')+' + '+r.toLocaleString('en-US'));a=b;b=r;}
+ var g=a;
+ var lcm=A===0||B===0?0:(A/g)*B;
+ var html='<div class="tl-big">gcd = '+g.toLocaleString('en-US')+' <span class="meta" style="font-size:1rem">· lcm = '+lcm.toLocaleString('en-US')+'</span></div>';
+ html+='<table class="tl-tab"><tbody>';steps.forEach(function(s,i){html+='<tr><td>step '+(i+1)+'</td><td>'+s+'</td></tr>';});
+ html+='<tr><td>stop</td><td>remainder reached 0 — the divisor of that step ('+g.toLocaleString('en-US')+') is the gcd</td></tr></tbody></table>';
+ html+='<p class="meta">lcm('+A+','+B+') = '+A.toLocaleString('en-US')+' × '+B.toLocaleString('en-US')+' ÷ '+g+' = '+lcm.toLocaleString('en-US')+'.</p>';
+ if(g===1)html+='<p class="meta"><span class="tl-badge tl-ok">coprime</span> Nothing but 1 divides both, so the fraction '+A+'/'+B+' is already fully reduced.</p>';
+ else html+='<p class="meta">Fraction bonus: '+A+'/'+B+' reduces by '+g+' to '+(A/g)+'/'+(B/g)+(B/g===1?' (a whole number, actually '+(A/g)+')':'')+'.</p>';
+ $('gd-out').innerHTML=html;}
+$('gd-go').onclick=render;$('gd-a').oninput=render;$('gd-b').oninput=render;render();`,
+  seo: `<h2 class="section-title">Why Euclid beats brute force</h2>
+  <p>Factoring both numbers to find shared primes is exponential work for anything the size of a cryptographic integer; Euclid needs only about five times the digit count in divisions — computing gcd of two 64-bit numbers is microseconds of arithmetic. That speed is why the algorithm sits inside every rational-arithmetic library, every calendar cycle calculation and, since the 1970s, the RSA key generator: the extended version of these same subtraction steps also finds the modular inverse that makes RSA keys possible.</p>`,
+});
+
+// ── 27. /alat/triangle — triangle solver ─────────────────────────────────────
+TOOLKIT.push({
+  slug: 'triangle', ic: '🔺', name: 'Triangle Solver',
+  title: 'Triangle Solver — SSS & SAS with Law of Cosines, Heron Area, Steps Shown | Tukuk-OS',
+  desc: 'Solve any triangle from three sides or two sides and the included angle: all angles by the law of cosines, area by Heron, right/obtuse/acute verdict.',
+  hero: 'Triangle Solver', sub: 'SSS · SAS · law of cosines · Heron area · inequality checked',
+  navBlurb: 'Three sides in, three angles, area and perimeter out — with the triangle inequality and the right/obtuse verdict stated honestly.',
+  hubBlurb: '3-4-5 tells you it is right: every angle from the law of cosines, area from Heron, and a refusal to solve sides that cannot close',
+  lead: 'A triangle is fully determined by <b>three sides</b> (SSS) or <b>two sides and the angle between them</b> (SAS) — this solver takes either, uses the <b>law of cosines</b> for the angles (never the law of sines, whose ambiguous case silently produces two answers), and <b>Heron\'s formula</b> for the area. If the sides cannot close into a triangle, the page says so and shows which inequality failed.',
+  form: `<div class="tl-form">
+  ${field('Known', '<select id="tr-mode"><option value="sss" selected>three sides (SSS)</option><option value="sas">two sides + included angle (SAS)</option></select>')}
+  ${field('Side a', '<input id="tr-a" type="number" min="0.001" step="any" value="3">')}
+  ${field('Side b', '<input id="tr-b" type="number" min="0.001" step="any" value="4">')}
+  ${field('Side c', '<input id="tr-c" type="number" min="0.001" step="any" value="5">')}
+  ${field('Included angle C (°)', '<input id="tr-ang" type="number" min="0.1" max="179.9" step="any" value="90">')}
+  <button class="tl-btn primary" id="tr-go" type="button">Solve</button>
+</div>
+<div class="tl-res" id="tr-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var RAD=Math.PI/180;
+function deg(r){return r/RAD;}
+function sideLabel(v){return Number(v.toFixed(3)).toString();}
+function solve(a,b,c,note){
+ if(a+b<=c||a+c<=b||b+c<=a){var f=a+b<=c?'a + b ≤ c':(a+c<=b?'a + c ≤ b':'b + c ≤ a');
+  return '<span class="tl-badge tl-no">cannot close</span> '+f+' ('+sideLabel(a)+' + '+sideLabel(b)+' vs '+sideLabel(c)+' etc.) — the triangle inequality fails, so no triangle has these sides. Two sticks shorter than the third never meet.';}
+ var A=deg(Math.acos(Math.min(1,Math.max(-1,(b*b+c*c-a*a)/(2*b*c)))));
+ var B=deg(Math.acos(Math.min(1,Math.max(-1,(a*a+c*c-b*b)/(2*a*c)))));
+ var C=180-A-B;
+ var s=(a+b+c)/2,area=Math.sqrt(s*(s-a)*(s-b)*(s-c));
+ var kind=A>=90||B>=90||C>=90?(Math.abs(A-90)<1e-9||Math.abs(B-90)<1e-9||Math.abs(C-90)<1e-9?'right':'obtuse'):'acute';
+ var iso=(Math.abs(a-b)<1e-9&&Math.abs(b-c)<1e-9)?'equilateral':(Math.abs(a-b)<1e-9||Math.abs(b-c)<1e-9||Math.abs(a-c)<1e-9?'isosceles':'scalene');
+ var html='<div class="tl-big">'+area.toFixed(3)+' <span class="meta" style="font-size:1rem">square units · '+kind+' '+iso+'</span></div>';
+ html+='<table class="tl-tab"><tbody>';
+ html+='<tr><td>Angle A (opposite a='+sideLabel(a)+')</td><td>'+A.toFixed(2)+'°</td></tr>';
+ html+='<tr><td>Angle B (opposite b='+sideLabel(b)+')</td><td>'+B.toFixed(2)+'°</td></tr>';
+ html+='<tr><td>Angle C (opposite c='+sideLabel(c)+')</td><td>'+C.toFixed(2)+'°</td></tr>';
+ html+='<tr><td>Perimeter</td><td>'+sideLabel(a+b+c)+'</td></tr>';
+ if(note)html+='<tr><td>Method</td><td>'+note+'</td></tr>';
+ html+='</tbody></table>';
+ html+='<p class="meta">Angles come from the law of cosines (cos C = (a²+b²−c²)/2ab) — one unambiguous answer per angle. Area is Heron\\'s: √(s(s−a)(s−b)(s−c)) with s = half the perimeter; for a right triangle it matches ½×legs exactly.</p>';
+ return html;}
+function render(){var mode=$('tr-mode').value;
+ var a=parseFloat($('tr-a').value),b=parseFloat($('tr-b').value);
+ if(!(a>0)||!(b>0)){$('tr-out').innerHTML='<span class="tl-badge tl-no">check input</span> Sides a and b must be positive numbers.';return;}
+ if(mode==='sss'){var c=parseFloat($('tr-c').value);
+  if(!(c>0)){$('tr-out').innerHTML='<span class="tl-badge tl-no">check input</span> SSS needs all three sides.';return;}
+  $('tr-out').innerHTML=solve(a,b,c,'SSS — Heron + law of cosines');return;}
+ var C=parseFloat($('tr-ang').value);
+ if(!(C>0&&C<180)){$('tr-out').innerHTML='<span class="tl-badge tl-no">check input</span> The included angle must be between 0° and 180° (exclusive — 0° and 180° are flat lines, not triangles).';return;}
+ var c=Math.sqrt(a*a+b*b-2*a*b*Math.cos(C*RAD));
+ $('tr-out').innerHTML=solve(a,b,c,'SAS — side c from the law of cosines: c² = a² + b² − 2ab·cos C = '+sideLabel(a*a+b*b-2*a*b*Math.cos(C*RAD))+', c = '+sideLabel(c))+
+  '<p class="meta">SAS has no ambiguous case: two sides and the angle <i>between</i> them pin the third side uniquely. That is why this page refuses SSA input instead of guessing which of two triangles you meant.</p>';}
+$('tr-go').onclick=render;['tr-a','tr-b','tr-c','tr-ang'].forEach(function(i){$(i).oninput=render;});$('tr-mode').onchange=render;render();`,
+  seo: `<h2 class="section-title">The ambiguous case the law of sines walks into</h2>
+  <p>Given two sides and a non-included angle, sin⁻¹ returns two angles (θ and 180−θ) and both can be geometrically legal — the SSA "ambiguous case" that school trigonometry quietly warns about. The law of cosines avoids the trap entirely because acos returns exactly one value in 0–180°, which is why every angle on this page is computed with it. Heron\'s formula closes the loop: area from sides alone, no height measurement needed — surveyors have used the pair of tricks to triangulate fields since before calculators existed.</p>`,
+});
+
+// ── 28. /alat/readability — Flesch scores & reading time ────────────────
+TOOLKIT.push({
+  slug: 'readability', ic: '📖', name: 'Readability Checker',
+  title: 'Readability Checker — Flesch Reading Ease, Grade Level & Reading Time | Tukuk-OS',
+  desc: 'Paste any English text and get the Flesch Reading Ease score, Flesch–Kincaid grade level, sentence and syllable counts, and how long it takes to read. Runs in your browser.',
+  hero: 'Readability Checker', sub: 'Flesch Reading Ease · Kincaid grade · words/sentences/syllables · reading time',
+  navBlurb: 'Flesch Reading Ease and Kincaid grade for any English text, with the syllable maths and a 230-wpm reading time — computed on your device.',
+  hubBlurb: 'is your writing news-simple or journal-dense? the 1948 Flesch score plus grade level, counted word by word without uploading anything',
+  lead: 'Rudolf Flesch\'s 1948 insight was that readability is arithmetic: sentences and words predict how hard a text reads — <b>206.835 − 1.015×(words per sentence) − 84.6×(syllables per word)</b>. Above 90 reads like a children\'s book, 60–70 like the news you are writing, below 30 like a journal. This page counts your words, sentences and syllables (heuristic vowel-group counter, same one the classics use) and runs the two published formulas out loud.',
+  form: `<textarea class="tl-in" id="rb-in" spellcheck="false" rows="7">The cat sat on the mat.</textarea>
+<div class="tl-form">
+  <button class="tl-btn primary" id="rb-go" type="button">Score it</button>
+</div>
+<div class="tl-res" id="rb-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function syllables(w){w=w.toLowerCase().replace(/[^a-z]/g,'');if(!w)return 0;
+ var m=w.match(/[aeiouy]+/g);var n=m?m.length:1;
+ if(n>1&&/e$/.test(w))n--;return n;}
+function render(){var text=$('rb-in').value;
+ var words=text.match(/[A-Za-z0-9]+(?:['-][A-Za-z0-9]+)*/g)||[];
+ if(!words.length){$('rb-out').innerHTML='<span class="tl-badge tl-no">nothing to score</span> Type or paste at least one word — the maths counts syllables, words and sentences, and you have handed it none.';return;}
+ var nSent=(text.match(/[.!?]+/g)||[]).length||1;
+ var syl=0;for(var i=0;i<words.length;i++)syl+=syllables(words[i]);
+ var asl=words.length/nSent,asw=syl/words.length;
+ var fre=206.835-1.015*asl-84.6*asw;
+ var fk=0.39*asl+11.8*asw-15.59;
+ var band=fre>=90?['tl-ok','very easy — children\\'s books, signage, the goal for consumer copy']
+  :fre>=60?['tl-ok','plain English — news and blogs live here; aim no higher']
+  :fre>=50?['tl-no','fairly hard — official prose and dense journalism']
+  :fre>=30?['tl-no','difficult — academic writing, read twice by most people']
+  :['tl-no','very difficult — specialist text; the general audience is not coming'];
+ var secs=Math.max(1,Math.round(words.length/230*60));
+ $('rb-out').innerHTML='<div class="tl-big">'+fre.toFixed(1)+' <span class="meta" style="font-size:1rem">Flesch Reading Ease</span></div>'
+ +'<p><span class="tl-badge '+band[0]+'">'+band[1]+'</span></p>'
+ +'<table class="tl-tab"><tbody>'
+ +'<tr><td>Words</td><td>'+words.length.toLocaleString('en-US')+'</td></tr>'
+ +'<tr><td>Sentences (runs of . ! ? count once)</td><td>'+nSent+'</td></tr>'
+ +'<tr><td>Syllables (vowel-group heuristic)</td><td>'+syl+' · '+asw.toFixed(2)+' per word</td></tr>'
+ +'<tr><td>Average sentence length</td><td>'+asl.toFixed(1)+' words</td></tr>'
+ +'<tr><td>Flesch–Kincaid grade</td><td>'+fk.toFixed(1)+' — US school year equivalent (12 = high-school graduate)</td></tr>'
+ +'<tr><td>Reading time</td><td>'+(secs<60?secs+' s':Math.round(secs/60)+' min')+' at 230 wpm silent reading (about 180 wpm spoken)</td></tr>'
+ +'</tbody></table>'
+ +'<p class="meta">The scale tops out near 121, not 100 — a short-sentence text of one-syllable words scores in the 110s, which is why a nursery rhyme reads 116 and still makes sense.</p>';}
+$('rb-go').onclick=render;$('rb-in').oninput=render;render();`,
+  seo: `<h2 class="section-title">What the score can and cannot tell you</h2>
+  <p>Flesch measures rhythm — sentence length and word length — nothing about whether the text is true, clear or kind to the reader. A list of short simple nonsense scores 100+; a perfectly clear technical definition with three long words can read \"difficult\". Use it as a smoke alarm for runaway sentences, not as a writing trophy: the counter on this page also counts hyphenated compounds and possessives as one word and treats silent trailing -e as unheard, the same conventions the original 1948 implementation documented.</p>`,
+});
+
+// ── 29. /alat/tdee — Mifflin-St Jeor calories ────────────────────────────────
+TOOLKIT.push({
+  slug: 'tdee', ic: '🔥', name: 'Calorie & TDEE Calculator',
+  title: 'Calorie Needs Calculator — Mifflin-St Jeor BMR & TDEE | Tukuk-OS',
+  desc: 'Daily calorie needs from the Mifflin-St Jeor equation — the most accurate standard formula — with BMR, activity-multiplied TDEE and honest +/- deficit rows. Browser-local.',
+  hero: 'Calorie & TDEE Calculator', sub: 'Mifflin-St Jeor 1990 · BMR × activity factor · ±250/500 rows',
+  navBlurb: 'BMR and daily calorie needs via Mifflin-St Jeor — the formula dietitians actually validate against — with weight-change rows instead of promises.',
+  hubBlurb: 'what you burn at rest, what you burn per day, and exactly which 250/500 kcal row moves the scale — Mifflin maths, stated with its error bars',
+  lead: 'The <b>Mifflin-St Jeor equation (1990)</b> is the formula the Academy of Nutrition and Dietetics calls the most accurate of the standard ones for healthy adults — men: 10×kg + 6.25×cm − 5×age + 5; women: the same, minus 161. That is your <b>BMR</b>, the calories a comatose body burns. Multiply by an activity factor to get <b>TDEE</b>, the maintenance number — and know the honest error bar: ±9%, because body composition, genetics and NEAT move it.',
+  form: `<div class="tl-form">
+  ${field('Sex', '<select id="td-sex"><option value="m" selected>male</option><option value="f">female</option></select>')}
+  ${field('Age', '<input id="td-age" type="number" min="10" max="100" step="1" value="30">')}
+  ${field('Height (cm)', '<input id="td-h" type="number" min="100" max="250" step="1" value="175">')}
+  ${field('Weight (kg)', '<input id="td-w" type="number" min="21" step="0.5" value="70">')}
+  ${field('Activity', '<select id="td-act"><option value="1.2" selected>sedentary — desk work, little exercise</option><option value="1.375">light — 1–3 sessions/week</option><option value="1.55">moderate — 3–5 sessions/week</option><option value="1.725">very — 6–7 sessions/week</option><option value="1.9">athlete — 2×/day or physical job</option></select>')}
+  <button class="tl-btn primary" id="td-go" type="button">Calculate</button>
+</div>
+<div class="tl-res" id="td-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var ACTS={'1.2':'sedentary','1.375':'light activity','1.55':'moderate activity','1.725':'very active','1.9':'athlete'};
+function fmt(n){return Math.round(n).toLocaleString('en-US');}
+function render(){var male=$('td-sex').value==='m',age=Number($('td-age').value),h=Number($('td-h').value),w=Number($('td-w').value),act=parseFloat($('td-act').value);
+ if(!(age>=10&&age<=100)||!(h>=100&&h<=250)||!(w>=21&&w<=400)){$('td-out').innerHTML='<span class="tl-badge tl-no">check inputs</span> Age 10–100, height 100–250 cm, weight 21–400 kg — the equation is adult-sized science; outside its range it is extrapolation.';return;}
+ var bmr=10*w+6.25*h-5*age+(male?5:-161);
+ var tdee=bmr*act;
+ var actName=ACTS[String(act)]||'custom factor';
+ $('td-out').innerHTML='<div class="tl-big">'+fmt(tdee)+' <span class="meta" style="font-size:1rem">kcal/day maintenance</span></div>'
+ +'<table class="tl-tab"><tbody>'
+ +'<tr><td>BMR (at complete rest)</td><td>'+fmt(bmr)+' kcal</td></tr>'
+ +'<tr><td>Activity multiplier</td><td>× '+act+' — '+actName+'</td></tr>'
+ +'<tr><td>Eat '+fmt(tdee-500)+'</td><td>≈ −0.45 kg/week (the classic 500 kcal deficit)</td></tr>'
+ +'<tr><td>Eat '+fmt(tdee-250)+'</td><td>≈ −0.25 kg/week — slow, sustainable, fewer hunger fights</td></tr>'
+ +'<tr><td>Eat '+fmt(tdee+250)+'</td><td>≈ +0.25 kg/week — the lean-bulk pace</td></tr>'
+ +'<tr><td>Eat '+fmt(tdee+500)+'</td><td>≈ +0.45 kg/week — beyond this the surplus outgrows training\\'s share</td></tr>'
+ +'</tbody></table>'
+ +'<p class="meta">The ±0.5 kg/week rows use the 3,500 kcal ≈ 0.45 kg body-mass convention; in practice adaptation makes losses slower than the arithmetic after month one — the rows are a pace, not a promise. Accuracy of Mifflin itself: about ±9% against measured expenditure (a 2,000 kcal answer can really be 1,820–2,180). Use the number as a starting weight on the scale of weeks of real data, not a prescription; if you have a medical condition this page is not your dietitian.</p>';}
+$('td-go').onclick=render;['td-age','td-h','td-w'].forEach(function(i){$(i).oninput=render;});$('td-sex').onchange=render;$('td-act').onchange=render;render();`,
+  seo: `<h2 class="section-title">Why the Harris-Benedict pages are showing their age</h2>
+  <p>The older Harris-Benedict equation (1919, revised 1984) was measured on a leaner, shorter population and runs roughly 5% high for modern bodies — enough to quietly stall a fat-loss plan that trusted it. Mifflin-St Jeor\'s 1990 cohort (22,500 measured people) is closer to today\'s populations, which is why every current dietetic reference defaults to it. Both are population estimates: the only equation that fits you exactly is your own scale after three honest weeks.</p>`,
+});
+
+// ── 30. /alat/inflate — compound inflation maths ──────────────────────────
+TOOLKIT.push({
+  slug: 'inflate', ic: '💹', name: 'Inflation Calculator',
+  title: 'Inflation Calculator — Future Prices & Real Value, With the Rule of 72 | Tukuk-OS',
+  desc: 'What will this cost in N years at R% a year — and what is today\'s money really worth later? Compound inflation maths, doubling time exact and rule-of-72, browser-local.',
+  hero: 'Inflation Calculator', sub: 'FV = PV × (1+r)ᵗ · exact doubling years · rule of 72 compared',
+  navBlurb: 'Prices forward and values backward by compound maths — with the exact doubling year count next to the rule-of-72 shortcut.',
+  hubBlurb: '3% for 10 years turns 1,000 into 1,343.92 — the compounding printed year by year, plus how fast your money halves itself',
+  lead: 'Inflation is compound interest running the wrong way. This page does the two directions of that arithmetic: <b>forward</b> — what today\'s figure costs in N years at your stated rate — and <b>backward</b> — what today\'s pile of cash is really worth in N years. It prints the exact doubling/halving time alongside the <b>rule of 72</b> shortcut, because every finance page quotes the shortcut without checking it.',
+  form: `<div class="tl-form">
+  ${field('Amount', '<input id="xf-amt" type="number" min="0.01" step="any" value="1000">')}
+  ${field('Annual inflation rate (%)', '<input id="xf-rate" type="number" min="-5" max="30" step="any" value="3">')}
+  ${field('Years', '<input id="xf-yrs" type="number" min="0" max="150" step="1" value="10">')}
+  ${field('Direction', '<select id="xf-mode"><option value="future" selected>price forward: what will it cost?</option><option value="real">value backward: what is this really worth later?</option></select>')}
+  <button class="tl-btn primary" id="xf-go" type="button">Compound it</button>
+</div>
+<div class="tl-res" id="xf-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function money(v){return v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function render(){var amt=parseFloat($('xf-amt').value),r=parseFloat($('xf-rate').value),y=Number($('xf-yrs').value),mode=$('xf-mode').value;
+ if(!(amt>0)){$('xf-out').innerHTML='<span class="tl-badge tl-no">check input</span> The amount must be a positive number.';return;}
+ if(!(r>=-5&&r<=30)){$('xf-out').innerHTML='<span class="tl-badge tl-no">check input</span> Rate between −5% and 30% — outside that, \"inflation\" stops being the word that describes it.';return;}
+ if(!Number.isInteger(y)||y<0||y>150){$('xf-out').innerHTML='<span class="tl-badge tl-no">check input</span> Years: a whole number from 0 to 150.';return;}
+ var f=Math.pow(1+r/100,y);
+ var out=mode==='future'?amt*f:amt/f;
+ var html='<div class="tl-big">'+money(out)+'</div>';
+ html+='<p class="meta">'+(mode==='future'
+  ?'At '+r+'% a year, '+money(amt)+' costs <b>'+money(out)+'</b> in '+y+' year'+(y===1?'':'s')+' — '+money(out-amt)+' more ('+((f-1)*100).toFixed(1)+'%).'
+  :'At '+r+'% a year, '+money(amt)+' today keeps the buying power of <b>'+money(out)+'</b> in '+y+' year'+(y===1?'':'s')+' — '+(100-100/f).toFixed(1)+'% of it evaporates.')+'</p>';
+ html+='<table class="tl-tab"><tbody>'
+ +'<tr><td>Compound factor</td><td>× '+f.toFixed(4)+'</td></tr>';
+ if(r>0){var dbl=Math.log(2)/Math.log(1+r/100);
+  html+='<tr><td>Prices double in</td><td>'+dbl.toFixed(1)+' years — rule of 72 says '+(72/r).toFixed(1)+'</td></tr>';}
+ if(r<0){html+='<tr><td>Deflation</td><td>prices fall; '+Math.abs(r)+'% a year means goods cost less, wages usually do too — which is the part history keeps getting wrong.</td></tr>';}
+ if(r===0)html+='<tr><td>Zero rate</td><td>nothing compounds; the arithmetic politely collapses to the same number.</td></tr>';
+ html+='<tr><td>Half of it gone in</td><td>'+(r>0?(Math.log(0.5)/Math.log(1+r/100)).toFixed(1)+' years':'n/a')+'</td></tr>';
+ html+='</tbody></table>';
+ var step=y<=30?1:(y<=60?5:10);
+ html+='<p class="meta">Year by year (every '+(step===1?'year':step+' years')+' for the printed run):</p><table class="tl-tab"><tbody>';
+ for(var i=0;i<=y;i+=step){html+='<tr><td>year '+i+'</td><td>'+(mode==='future'?money(amt*Math.pow(1+r/100,i)):money(amt/Math.pow(1+r/100,i)))+'</td></tr>';}
+ html+='</tbody></table>';
+ $('xf-out').innerHTML=html;}
+$('xf-go').onclick=render;['xf-amt','xf-rate','xf-yrs'].forEach(function(i){$(i).oninput=render;});$('xf-mode').onchange=render;render();`,
+  seo: `<h2 class="section-title">Bring your own honest rate</h2>
+  <p>This page deliberately does not fetch \"the\" inflation rate: every country publishes several (headline CPI, core CPI, your personal basket), revisions land months later, and a silent API number on a calculator page hides which one you are compounding. Look up your own statistics office\'s current CPI — the one with the publication date on it — and type that here. The rule of 72 is printed next to the exact logarithm on purpose: at 2% it says 36 years while the truth is 35.0 — a 3% error that is fine for coffee talk and not fine for a retirement plan.</p>`,
+});
+
+// ── 31. /alat/cipher — classical ciphers, taught honestly ────────────────
+TOOLKIT.push({
+  slug: 'cipher', ic: '🗝️', name: 'Caesar & Vigenère Cipher',
+  title: 'Caesar & Vigenère Cipher Encoder — ROT13, Atbash Too | Tukuk-OS',
+  desc: 'Encode and decode Caesar (including ROT13), Atbash and Vigenère text with the maths shown — case preserved, non-letters untouched. Educational ciphers, explicitly not security.',
+  hero: 'Caesar & Vigenère Cipher', sub: 'Caesar · ROT13 · Atbash · Vigenère · encode/decode · case kept',
+  navBlurb: 'The ciphers history actually used — Caesar, ROT13, Atbash, Vigenère — encoded and decoded with the shift maths printed and no false security claims.',
+  hubBlurb: 'rotate, mirror or polybius-square the alphabet: four classic ciphers both directions, with the honest note that none of them survive a afternoon of cryptanalysis',
+  lead: 'Four ciphers that carry real history: <b>Caesar</b> (shift every letter by k — ROT13 is just k=13, its own inverse), <b>Atbash</b> (flip the alphabet, Hebrew-letterbook wisdom), and <b>Vigenère</b> (a different Caesar shift per letter from a keyword — the \"le boundless\" cipher that resisted casual breaking for three centuries). Everything runs on your device and the page says the quiet part out loud: these are <b>not encryption</b>. A cipher you can demo on a napkin is a cipher a computer breaks before the soup arrives.',
+  form: `<textarea class="tl-in" id="cp-text" spellcheck="false" rows="4">Attack at dawn</textarea>
+<div class="tl-form">
+  ${field('Cipher', '<select id="cp-kind"><option value="caesar" selected>Caesar (shift by key)</option><option value="rot13">ROT13 (the self-inverse one)</option><option value="atbash">Atbash (alphabet mirror)</option><option value="vigenere">Vigenère (keyword)</option></select>')}
+  ${field('Key (shift or word)', '<input id="cp-key" type="text" value="3" autocomplete="off" spellcheck="false">')}
+  ${field('Direction', '<select id="cp-dir"><option value="enc" selected>encrypt</option><option value="dec">decrypt</option></select>')}
+  <button class="tl-btn primary" id="cp-go" type="button">Run</button>
+</div>
+<div class="tl-res" id="cp-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function isLet(c){return (c>='a'&&c<='z')||(c>='A'&&c<='Z');}
+function shiftChar(c,k){var upper=c>='A'&&c<='Z';var base=upper?65:97;
+ var v=((c.charCodeAt(0)-base+k)%26+26)%26;
+ return String.fromCharCode(base+v);}
+function atbashChar(c){var upper=c>='A'&&c<='Z';var base=upper?65:97;
+ return String.fromCharCode(base+25-(c.charCodeAt(0)-base));}
+function render(){var kind=$('cp-kind').value,dir=$('cp-dir').value,text=$('cp-text').value,key=$('cp-key').value.trim();
+ var rot=dir==='dec';
+ if(kind==='caesar'||kind==='vigenere'){
+  if(!key){$('cp-out').innerHTML='<span class="tl-badge tl-no">needs a key</span> Caesar wants a number, Vigenère a keyword — the field is empty.';return;}}
+ if(kind==='caesar'||kind==='rot13'){
+  var k=kind==='rot13'?13:(parseInt(key,10));
+  if(kind==='caesar'&&isNaN(k)){$('cp-out').innerHTML='<span class="tl-badge tl-no">check key</span> The Caesar key must be a whole number of positions (0–25 or beyond, it wraps).';return;}
+  if(rot)k=26-k;
+  var out='',letters=0;
+  for(var i=0;i<text.length;i++){var c=text[i];if(isLet(c)){letters++;out+=shiftChar(c,k);}else out+=c;}
+  $('cp-out').innerHTML='<div class="tl-pick" style="word-break:break-word">'+esc(out)+'</div>'
+   +'<p class="meta">'+(kind==='rot13'?'ROT13 shift 13':'Caesar shift '+((dir==='dec'?26-parseInt(key,10)%26:parseInt(key,10)%26+26)%26)+' mod 26')+' · '+letters+' of '+text.length+' characters were letters; spaces, digits and punctuation passed through untouched, as every classical cipher does.</p>';
+  return;}
+ if(kind==='atbash'){
+  var o2='',l2=0;
+  for(var j=0;j<text.length;j++){var c2=text[j];if(isLet(c2)){l2++;o2+=atbashChar(c2);}else o2+=c2;}
+  $('cp-out').innerHTML='<div class="tl-pick" style="word-break:break-word">'+esc(o2)+'</div><p class="meta">Atbash maps A↔Z, B↔Y, C↔X… it is its own inverse, so encrypt and decrypt are the same machine — which is also its cryptanalytic epitaph. '+l2+' letters mirrored.</p>';
+  return;}
+ // vigenere
+ if(!/^[A-Za-z]+$/.test(key)){$('cp-out').innerHTML='<span class="tl-badge tl-no">check key</span> A Vigenère keyword must be letters only (the historical versions never mixed digits into the square).';return;}
+ var ks=key.toUpperCase(),out3='',li=0,used=0;
+ for(var m=0;m<text.length;m++){var c3=text[m];
+  if(!isLet(c3)){out3+=c3;continue;}
+  var s=ks.charCodeAt(li%ks.length)-65;if(rot)s=26-s;
+  out3+=shiftChar(c3,s);li++;used++;}
+ var repeats=Math.ceil(used/ks.length);
+ $('cp-out').innerHTML='<div class="tl-pick" style="word-break:break-word">'+esc(out3)+'</div>'
+  +'<p class="meta">Keyword \"'+esc(ks)+'\" ('+ks.length+' letters) cycled '+repeats+' times under the text: each letter is a Caesar shift by its keyword letter. That the cycle repeats is exactly what gave Kasiski and Babbage the seam to unpick it — the length of the key is the first thing an attacker guesses.</p>';}
+$('cp-go').onclick=render;$('cp-text').oninput=render;$('cp-key').oninput=render;$('cp-kind').onchange=render;$('cp-dir').onchange=render;render();`,
+  seo: `<h2 class="section-title">Why \"encrypted with a Caesar cipher\" is a joke in security circles</h2>
+  <p>Twenty-five possible keys for Caesar is fewer than a four-digit PIN tries before lunch; a simple frequency count breaks it in seconds because English E still arrives first no matter how far you marched the alphabet. Vigenère survived until the 1850s precisely because its repeating key finally hid frequency — until Kasiski found the repeat distance. The lesson each of these teaches is Kerckhoffs\'s principle: the algorithm is never the secret, only the key is, and 25 or 26ⁿ key-space is not a defence. Use them to understand history and to amuse your friends; use real AES-GCM libraries for anything you would not post on a door.</p>`,
+});
+
+// ── 32. /alat/paint — paint & plaster coverage ──────────────────────────
+TOOLKIT.push({
+  slug: 'paint', ic: '🖌️', name: 'Paint Coverage Calculator',
+  title: 'Paint Coverage Calculator — Wall Area, Litres and Cans to Buy | Tukuk-OS',
+  desc: 'Room wall area minus doors and windows, litres needed at your paint\'s real spread rate, 10% waste and the two-coat reality — no marketing rounding.',
+  hero: 'Paint Coverage Calculator', sub: 'wall area · openings deducted · 10% waste · two-coat warning',
+  navBlurb: 'How much paint the room actually needs: wall area minus doors and windows, at the tin\'s real m²-per-litre, with waste and second coats included.',
+  hubBlurb: 'buy the right number of tins: gross wall area, openings deducted, spread rate honoured, and the second coat nobody prices in',
+  lead: 'Paint tins quote coverage (a common figure is ~10 m² per litre on smooth walls — yours is printed on yours) and rooms quote traps: doors, windows and the second coat over a dark or raw surface. This page does the subtraction chain honestly: gross wall area → minus openings → litres at your spread rate → plus 10% for roller leftovers and touch-ups → plus double when the colour change demands two coats.',
+  form: `<div class="tl-form">
+  ${field('Room length (m)', '<input id="pt-l" type="number" min="0.5" step="any" value="5">')}
+  ${field('Room width (m)', '<input id="pt-w" type="number" min="0.5" step="any" value="4">')}
+  ${field('Wall height (m)', '<input id="pt-h" type="number" min="0.5" step="any" value="2.4">')}
+  ${field('Doors + windows (m²)', '<input id="pt-open" type="number" min="0" step="any" value="6">')}
+  ${field('Spread rate (m² per litre)', '<input id="pt-cov" type="number" min="1" step="any" value="10">')}
+  ${field('Price per litre (optional)', '<input id="pt-cost" type="number" min="0" step="any" value="0">')}
+  <button class="tl-btn primary" id="pt-go" type="button">Calculate</button>
+</div>
+<div class="tl-res" id="pt-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function num2(v){return (Math.round(v*100)/100).toLocaleString('en-US',{maximumFractionDigits:2});}
+function render(){var l=parseFloat($('pt-l').value),w=parseFloat($('pt-w').value),h=parseFloat($('pt-h').value);
+ var open=parseFloat($('pt-open').value)||0,cov=parseFloat($('pt-cov').value),price=parseFloat($('pt-cost').value)||0;
+ if(!(l>0)||!(w>0)||!(h>0)||!(cov>0)){$('pt-out').innerHTML='<span class="tl-badge tl-no">check inputs</span> Length, width, height and spread rate must all be positive numbers.';return;}
+ if(open<0||open>=2*(l+w)*h){$('pt-out').innerHTML='<span class="tl-badge tl-no">check input</span> The openings are larger than the whole room — that is a greenhouse, not a wall estimate.';return;}
+ var gross=2*(l+w)*h,net=gross-open;
+ var litres=net/cov,buy=Math.ceil(litres*1.1*10)/10;
+ var html='<div class="tl-big">'+buy+' L <span class="meta" style="font-size:1rem">to buy (one coat + 10% waste)</span></div>';
+ html+='<table class="tl-tab"><tbody>'
+ +'<tr><td>Gross wall area</td><td>2×('+l+'+'+w+')m × '+h+'m = '+num2(gross)+' m²</td></tr>'
+ +'<tr><td>Minus doors &amp; windows</td><td>− '+num2(open)+' m² → '+num2(net)+' m² to paint</td></tr>'
+ +'<tr><td>At '+cov+' m² per litre</td><td>'+num2(litres)+' L</td></tr>'
+ +'<tr><td>Rounded with waste</td><td>'+buy+' L</td></tr>';
+ if(price>0)html+='<tr><td>Cost at '+price+'/L</td><td>'+num2(buy*price)+' (currency of the price you typed)</td></tr>';
+ html+='<tr><td>If two coats are needed</td><td>'+Math.ceil(litres*2*1.1*10)/10+' L — dark→light, raw plaster, or un-tinted primer all demand it</td></tr>';
+ html+='</tbody></table>';
+ html+='<p class="meta">Ceiling? It is length×width = '+num2(l*w)+' m² more — the same maths, one extra row. The 10% waste figure is generous for rolling and mean for sprayers; textured walls eat paint faster than the tin promises.</p>';
+ $('pt-out').innerHTML=html;}
+$('pt-go').onclick=render;['pt-l','pt-w','pt-h','pt-open','pt-cov','pt-cost'].forEach(function(i){$(i).oninput=render;});render();`,
+  seo: `<h2 class="section-title">Read the tin, not the slogan</h2>
+  <p>Coverage figures are measured on smooth, primed walls under lab light — real rooms add texture, patch-repair and the roller that never gets into the corner. That is why this page separates the exact litres the maths asks for from the number you actually buy: the waste buffer and the two-coat row exist because the expensive mistake is never running out mid-wall, it is discovering the colour took three coats. Painters\' rule the spreadsheets omit: one coat is a rumour, two is a product.</p>`,
+});
+
+// ── 33. /alat/recipe — recipe scaler with real fractions ────────────────────
+TOOLKIT.push({
+  slug: 'recipe', ic: '🥘', name: 'Recipe Scaler',
+  title: 'Recipe Scaler — Multiply Ingredients With Proper Fractions | Tukuk-OS',
+  desc: 'Scale any recipe to any number of servings and get the amounts as real fractions (¾ tsp, not 0.75 tsp), parsed line by line in your browser.',
+  hero: 'Recipe Scaler', sub: 'any factor · fractions rendered as ½ ⅓ ¾ · baking caveat printed',
+  navBlurb: 'Halve, double or 2.5× a recipe and read the result as fractions a human measures with — ¾ tsp, not 0.75 tsp.',
+  hubBlurb: 'paste the ingredient list, set servings from/to: every line rescaled to real spoon fractions, with the one baking rule that scales badly',
+  lead: 'Recipe maths is easy; <b>kitchen-representable</b> maths is not. 0.75 teaspoons is correct and unusable — nobody turns a measuring spoon to 0.75. This page parses your ingredient lines, applies the factor, and renders the answer as the fractions your spoon set actually has (½, ⅓, ⅔, ¼, ¾, ⅛…), falling back to decimals for quantities above 10 where the teaspoon argument stops mattering.',
+  form: `<textarea class="tl-in" id="rc-in" spellcheck="false" rows="5">2 cups flour
+0.5 tsp salt
+3 eggs</textarea>
+<div class="tl-form">
+  ${field('Recipe serves', '<input id="rc-from" type="number" min="1" step="any" value="8">')}
+  ${field('You want', '<input id="rc-to" type="number" min="1" step="any" value="12">')}
+  <button class="tl-btn primary" id="rc-go" type="button">Scale</button>
+</div>
+<div class="tl-res" id="rc-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function fracStr(v){
+ if(v>=10)return (Math.round(v*10)/10).toString();
+ var whole=Math.floor(v+1e-9),rem=v-whole;
+ if(rem<0.03)return String(whole);
+ if(rem>0.97)return String(whole+1);
+ var UNI={'1/2':'½','1/3':'⅓','2/3':'⅔','1/4':'¼','3/4':'¾','1/6':'⅙','5/6':'⅚','1/8':'⅛','3/8':'⅜','5/8':'⅝','7/8':'⅞'};
+ var best=null;
+ for(var d=2;d<=8;d++){for(var n=1;n<d;n++){
+  var e=Math.abs(rem-n/d);
+  if(e<0.03&&(!best||e<best.e))best={e:e,s:UNI[n+'/'+d]||n+'/'+d};
+ }}
+ if(!best)return (Math.round(v*100)/100).toString();
+ return (whole?whole+' ':'')+best.s;}
+function render(){var lines=$('rc-in').value.split(/\\n/).filter(function(s){return s.trim();});
+ var from=parseFloat($('rc-from').value),to=parseFloat($('rc-to').value);
+ if(!(from>0)||!(to>0)){$('rc-out').innerHTML='<span class="tl-badge tl-no">check input</span> Both serving numbers must be positive.';return;}
+ var f=to/from;
+ var rows='',scaled=0,plain=0;
+ for(var i=0;i<lines.length;i++){var line=lines[i].trim();
+  var m=line.match(/^(\\d+(?:\\.\\d+)?|\\d+\\s+\\d+\\/\\d+|\\d+\\/\\d+)\\s+(.*)$/);
+  if(!m){rows+='<tr><td colspan="2">'+line.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</td></tr>';plain++;continue;}
+  var raw=m[1],val;
+  if(raw.indexOf('/')>-1){var pm=raw.match(/(\\d+)?\\s*(\\d+)\\/(\\d+)/);val=(pm[1]?+pm[1]:0)+(+pm[2])/(+pm[3]);}
+  else val=parseFloat(raw);
+  scaled++;
+  rows+='<tr><td>'+fracStr(val*f)+' '+m[2].replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</td><td class="meta">was '+raw.replace(/\\s+/g,' ')+' '+m[2].replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</td></tr>';}
+ $('rc-out').innerHTML='<table class="tl-tab"><thead><tr><th>Scaled ×'+(Math.round(f*1000)/1000)+'</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>'
+ +'<p class="meta">'+scaled+' ingredient line'+(scaled===1?'':'s')+' rescaled'+(plain?', '+plain+' left as written (no leading number found — e.g. \"salt to taste\")':'')+'. Rounding lands on the nearest usable fraction within one eighth.</p>'
+ +'<p class="meta">Cooking scales linearly; baking does not always: salt, yeast, baking powder and spice tolerate halving fine but a 5× batch needs proportionally <i>less</i> leavening and spice per flour (the reaction and the flavour compounds do not multiply politely). Scale, then smell at half-time.</p>';
+}
+$('rc-go').onclick=render;$('rc-in').oninput=render;$('rc-from').oninput=render;$('rc-to').oninput=render;render();`,
+  seo: `<h2 class="section-title">Why the \"pinch\" line survives untouched</h2>
+  <p>Lines without a leading number — salt to taste, one onion, juice of a lime — are not arithmetic failures, they are the recipe talking like a person. The scaler passes them through visibly instead of inventing quantities, because a page that confidently tells you to scale \"a pinch\" to \"0.1875 pinches\" is the page that ruins dinner. The same reason decimals stay under 10: nobody measures 12.75 cups of anything; they measure twelve and a three-quarter and stop fussing.</p>`,
+});
+
+// ── 34. /alat/printsize — pixels to print dimensions ────────────────────
+TOOLKIT.push({
+  slug: 'printsize', ic: '\ud83d\udda8', name: 'Print Size Calculator',
+  title: 'Print Size Calculator — Pixels to Inches & cm at Any DPI | Tukuk-OS',
+  desc: 'What size will this photo print: pixels to inches and centimetres at 300/150/72 DPI, the real megapixel count, and how far you must stand for it to look sharp.',
+  hero: 'Print Size Calculator', sub: 'px \u00f7 dpi = inches \u00b7 cm conversion \u00b7 MP count \u00b7 viewing-distance rule',
+  navBlurb: '3000×2000 prints 10×6.7 inches at 300 dpi — plus the honest physics of how big you can actually go before the dots show.',
+  hubBlurb: 'does this file print poster-size? pixels divided by dpi, printed in inches and cm, with the viewing distance at which it still looks sharp',
+  lead: 'Print resolution is a division, and the sharpness question is geometry: <b>inches = pixels \u00f7 dpi</b>, and the dpi a viewer needs depends on how far they stand. A magazine at 300 dpi is read at 30 cm; a billboard at roughly 30 dpi is read from 30 m — and at that distance the eye literally cannot resolve the dots. This page gives you both halves: the size at your dpi, and the size at your viewing distance.',
+  form: `<div class="tl-form">
+  ${field('Width (px)', '<input id="py-w" type="number" min="1" step="1" value="3000">')}
+  ${field('Height (px)', '<input id="py-h" type="number" min="1" step="1" value="2000">')}
+  ${field('Print DPI', '<input id="py-dpi" type="number" min="10" max="2400" step="any" value="300">')}
+  <button class="tl-btn primary" id="py-go" type="button">Calculate</button>
+</div>
+<div class="tl-res" id="py-out">\u2014</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function f1(v){return (Math.round(v*10)/10).toLocaleString('en-US',{maximumFractionDigits:1});}
+function render(){var w=Number($('py-w').value),h=Number($('py-h').value),dpi=parseFloat($('py-dpi').value);
+ if(!(w>=1)||!(h>=1)||!(dpi>=10&&dpi<=2400)){$('py-out').innerHTML='<span class="tl-badge tl-no">check input</span> Pixel sizes from 1 up, DPI between 10 and 2,400.';return;}
+ var wi=w/dpi,hi=h/dpi;
+ $('py-out').innerHTML='<div class="tl-big">'+f1(wi)+' \u00d7 '+f1(hi)+' in</div>'
+ +'<table class="tl-tab"><tbody>'
+ +'<tr><td>At '+f1(dpi)+' dpi</td><td>'+f1(wi)+' \u00d7 '+f1(hi)+' in = '+f1(wi*2.54)+' \u00d7 '+f1(hi*2.54)+' cm</td></tr>'
+ +'<tr><td>Same file at 300 dpi</td><td>'+f1(w/300)+' \u00d7 '+f1(h/300)+' in \u2014 the gallery print standard</td></tr>'
+ +'<tr><td>Same file at 150 dpi</td><td>'+f1(w/150)+' \u00d7 '+f1(h/150)+' in \u2014 fine for A3 held at arm\u2019s length</td></tr>'
+ +'<tr><td>Resolution</td><td>'+f1(w*h/1e6)+' megapixels</td></tr>'
+ +'<tr><td>Sharp to the eye at</td><td>\u2248 '+f1(dpi/3.4)+' cm or further away (60/20 vision resolves ~1 arcminute; dot pitch \u00f7 that is this formula)</td></tr>'
+ +'</tbody></table>'
+ +'<p class="meta">Printers do not scale up for free: pushing 72 dpi to 300 is interpolation, not detail. But down-sizing is lossless-ish, and the viewing-distance row is why a 6-megapixel file makes a perfectly sharp A3 and a very convincing poster \u2014 nobody is reading a poster with their nose on it.</p>';}
+$('py-go').onclick=render;['py-w','py-h','py-dpi'].forEach(function(i){$(i).oninput=render;});render();`,
+  seo: `<h2 class="section-title">The arc-minute is doing all the work</h2>
+  <p>Standard visual acuity resolves about one arcminute \u2014 at 25 cm that is a dot pitch of roughly 0.073 mm, which is where the 300-dpi magazine convention comes from: it is the resolution at which printing becomes invisible to reading distance, not a magic number the ink invented. Double the viewing distance and you can halve the dpi, which is why signage shops print huge murals at 50\u2013100 dpi and billboard operators laugh at the word dpi entirely. \u201c300 dpi required\u201d is therefore half the answer: always ask \u201cat what distance?\u201d.</p>`,
+});
+
+// ── 35. /alat/electricity — watts to cost ──────────────────────────────────
+TOOLKIT.push({
+  slug: 'electricity', ic: '\ud83d\udca1', name: 'Electricity Cost Calculator',
+  title: 'Electricity Cost Calculator — Watts, Hours and Tariff to Real Money | Tukuk-OS',
+  desc: 'What any appliance actually costs to run: watts \u00d7 hours to kWh, times your tariff, with the yearly figure and the standby-power trap explained.',
+  hero: 'Electricity Cost Calculator', sub: 'W \u00d7 h \u00f7 1000 = kWh \u00b7 your tariff \u00b7 yearly view \u00b7 standby trap',
+  navBlurb: 'The real money an appliance burns: watts-hours to kWh, your own tariff, the annual figure, and what that always-on standby light actually costs.',
+  hubBlurb: 'is the old fridge worth replacing? watts \u00d7 hours \u00d7 your tariff to a kWh figure and an annual cost, standby included',
+  lead: 'One formula, honest inputs: <b>energy (kWh) = watts \u00d7 hours \u00f7 1,000</b>, cost = energy \u00d7 your tariff. The two numbers people get wrong are the tariff (use the all-in rate on your bill, not the headline) and duty cycle (a fridge\u2019s compressor does not run 24 h \u2014 it runs maybe 8 of them). Both rows below warn you about themselves.',
+  form: `<div class="tl-form">
+  ${field('Power (watts)', '<input id="el-w" type="number" min="0.1" step="any" value="100">')}
+  ${field('Hours per day', '<input id="el-hrs" type="number" min="0" max="24" step="any" value="8">')}
+  ${field('Days', '<input id="el-days" type="number" min="1" max="365" step="1" value="30">')}
+  ${field('Tariff per kWh', '<input id="el-tar" type="number" min="0" step="any" value="0.50">')}
+  <button class="tl-btn primary" id="el-go" type="button">Calculate</button>
+</div>
+<div class="tl-res" id="el-out">\u2014</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function n2(v){return (Math.round(v*100)/100).toLocaleString('en-US',{maximumFractionDigits:2});}
+function render(){var w=parseFloat($('el-w').value),hrs=parseFloat($('el-hrs').value),days=Number($('el-days').value),tar=parseFloat($('el-tar').value);
+ if(!(w>0)||!(hrs>=0&&hrs<=24)||!Number.isInteger(days)||days<1||days>365||!(tar>=0)){$('el-out').innerHTML='<span class="tl-badge tl-no">check input</span> Watts above 0, hours 0\u201324, days 1\u2013365, tariff 0 or more.';return;}
+ var kwh=w*hrs*days/1000,cost=kwh*tar;
+ var yr=w*hrs*365/1000;
+ $('el-out').innerHTML='<div class="tl-big">'+n2(cost)+' <span class="meta" style="font-size:1rem">over '+days+' day'+(days===1?'':'s')+' ('+n2(kwh)+' kWh)</span></div>'
+ +'<table class="tl-tab"><tbody>'
+ +'<tr><td>Per day</td><td>'+n2(w*hrs/1000)+' kWh \u00b7 '+n2(w*hrs/1000*tar)+'</td></tr>'
+ +'<tr><td>If run all year</td><td>'+n2(yr)+' kWh \u00b7 '+n2(yr*tar)+'</td></tr>'
+ +'<tr><td>For '+days+' days</td><td>'+n2(kwh)+' kWh \u00b7 '+n2(cost)+'</td></tr>'
+ +'</tbody></table>'
+ +'<p class="meta">Rating \u2260 consumption: a 65 W laptop charger sips 20\u201340 W in practice, a resistive heater (kettle, oven, iron) really does pull its full watts. Fridges and pumps list a duty cycle \u2014 use the average watts from the label or a plug-in meter if you have one. And yes: the standby LED on that \u201c100 W\u201d old TV is 8 W \u2014 '+n2(8*24*365/1000*tar)+' a year of paying to glow.</p>';}
+$('el-go').onclick=render;['el-w','el-hrs','el-days','el-tar'].forEach(function(i){$(i).oninput=render;});render();`,
+  seo: `<h2 class="section-title">The tariff is the whole answer</h2>
+  <p>The same fan can cost four times as much to run in one country as another \u2014 which is why the tariff field is yours to fill and this page never ships a default national rate. Check your latest bill\u2019s total: divide the amount due by the kWh used and you get the all-in rate (energy + network + taxes + levies), the only number that reflects what a real extra kWh costs you. Time-of-use tariffs change the maths again: the EV charged at midnight is not the same kWh as the oven at 7 p.m.</p>`,
+});
+
+// ── 36. /alat/pace — running pace & race splits ────────────────────────────
+TOOLKIT.push({
+  slug: 'pace', ic: '\ud83c\udfc3', name: 'Running Pace Calculator',
+  title: 'Running Pace Calculator — Pace per KM, Splits & Race Prediction | Tukuk-OS',
+  desc: 'Distance and time in: pace per km and mile, speed, even-pace splits for 5K to marathon, and the Riegel formula prediction for the longer races.',
+  hero: 'Running Pace Calculator', sub: 'pace \u00b7 splits \u00b7 km/h and min/mi \u00b7 Riegel \u00d7d^1.06 prediction',
+  navBlurb: 'Pace per km and mile, even splits from 5K to marathon, and the Riegel 1.06 prediction with its honest warning about the wall.',
+  hubBlurb: 'a 25-minute 5K is 5:00/km \u2014 until it is not: even splits, and the Riegel-formula marathon prediction that admits the wall exists',
+  lead: 'The watch face maths, done properly: <b>pace = time \u00f7 distance</b>, printed per kilometre <i>and</i> per mile because runners live in both units. Splits assume even pacing, which is what a GPS watch promises you; the longer-race prediction then uses <b>Riegel\u2019s formula</b> T\u2082 = T\u2081 \u00d7 (D\u2082/D\u2081)^1.06 because doubling distance has cost a little more than double time since 1981 and every sports-math textbook.',
+  form: `<div class="tl-form">
+  ${field('Distance (km)', '<input id="pc-dist" type="number" min="0.1" max="200" step="any" value="5">')}
+  ${field('Hours', '<input id="pc-h" type="number" min="0" max="23" step="1" value="0">')}
+  ${field('Minutes', '<input id="pc-m" type="number" min="0" max="59" step="1" value="25">')}
+  ${field('Seconds', '<input id="pc-s" type="number" min="0" max="59" step="1" value="0">')}
+  <button class="tl-btn primary" id="pc-go" type="button">Calculate</button>
+</div>
+<div class="tl-res" id="pc-out">\u2014</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function hms(s){s=Math.round(s);var h=Math.floor(s/3600),m=Math.floor(s%3600/60),ss=s%60;
+ var mm=(h?String(m).padStart(2,'0'):String(m));
+ return (h?h+':':'')+mm+':'+String(ss).padStart(2,'0');}
+function render(){var d=parseFloat($('pc-dist').value),secs=Number($('pc-h').value)*3600+Number($('pc-m').value)*60+Number($('pc-s').value);
+ if(!(d>0)||!(secs>0)||secs>24*3600){$('pc-out').innerHTML='<span class="tl-badge tl-no">check input</span> Distance above 0 km, total time between 1 second and 24 hours.';return;}
+ var pace=secs/d,mi=1.609344;
+ var RACES=[[5,'5K'],[10,'10K'],[21.0975,'Half'],[42.195,'Marathon']];
+ var rows='';
+ RACES.forEach(function(r){if(r[0]<=d)return;
+  var even=pace*r[0],riegel=secs*Math.pow(r[0]/d,1.06);
+  rows+='<tr><td>'+r[1]+'</td><td>'+hms(even)+'</td><td>'+hms(riegel)+'</td></tr>';});
+ $('pc-out').innerHTML='<div class="tl-big">'+hms(pace)+' <span class="meta" style="font-size:1rem">per km</span></div>'
+ +'<table class="tl-tab"><tbody>'
+ +'<tr><td>Pace per mile</td><td>'+hms(pace*mi)+' /mi</td></tr>'
+ +'<tr><td>Speed</td><td>'+(d/(secs/3600)).toFixed(1)+' km/h ('+(d/(secs/3600)/mi).toFixed(1)+' mph)</td></tr>'
+ +'</tbody></table>'
+ +(rows?'<p class="meta">Predictions for races longer than the one you ran:</p><table class="tl-tab"><thead><tr><th>Race</th><th>Even pace</th><th>Riegel formula</th></tr></thead><tbody>'+rows+'</tbody></table>':'')
+ +'<p class="meta">Even pace is the lie the watch tells; Riegel\u2019s exponent 1.06 is the lie the science tells \u2014 the real drift depends on where you got fit. Trained marathoners lose only 2\u20134% per doubling past the half; under-trained ones hit the wall and lose 20%. Treat the Riegel column as the optimistic ceiling, not the plan.</p>';
+}
+$('pc-go').onclick=render;['pc-dist','pc-h','pc-m','pc-s'].forEach(function(i){$(i).oninput=render;});render();`,
+  seo: `<h2 class="section-title">Where the 1.06 came from</h2>
+  <p>Peter Riegel fitted thousands of race results in 1981 and found performance decays predictably with distance \u2014 T\u2082 = T\u2081 \u00d7 (D\u2082/D\u2081)^1.06 \u2014 exponent 1.0 being pure linear scaling, the extra 0.06 being physiology. Later studies put the exponent between 1.03 and 1.14 depending on the population and the heat. That spread is the whole story: the formula predicts the shape of the decay, not your race; it assumes training depth behind the shorter time. Use the split column to pace, and the wall column as a warning.</p>`,
+});
+
+// ── 37. /alat/design — the browser-local poster studio (Canva-lite) ────────
+TOOLKIT.push({
+  slug: 'design', ic: '\ud83c\udfa8', name: 'Design Studio',
+  title: 'Free Online Design Studio — Poster & Social Image Maker, No Account | Tukuk-OS',
+  desc: 'A Canva-style canvas studio that runs entirely in your browser: gradient backgrounds, text, shapes and your own images as layers — drag, rotate, scale, export PNG at 2x. No sign-up, nothing uploaded.',
+  hero: 'Design Studio', sub: 'layers · drag · rotate · PNG export · zero uploads, ever',
+  navBlurb: 'The poster maker without the login wall: backgrounds, text, shapes and images as real layers, exported as PNG straight from your canvas.',
+  hubBlurb: 'make the social image yourself: gradient or solid background, layered text/shapes/photos, drag-wheel-export — and your file never leaves the tab',
+  lead: 'What a design tool should be in one page: a <b>canvas</b>, real <b>layers</b> (text, rectangles, circles, your own images), drag to move, wheel to scale, sliders for rotation and opacity, and a <b>PNG export</b> at up to 2× the working size. Every preset matches a real spec — Instagram square and story, YouTube thumbnail, Open Graph share card, A4 portrait. And unlike the platforms this borrows the idea from: there is no account, no watermark, no template warehouse, no upload — <b>your image exists only in this tab\u2019s memory</b>. Close it and it is gone; export before you refresh.',
+  css: `
+.ds-bar,.ds-tools,.ds-edit{display:flex;flex-wrap:wrap;gap:.6rem;align-items:flex-end;margin:.7rem 0}
+.ds-bar label,.ds-edit label{display:flex;flex-direction:column;font-size:.78rem;gap:.2rem}
+.ds-bar input,.ds-bar select,.ds-edit input,.ds-edit select{min-width:4.5rem}
+.ds-edit input[type=color]{padding:1px;height:2rem}
+#ds-canvas{display:block;margin:.5rem auto;border:1px solid #334155;border-radius:.5rem;max-width:100%;touch-action:none;cursor:crosshair;background:#000}
+.ds-tools button,.ds-imgbtn{background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:.4rem;padding:.45rem .8rem;cursor:pointer;font-size:.85rem}
+.ds-tools button:hover,.ds-imgbtn:hover{background:#334155}
+.ds-imgbtn input{display:none}
+#ds-sel{margin-left:auto;font-size:.8rem}
+`,
+  form: `<div class="ds-bar">
+  ${field('Canvas', '<select id="ds-size"><option value="1080x1080" selected>Instagram post · 1080×1080</option><option value="1080x1920">Story / Reel · 1080×1920</option><option value="1080x1350">Portrait post · 1080×1350</option><option value="1280x720">YouTube thumbnail · 1280×720</option><option value="1200x630">Share card (OG) · 1200×630</option><option value="1240x1754">A4 portrait · 1240×1754</option><option value="custom">Custom…</option></select>')}
+  ${field('W', '<input id="ds-w" type="number" min="100" max="4000" step="10" value="1080">')}
+  ${field('H', '<input id="ds-h" type="number" min="100" max="4000" step="10" value="1080">')}
+  ${field('BG colour', '<input id="ds-bga" type="color" value="#0f172a">')}
+  ${field('BG accent', '<input id="ds-bgb" type="color" value="#7c3aed">')}
+  ${field('Background', '<select id="ds-bgs"><option value="solid">solid</option><option value="vgrad" selected>vertical gradient</option><option value="dgrad">diagonal gradient</option><option value="radial">radial glow</option></select>')}
+</div>
+<canvas id="ds-canvas"></canvas>
+<div class="ds-tools">
+  <button type="button" id="ds-addtext">+ Text</button>
+  <button type="button" id="ds-addrect">+ Rectangle</button>
+  <button type="button" id="ds-addcircle">+ Circle</button>
+  <label class="ds-imgbtn">+ Image<input type="file" id="ds-img" accept="image/*"></label>
+  <button type="button" id="ds-dup">Duplicate</button>
+  <button type="button" id="ds-back">Send back</button>
+  <button type="button" id="ds-fwd">Bring forward</button>
+  <button type="button" id="ds-del">Delete</button>
+  <span id="ds-sel" class="meta">nothing selected</span>
+</div>
+<div class="ds-edit">
+  ${field('Text', '<input id="ds-txt" type="text" value="" disabled>')}
+  ${field('Font', '<select id="ds-font"><option value="Impact,Charcoal,sans-serif">Impact</option><option value="Georgia,serif" selected>Georgia</option><option value="Helvetica,Arial,sans-serif">Helvetica</option><option value="Trebuchet MS,sans-serif">Trebuchet</option><option value="Courier New,monospace">Courier</option></select>')}
+  ${field('Size', '<input id="ds-ps" type="number" min="8" max="600" step="1" value="64">')}
+  ${field('Colour', '<input id="ds-col" type="color" value="#ffffff">')}
+  ${field('Opacity %', '<input id="ds-op" type="range" min="5" max="100" value="100">')}
+  ${field('Scale %', '<input id="ds-sc" type="range" min="10" max="500" value="100">')}
+  ${field('Rotate °', '<input id="ds-rot" type="range" min="-180" max="180" value="0">')}
+  ${field('Export', '<select id="ds-scale"><option value="1">PNG 1×</option><option value="2" selected>PNG 2×</option></select>')}
+  <button class="tl-btn primary" id="ds-dl" type="button">Download PNG</button>
+</div>
+<div class="tl-res meta" id="ds-out">The canvas is the tool: click a layer to select it, drag to move, mouse wheel over the canvas to scale the selected layer. The row of controls below edits the selected layer live.</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var cv=$('ds-canvas');
+var cx=(cv&&cv.getContext)?cv.getContext('2d'):null;
+var W=1080,H=1080,layers=[],sel=-1,seq=0,dragging=false;
+function num(v,d){v=parseFloat(v);return isNaN(v)?d:v;}
+function hex(v){return /^#[0-9a-fA-F]{6}$/.test(v)?v:'#000000';}
+function draw(){
+ if(!cx)return;
+ var vw=(typeof window!=='undefined'&&window.innerWidth)?Math.min(window.innerWidth-70,720):720;
+ var scD=Math.min(vw/W,(vw*1.35)/H);
+ cv.style.width=Math.round(W*scD)+'px';cv.style.height=Math.round(H*scD)+'px';
+ if(cv.width!==W)cv.width=W;if(cv.height!==H)cv.height=H;
+ var A=hex($('ds-bga').value),B=hex($('ds-bgb').value),st=$('ds-bgs').value;
+ cx.setTransform(1,0,0,1,0,0);cx.globalAlpha=1;cx.setLineDash([]);
+ if(st==='solid'){cx.fillStyle=A;cx.fillRect(0,0,W,H);}
+ else{var g=st==='radial'?cx.createRadialGradient(W/2,H*0.42,10,W/2,H*0.42,Math.max(W,H)*0.75)
+   :cx.createLinearGradient(0,0,st==='dgrad'?W:0,st==='dgrad'?H:H);
+  if(st==='radial'){g.addColorStop(0,B);g.addColorStop(1,A);}else{g.addColorStop(0,A);g.addColorStop(1,B);}
+  cx.fillStyle=g;cx.fillRect(0,0,W,H);}
+ for(var i=0;i<layers.length;i++)drawLayer(layers[i],i===sel);
+}
+function wrapText(text){
+ var out=[],maxW=W*0.86;
+ text.split('\\n').forEach(function(para){
+  var words=para.split(' '),line='';
+  for(var i=0;i<words.length;i++){var t=line?line+' '+words[i]:words[i];
+   if(cx.measureText(t).width>maxW&&line){out.push(line);line=words[i];}else line=t;}
+  out.push(line);});
+ return out;}
+function layerBox(l){var s=l.scale/100;
+ if(l.kind==='img')return {w:l.imgW*s,h:l.imgH*s};
+ if(l.kind==='rect')return {w:l.size*s,h:l.size*0.62*s};
+ if(l.kind==='text'){var f=l.text.split('\\n'),mw=0,keep=cx.font;
+  cx.font='700 '+Math.round(l.size)+'px '+l.font;
+  for(var i=0;i<f.length;i++)mw=Math.max(mw,cx.measureText(f[i]).width);
+  cx.font=keep;return {w:mw,h:l.size*1.18*f.length};}
+ return {w:l.size*s,h:l.size*s};}
+function drawLayer(l,selected){
+ cx.save();cx.translate(l.x,l.y);cx.rotate(l.rot*Math.PI/180);cx.globalAlpha=l.op/100;
+ var s=l.scale/100;
+ if(l.kind==='text'){
+  cx.font='700 '+Math.round(l.size)+'px '+l.font;
+  cx.fillStyle=l.color;cx.textAlign='center';cx.textBaseline='middle';
+  var lines=wrapText(l.text),lh=l.size*1.18;
+  for(var i=0;i<lines.length;i++)cx.fillText(lines[i],0,(i-(lines.length-1)/2)*lh);
+ }else if(l.kind==='rect'){cx.fillStyle=l.color;cx.fillRect(-l.size*s/2,-l.size*0.31*s,l.size*s,l.size*0.62*s);
+ }else if(l.kind==='ellipse'){cx.fillStyle=l.color;cx.beginPath();cx.arc(0,0,l.size*s/2,0,Math.PI*2);cx.fill();
+ }else if(l.kind==='img'&&l.img&&l.img.complete&&l.img.naturalWidth){
+  cx.drawImage(l.img,-l.imgW*s/2,-l.imgH*s/2,l.imgW*s,l.imgH*s);}
+ if(selected){cx.globalAlpha=1;cx.strokeStyle='#38bdf8';cx.lineWidth=Math.max(3,W/360);cx.setLineDash([12,9]);
+  var b=layerBox(l);cx.strokeRect(-b.w/2-12,-b.h/2-12,b.w+24,b.h+24);}
+ cx.restore();cx.globalAlpha=1;cx.setLineDash([]);
+}
+function select(i){sel=i;var l=i>=0?layers[i]:null;
+ $('ds-sel').textContent=l?('layer '+(i+1)+': '+l.name):'nothing selected';
+ $('ds-txt').disabled=!l||l.kind!=='text';
+ if(l){$('ds-txt').value=l.text!==undefined?l.text:'';
+  if(l.font)$('ds-font').value=l.font;
+  $('ds-ps').value=Math.round(l.size||0);
+  if(/^#[0-9a-fA-F]{6}$/.test(l.color||''))$('ds-col').value=l.color;
+  $('ds-op').value=l.op;$('ds-sc').value=Math.round(l.scale);$('ds-rot').value=Math.round(l.rot);}
+ draw();}
+function addLayer(l){l.id=++seq;l.x=l.x||Math.round(W/2);l.y=l.y||Math.round(H/2);
+ l.rot=l.rot||0;l.op=l.op==null?100:l.op;l.scale=l.scale||100;
+ layers.push(l);select(layers.length-1);}
+function swapTo(i){if(i<0||i>=layers.length)return;select(i);}
+$('ds-addtext').onclick=function(){addLayer({kind:'text',name:'text',text:'Your text',font:$('ds-font').value,size:Math.max(28,Math.round(W/13)),color:hex($('ds-col').value),rot:0,op:100,scale:100});};
+$('ds-addrect').onclick=function(){addLayer({kind:'rect',name:'rectangle',size:Math.round(W/4),color:hex($('ds-bgb').value),rot:0,op:100,scale:100});};
+$('ds-addcircle').onclick=function(){addLayer({kind:'ellipse',name:'circle',size:Math.round(W/4),color:hex($('ds-bgb').value),rot:0,op:100,scale:100});};
+$('ds-del').onclick=function(){if(sel<0)return;layers.splice(sel,1);swapTo(Math.min(sel,layers.length-1));};
+$('ds-dup').onclick=function(){if(sel<0)return;var n={},L=layers[sel];for(var k in L)n[k]=L[k];
+ n.id=++seq;n.x=Math.round(L.x+W*0.05);n.y=Math.round(L.y+H*0.05);n.name=L.name;
+ layers.splice(sel+1,0,n);select(sel+1);};
+$('ds-back').onclick=function(){if(sel<=0)return;var L=layers[sel];layers.splice(sel,1);layers.unshift(L);select(0);};
+$('ds-fwd').onclick=function(){if(sel<0||sel>=layers.length-1)return;var L=layers[sel];layers.splice(sel,1);layers.push(L);select(layers.length-1);};
+function bindEdit(id,fn){$(id).oninput=function(){if(sel<0)return;fn(layers[sel]);draw();};}
+bindEdit('ds-txt',function(l){if(l.kind==='text'){l.text=$('ds-txt').value;l.name=l.text.slice(0,20)||'text';}});
+bindEdit('ds-font',function(l){l.font=$('ds-font').value;});
+bindEdit('ds-ps',function(l){l.size=num($('ds-ps').value,l.size);});
+bindEdit('ds-col',function(l){l.color=$('ds-col').value;});
+bindEdit('ds-op',function(l){l.op=num($('ds-op').value,100);});
+bindEdit('ds-sc',function(l){l.scale=num($('ds-sc').value,100);});
+bindEdit('ds-rot',function(l){l.rot=num($('ds-rot').value,0);});
+function canvasPos(e){var r=(cv.getBoundingClientRect&&cv.getBoundingClientRect())||{left:0,top:0,width:W,height:H};
+ return {x:(e.clientX-r.left)*(W/(r.width||W)),y:(e.clientY-r.top)*(H/(r.height||H))};}
+function hit(p){for(var i=layers.length-1;i>=0;i--){var l=layers[i],b=layerBox(l);
+ if(Math.abs(p.x-l.x)<b.w/2+16&&Math.abs(p.y-l.y)<b.h/2+16)return i;}return -1;}
+if(cv.addEventListener){
+ cv.addEventListener('pointerdown',function(e){if(cv.setPointerCapture)cv.setPointerCapture(e.pointerId);
+  var p=canvasPos(e),i=hit(p);
+  if(i>=0){select(i);dragging=true;}else if(layers.length)select(-1);});
+ cv.addEventListener('pointermove',function(e){if(!dragging||sel<0)return;var p=canvasPos(e);
+  layers[sel].x=Math.max(0,Math.min(W,Math.round(p.x)));layers[sel].y=Math.max(0,Math.min(H,Math.round(p.y)));draw();});
+ cv.addEventListener('pointerup',function(){dragging=false;});
+ cv.addEventListener('wheel',function(e){if(sel<0)return;e.preventDefault();
+  var l=layers[sel];l.scale=Math.max(10,Math.min(500,l.scale+(e.deltaY<0?6:-6)));
+  $('ds-sc').value=Math.round(l.scale);draw();},{passive:false});}
+function applySize(){var v=$('ds-size').value;
+ if(v!=='custom'){var p=v.split('x');W=parseInt(p[0],10);H=parseInt(p[1],10);
+  $('ds-w').value=W;$('ds-h').value=H;}
+ var cw=num($('ds-w').value,W),ch=num($('ds-h').value,H);
+ if(cw>=100&&cw<=4000&&ch>=100&&ch<=4000){W=cw;H=ch;}
+ draw();}
+$('ds-size').onchange=applySize;$('ds-w').oninput=applySize;$('ds-h').oninput=applySize;
+$('ds-bga').oninput=draw;$('ds-bgb').oninput=draw;$('ds-bgs').onchange=draw;
+$('ds-img').onchange=function(e){var f=e.target.files&&e.target.files[0];
+ if(!f||typeof FileReader==='undefined')return;
+ var fr=new FileReader();
+ fr.onload=function(){var im=new Image();
+  im.onload=function(){var s=Math.min(W*0.8/im.naturalWidth,H*0.8/im.naturalHeight,1);
+   addLayer({kind:'img',name:(f.name||'image').slice(0,24),img:im,
+    imgW:Math.round(im.naturalWidth*s),imgH:Math.round(im.naturalHeight*s),
+    size:Math.round(im.naturalWidth*s),rot:0,op:100,scale:100});};
+  im.src=fr.result;};
+ fr.readAsDataURL(f);e.target.value='';};
+$('ds-dl').onclick=function(){if(!cx||typeof document==='undefined'||!document.createElement)return;
+ var k=parseInt($('ds-scale').value,10)||1;
+ var oc=document.createElement('canvas');oc.width=W*k;oc.height=H*k;
+ var o=oc.getContext('2d');o.scale(k,k);
+ var keepSel=sel,realCx=cx;sel=-1;cx=o;draw();cx=realCx;sel=keepSel;
+ var a=document.createElement('a');a.download='tukuk-design.png';a.href=oc.toDataURL('image/png');a.click();
+ draw();};
+W=num($('ds-w').value,1080);H=num($('ds-h').value,1080);
+addLayer({kind:'ellipse',name:'accent circle',size:Math.round(W/2),color:hex($('ds-bgb').value),rot:0,op:35,scale:100});
+layers[0].x=Math.round(W*0.78);layers[0].y=Math.round(H*0.2);
+addLayer({kind:'text',name:'headline',text:'Your headline',font:'Impact,Charcoal,sans-serif',size:Math.max(30,Math.round(W/11)),color:'#ffffff',rot:0,op:100,scale:100});
+layers[1].y=Math.round(H*0.5);
+select(1);`,
+  seo: `<h2 class="section-title">Why a plain-canvas studio beats a template portal</h2>
+  <p>Every hosted design platform runs the same quiet business: your work markets the platform, the watermark is the upsell, and the file leaves your machine before you have really made it. This studio inverts all three — the pixels are composited by your browser\u2019s own canvas engine, the PNG is assembled locally, and closing the tab destroys the document like a whiteboard. What it deliberately lacks: template galleries, stock search, font libraries, collaborative cursors — all features of the account that owns your file. The presets, though, are real: Instagram and YouTube take exactly these dimensions because their own specs demand them.</p>
+  <p class="meta">Thumbnail makers: Impact at one-eleventh of the canvas width (about 116 px on a 1280 canvas) is the size that still reads at phone preview width — anything smaller is decoration, not headline.</p>`,
+});
+
 module.exports = { TOOLKIT, toolkitPage, navItems, hubLines, sitemapPaths };

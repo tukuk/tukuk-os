@@ -61,7 +61,21 @@ const PAGES = [
   { path: '/alat/aspect', marker: 'Aspect Ratio Calculator', ids: ['as-w', 'as-h', 'as-fw', 'as-fh', 'as-go', 'as-out'] },
   { path: '/alat/cssunits', marker: 'CSS Unit Converter', ids: ['cu-v', 'cu-u', 'cu-r', 'cu-go', 'cu-out'] },
   { path: '/alat/dice', marker: 'Dice Probability', ids: ['di-n', 'di-s', 'di-t', 'di-go', 'di-out'] },
-  { path: '/alat/download', marker: 'Download Time Calculator', ids: ['dn-size', 'dn-sz', 'dn-rate', 'dn-rt', 'dn-go', 'dn-out'] }
+  { path: '/alat/download', marker: 'Download Time Calculator', ids: ['dn-size', 'dn-sz', 'dn-rate', 'dn-rt', 'dn-go', 'dn-out'] },
+  // ── fourth wave (Nov 2026 batch 3 + design studio) ──
+  { path: '/alat/comb', marker: 'Combination Calculator', ids: ['cb-n', 'cb-r', 'cb-go', 'cb-out'] },
+  { path: '/alat/gcd', marker: 'GCD &amp; LCM', ids: ['gd-a', 'gd-b', 'gd-go', 'gd-out'] },
+  { path: '/alat/triangle', marker: 'Triangle Solver', ids: ['tr-mode', 'tr-a', 'tr-b', 'tr-c', 'tr-ang', 'tr-go', 'tr-out'] },
+  { path: '/alat/readability', marker: 'Readability Checker', ids: ['rb-in', 'rb-go', 'rb-out'] },
+  { path: '/alat/tdee', marker: 'Calorie &amp; TDEE Calculator', ids: ['td-sex', 'td-age', 'td-h', 'td-w', 'td-act', 'td-go', 'td-out'] },
+  { path: '/alat/inflate', marker: 'Inflation Calculator', ids: ['xf-amt', 'xf-rate', 'xf-yrs', 'xf-mode', 'xf-go', 'xf-out'] },
+  { path: '/alat/cipher', marker: 'Caesar &amp; Vigenère Cipher', ids: ['cp-text', 'cp-kind', 'cp-key', 'cp-dir', 'cp-go', 'cp-out'] },
+  { path: '/alat/paint', marker: 'Paint Coverage Calculator', ids: ['pt-l', 'pt-w', 'pt-h', 'pt-open', 'pt-cov', 'pt-cost', 'pt-go', 'pt-out'] },
+  { path: '/alat/recipe', marker: 'Recipe Scaler', ids: ['rc-in', 'rc-from', 'rc-to', 'rc-go', 'rc-out'] },
+  { path: '/alat/printsize', marker: 'Print Size Calculator', ids: ['py-w', 'py-h', 'py-dpi', 'py-go', 'py-out'] },
+  { path: '/alat/electricity', marker: 'Electricity Cost Calculator', ids: ['el-w', 'el-hrs', 'el-days', 'el-tar', 'el-go', 'el-out'] },
+  { path: '/alat/pace', marker: 'Running Pace Calculator', ids: ['pc-dist', 'pc-h', 'pc-m', 'pc-s', 'pc-go', 'pc-out'] },
+  { path: '/alat/design', marker: 'Design Studio', ids: ['ds-size', 'ds-canvas', 'ds-addtext', 'ds-addcircle', 'ds-del', 'ds-dl', 'ds-out'] }
 ];
 
 for (const page of PAGES) {
