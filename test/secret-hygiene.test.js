@@ -205,6 +205,19 @@ test('the private half is ignored, and the merge script exists', () => {
   const makeEnv = readFileSync(join(ROOT, 'scripts', 'make-env.sh'), 'utf8');
   assert.match(makeEnv, /env\.secrets/, 'make-env.sh is the single place the two halves meet');
   assert.match(makeEnv, /chmod 600/, '.env holds secrets, so it must not be world-readable');
+
+  // The Firebase console tells the operator to save the generated Admin key as
+  // `serviceAccountKey.json` beside the code, so that is the filename a `git add -A` finds.
+  // A service-account JSON is full read/write over Firestore/Storage/Auth/Messaging, which
+  // puts it in the same class as the tunnel token — and an ignore rule that nobody has
+  // demonstrated to fire is only a comment, so this names the three accepted spellings.
+  for (const name of ['serviceAccountKey.json', 'deploy/serviceAccountKey.json',
+    'firebase-service-account.json', 'config/gcp-service-account-key.json']) {
+    assert.match(
+      execFileSync('git', ['check-ignore', '-v', name], { cwd: ROOT, encoding: 'utf8' }).trim(),
+      new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+      `${name} is stageable — a service-account key must never reach git`);
+  }
 });
 
 test('no value from the private half appears anywhere in the tracked tree', (t) => {

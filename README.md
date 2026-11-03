@@ -252,6 +252,19 @@ The zone now lives in **`Tukuk.co@gmail.com's Account`** (`6134c115f7311412314b3
 - ⚠️ **Do not read "the homepage looks fine" as "fixed" — I made that mistake and corrected it 31 Oct.** After `tukuk-snapshot.service` ran on the rebuilt box, the Worker's R2 mirror became current: `GET https://tukuk.org/theme.js` now returns the live **11 795 B** file (`code=200 size=11795`). But `GET https://tukuk.org/health` still answers `"API unavailable — server offline"`, i.e. the apex is STILL on the Worker, so anything that is not a pre-mirrored static file (search, login, chat, admin, any POST) is dead. `www.tukuk.org` 301s correctly and `tchat.tukuk.org` gives the expected bare cloudflared 404 until its route is added.
 - Missing pieces inherited from the account move: the old `tukuk-backup` upload worker does not exist in the new account (`BACKUP_WORKER_URL` is dead → send backups straight to R2, which this token *can* write).
 
+### ✅ CLOSED 2 NOV 2026 — the apex really is workerless now, and "no Workers connected" is the correct screen
+`GET /zones/{Z}/workers/routes` through the **account** token (`CLOUDFLARE_API_TOKEN`) answers
+**`"result": []`**: the `tukuk.org/* → tukuk-fallback` route the block above recorded is gone, and
+the account's only two scripts are Cloudflare's own templates — `email-routing-template` (Email
+Routing/MX, **keep**) and `workflows-starter-template` — neither on the web path. The request path
+agrees: `GET https://tukuk.org/health` answers **live Node JSON** today (the `update` object, down to
+the `merge-failed` stage) where 31 Oct answered the worker's own
+`"API unavailable — server offline"`, and `/api/public/settings` answers the live Admin store.
+What this does **not** license: creating a Worker here (the rule below still holds — a route would
+make visitors billable against the 100k/day free cap that something on this account already spends),
+or trusting the DNS token for the check (`cfut_…` gets `"No access to the specified resource"` even
+reading routes; use the account token).
+
 ### 🧩 DNS vs tunnel routes — what a hostname actually needs (measured 31 Oct 2026)
 The DNS token (`CLOUDFLARE_DNS_API_TOKEN`, env.secrets) can see the zone, the read-token cannot. Live records for `tukuk.org` (17): `CNAME @ → c1d8ea0f…cfargotunnel.com` **proxied** ✓, `CNAME www →` the same tunnel ✓, 3× MX + SPF + DKIM + DMARC (Email Routing) ✓, 3× CAA (`pki.goog`, `letsencrypt.org`, `digicert.com`), 2× `google-site-verification`, and `CNAME worker → tukuk-os-v2.pages.dev`. Added on 31 Oct: `tchat`, `play`, `build` → the tunnel CNAME, proxied.
 - **A DNS record is not enough in TOKEN mode.** `journalctl -u cloudflared` prints the tunnel's own remote config, and it is only `tukuk.org` + `www.tukuk.org` → `http://localhost:3000` plus a catch-all `http_status:404`. Proved: `https://tchat.tukuk.org/` resolves and answers **an empty 404 from cloudflared** — the request never reaches nginx (`tukuk-front.log` stayed silent). So `tchat` / `play` / `build` need one dashboard action each: **Zero Trust → Networks → Routes → Add a public hostname**, service `http://localhost:3000` (`build` = `http://127.0.0.1:5174`, the wake door). No token here has tunnel-route write, so this cannot be automated.
@@ -279,18 +292,23 @@ Because there is no fallback Worker on the request path, R2 is now purely a **co
 - **The VPS has no `cert.pem`**, so every cert-authenticated `cloudflared` subcommand (`tunnel list`, `tunnel status`, `tunnel route dns`) dies with *"Cannot determine default origin certificate path"*. Do not read that as an outage — it is the missing laptop credential, not the tunnel. What actually means something: `systemctl is-active cloudflared` and a request that goes through the edge (`curl -sI https://tukuk.org/health` → 200 + `server: cloudflare`). Both measured 29 Oct 2026; `scripts/ship-to-box.sh` checks the second one after every deploy because a healthy restart and a dead connector are indistinguishable from loopback.
 - **Do NOT `tunnel create` a new one** — that is how `a3af5bb4` happened, and it cost a second credential plus a second unit. To serve a new hostname = one dashboard route on `c1d8ea0f` (Zero Trust → Networks → Routes, service = HTTP `localhost:3000`) **and** the matching `ingress` line in `deploy/cloudflared/config.yml`, which stays the canonical list. `npm test` fails if a second connector file reappears (`test/one-tunnel.test.js`), and `node scripts/cloudflared-audit.js` compares the file against the live edge when a token is present.
 
-**DNS inventory & meaning (17 records, as read through the DNS token on 31 Oct 2026 — all in the new account, all pointing at tunnel `c1d8ea0f…`):**
+**DNS inventory & meaning (16 records as re-read through the DNS token on 2 Nov 2026; 17 on
+31 Oct — `play`, `build` and `worker` have since left the zone and a Bing verification CNAME
+arrived. The three routed hostnames still point at tunnel `c1d8ea0f…`):**
 | Record | For | Delete? |
 |---|---|---|
 | `CNAME @ (tukuk.org) → c1d8ea0f…cfargotunnel` (proxy) | Main site | ❌ NEVER |
 | `CNAME www → c1d8ea0f…cfargotunnel` (proxy) | www mirror → Node 301 to apex | ❌ NEVER |
-| `CNAME tchat / play / build → c1d8ea0f…` (proxy) | T Chat space, Tukuk Strike HD, Tukuk Builder — added 31 Oct 2026 | ❌ keep — but each still needs its **tunnel route** (§9) or it 404s at cloudflared |
-| `CNAME worker → tukuk-os-v2.pages.dev` (proxy) | Cloudflare Pages mirror | ⚠️ answers **522** — the Pages custom-domain binding is broken (§9) |
+| `CNAME tchat → c1d8ea0f…` (proxy) | T Chat space | ❌ keep — still needs its **tunnel route** (§9) or it 404s at cloudflared |
+| ~~`CNAME play / build → c1d8ea0f…`~~ | Tukuk Strike HD, Tukuk Builder | ✅ **gone from the zone as at 2 Nov** (`dig` → NXDOMAIN), which is the freeze the ops runbook records: both surfaces live on the apex (`/play`, `/build`) and `build.tukuk.org` is left alone by the owner's instruction |
+| ~~`CNAME worker → tukuk-os-v2.pages.dev`~~ | Cloudflare Pages mirror | ✅ **gone as at 2 Nov** — the broken custom-domain binding below is therefore nobody's problem until someone re-adds it |
 | `MX ×3 → route1/2/3.mx.cloudflare.net` | Cloudflare Email Routing | ❌ NEVER |
 | `TXT @ → v=spf1 include:_spf.mx.cloudflare.net ~all` | Email SPF | ❌ NEVER |
 | `TXT cf2024-1._domainkey` (DKIM) · `TXT _dmarc` (`p=quarantine`) | Email DKIM/DMARC | ❌ NEVER |
 | `CAA @ ×3 → "pki.goog" / "letsencrypt.org" / "digicert.com" | Certificate issuing ACL | ⚠️ Google issued the old certs via `pki.goog`; don't trim these unless you know who signs next |
 | `TXT @ → google-site-verification ×2` | Search Console | ❌ NEVER (deleting un-verifies the property) |
+| `TXT _github-pages-challenge-tukuk` = `"588a948eaa1c3d8631d5d3801a080a"` | GitHub's **domain ownership** proof for the `tukuk` account | ❌ keep — GitHub shows the domain *verified* (2 Nov 2026). It moves no traffic: nothing points at `*.github.io`, and no hostname may be repointed there (§11) |
+| `CNAME 960e3a35….tukuk.org → verify.bing.com` | Bing webmaster ownership | ❌ keep — pairs with the tracked, served `public/BingSiteAuth.xml` |
 | ~~`CNAME dashboard → tunnel`~~ | Panel was `/admin` on the apex anyway | ✅ gone — do not re-add |
 | ~~`CNAME api` / `mqtt` / `github` / `gitlab` / `bitbucket`~~ | dead tunnel / convenience aliases | ✅ gone — they were never carried into this zone |
 
@@ -315,6 +333,7 @@ None of it needs payment at small scale. Here is the list + where each is set:
 | **Google Search Console** | Free | Verification files `public/*.html` (bingbot etc.) — register & submit `sitemap.xml` |
 | **Microsoft Clarity** | Free (cookieless analytics) | Project `ytshvg0zer`, default in `src/server.js` + `deploy/env.defaults`; Admin can override or switch it off |
 | **Google Analytics 4** | Free | Property **tukuk-org-web** (property id `561854360`) — web stream id `16251234684`, measurement id **`G-HLPDZPEYMN`**, the single Google tag (§11), linked to Google Ads **622-127-4131** / `AW-18551010096`. Firebase account `360653340` (`tukuk trading plt`) is the same property's parent |
+| **Firebase** | Free (spark plan) | Project **`tukuk-org-web`** (number `342129340504`), web app *TUKUK OS* `1:342129340504:web:b60855fc50c0a548fd9a2d`, linked Hosting site `web-org-tukuk` — which serves **nothing**, the apex is a tunnel CNAME (§9). Its `measurementId` is the *same* `G-HLPDZPEYMN` as the row above, so its console snippet is deliberately not installed (§11). FCM HTTP v1 on / legacy off; chat push does **not** use it — self-hosted VAPID in `src/chat.js` |
 | **NASA APOD API** | Free (DEMO_KEY) | `src/nasa.js` / `public/nasa.html` |
 | **GitHub Actions** | 2,000 min/mo (private) · unlimited (public) | Cron brain + `satu-kata` deploy → `.github/workflows/satu-kata.yml` |
 | **GitLab CI** | ~400 min/mo | Weekly `satu-kata` mirror → `.gitlab-ci.yml` |
@@ -404,6 +423,53 @@ double-count the rule above forbids. The console's "create conversions / create 
 are owner actions, and while consent is `denied` (the default) they measure less by design, not less
 by bug: `ad_storage`, `ad_user_data` and `ad_personalization` all have to be granted for a
 personalised remarketing hit.
+
+### Firebase: the project is linked, and not one line of its snippet went into a page (2 Nov 2026)
+
+**Project of record:** `tukuk-org-web` (number `342129340504`; web app *TUKUK OS*
+`1:342129340504:web:b60855fc50c0a548fd9a2d`; console's project *name* and linked Hosting site read
+`web-org-tukuk`, the same words rotated), under `tukuk.co@gmail.com` in Firebase account
+`360653340`. It is recorded in `deploy/env.defaults` as `FIREBASE_*` names, and what makes it
+*identity* rather than *configuration in use* is one command:
+`grep -rli firebase src/ public/ deploy/ scripts/` → `src/pangkalan-tentera-data.json` (Vietnamese
+place names carried from a wiki dump — "Firebase Crook", "Firebase Gio Linh") and that env file.
+No SDK, no `firebaseConfig`, no import.
+
+**Why the console's ready-made `<script type="module">` was not pasted, even though its
+`measurementId` is exactly ours.** `getAnalytics(app)` loads `gtag.js` for `G-HLPDZPEYMN` by
+itself. Every page here already carries that tag — `googleTagHead()` on server-rendered pages,
+`public/adsense-loader.js` on the SPA — so Firebase's block alongside them means **two Google tags
+and every pageview counted twice**, the precise failure `test/google-tag.test.js` exists to fail the
+build over. If Firebase Analytics is ever genuinely wanted, the change is to *replace* this repo's
+tag with Firebase's everywhere, in one step, not to add it. The web `AIza…` key is absent for the
+same reason in reverse: it is meant to ship in browser code, but no browser code loads Firebase, and
+`test/secret-hygiene.test.js` treats any `AIza…` in a tracked file as live-shaped — so recording it
+would weaken the guard for zero benefit.
+
+**Cloud Messaging: the console's "Web Push certificate" is not a TODO.** FCM HTTP v1 is enabled and
+legacy HTTP/XMPP is disabled (correct — the legacy APIs were cut off 20/6/2024) and a key pair was
+added 2 Nov, but nothing sends through it, because chat notifications already ride the app's **own**
+VAPID identity: `src/chat.js` mints an EC P-256 pair on first use, stores it in the chat JSON state,
+and PUTs an empty body to each subscriber's push-service endpoint, with
+`/api/chat/vapid-public-key` handing the public half to `public/apps/chat.html`. Two push stacks on
+one site means two subscription sets and doubled notifications, so FCM becomes worth adopting only
+by retiring that path. (`/api/chat/vapid-public-key`, note: this is the site's own channel, not
+Firebase's.)
+
+**The one urgent item — rotate the Admin service-account key.** Its complete JSON, private key
+included, was pasted into a chat window on 2 Nov 2026 for
+`firebase-adminsdk-fbsvc@tukuk-org-web.iam.gserviceaccount.com`. A service-account file of that kind
+is full read/write over Firestore, Storage, Auth and Cloud Messaging for the project — the same
+weight as the tunnel token. It reached no repository (the key's identifier appears nowhere in this
+workspace, and `test/secret-hygiene.test.js` fails any tracked file carrying a `PRIVATE KEY` block),
+and nothing reads it yet, so rotating costs no deploy: console → Project settings → Service accounts
+→ Manage keys → delete, then put the replacement in a 600 file on the box named by
+`FIREBASE_SERVICE_ACCOUNT_FILE` — never in git. Because Google's own instructions tell the operator
+to save it as `serviceAccountKey.json` *beside the code*, which is exactly where a `git add -A`
+finds it, `.gitignore` now blocks that name plus `firebase-service-account*.json` and
+`*service-account-key*.json`, and the same test asserts each pattern actually fires rather than
+trusting an ignore rule nobody demonstrated. The Cloudflare tokens and the GitHub PAT pasted the
+same day are due for rollover too — see the ops runbook, §17.13.
 
 ---
 

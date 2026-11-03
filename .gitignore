@@ -120,6 +120,18 @@ public/downloads/*.aab
 public/downloads/tukuk-km*.apk
 # Google Cloud service-account key for fastlane supply — SECRET, do not commit
 google-cloud-key.json
+gdrive-key.json
+# Firebase Admin SDK key (console → Project settings → Service accounts → Generate new
+# private key). Same weight as the tunnel token: a generated service-account JSON is full
+# read/write over Firestore, Storage, Auth and Cloud Messaging for tukuk-org-web, and the
+# install snippet Google shows literally tells the operator to save it as
+# `serviceAccountKey.json` next to the code — which is how a key like this reaches a
+# `git add -A`. The name is on the deploy path (deploy/env.defaults →
+# FIREBASE_SERVICE_ACCOUNT_FILE), the file must never be. test/secret-hygiene.test.js
+# asserts these patterns are live, because an ignore rule nobody proves is a comment.
+serviceAccountKey.json
+firebase-service-account*.json
+*service-account-key*.json
 fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
