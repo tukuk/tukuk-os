@@ -814,15 +814,29 @@ async function subject(slug) {
 }
 
 /**
- * Fill the cache for every subject, one at a time, after boot. Without this the first
- * visitor to each of the twenty-seven pages pays an up-to-16-second catalogue search, and
- * the first ten minutes after a deploy are exactly when a slow page goes unnoticed.
+ * Fill the cache for every subject that is not fresh on disk, one at a time, after boot.
+ * Without this the first visitor to each shelf page pays an up-to-16-second catalogue
+ * search, and the first ten minutes after a deploy are exactly when a slow page goes
+ * unnoticed. A restart inside the mirror's own TTL is a warm start, not a re-scan: a
+ * shelf fetched less than a day ago is loaded from disk and the catalogue is not asked
+ * again — the walk should size itself to the deploy schedule, not the other way round.
  * Sequential and spaced because this is a 4 GB box coming back up, and polite because
  * the searches belong to the Internet Archive, not to us. Never rejects.
- * `fetchOne` is injectable so the walk itself can be tested without the catalogue.
+ * `fetchOne` is injectable so the walk itself can be tested without the catalogue,
+ * and `mirror` so the warm start can be tested without the disk.
  */
-async function prime({ gapMs = PRIME_GAP_MS, log = console.log, fetchOne = subject } = {}) {
+async function prime({ gapMs = PRIME_GAP_MS, log = console.log, fetchOne = subject, mirror = readMirror() } = {}) {
   const done = new Set();
+  const now = Date.now();
+  for (const s of SUBJECTS) {
+    const m = mirror[s.slug];
+    const at = m && m.at ? Date.parse(m.at) : NaN;
+    if (Number.isFinite(at) && now - at < TTL && Array.isArray(m.works) && m.works.length) {
+      cache.set(s.slug, { at, works: m.works });
+      done.add(s.slug);
+    }
+  }
+  const walk = SUBJECTS.filter((s) => !done.has(s.slug));
   const pass = async (list) => {
     for (const s of list) {
       try {
@@ -832,16 +846,16 @@ async function prime({ gapMs = PRIME_GAP_MS, log = console.log, fetchOne = subje
       await new Promise((resolve) => setTimeout(resolve, gapMs));
     }
   };
-  await pass(SUBJECTS);
+  await pass(walk);
   // A catalogue search that times out is a bad second, not a bad day: the empties get one
   // more turn after a pause, which is what made the difference in testing — 23 of 24 on the
   // first pass, 24 on the second.
-  const left = SUBJECTS.filter((s) => !done.has(s.slug));
+  const left = walk.filter((s) => !done.has(s.slug));
   if (left.length) {
     await new Promise((resolve) => setTimeout(resolve, gapMs * 5));
     await pass(left);
   }
-  log(`[books] primed ${done.size}/${SUBJECTS.length} subjects`);
+  log(`[books] primed ${done.size}/${SUBJECTS.length} subjects (${walk.length} needed a search)`);
   return done.size;
 }
 

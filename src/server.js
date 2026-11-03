@@ -744,24 +744,45 @@ const START_TIME = Date.now();
 // The lifetime totals SAVED to disk so /stats does not reset to 0 on every
 // restart/deploy. requestCount/errorCount start from this file and are flushed periodically.
 const LIFETIME_FILE = path.join(path.dirname(config.store.path), 'lifetime-stats.json');
-let lifetime = { requests: 0, errors: 0, firstStartedAt: START_TIME };
+let lifetime = { requests: 0, errors: 0, firstStartedAt: START_TIME, benefits: null };
 try {
   const j = JSON.parse(fs.readFileSync(LIFETIME_FILE, 'utf8'));
   if (j && typeof j === 'object') {
     lifetime = {
       requests: Number(j.requests) || 0,
       errors: Number(j.errors) || 0,
-      firstStartedAt: Number(j.firstStartedAt) || START_TIME
+      firstStartedAt: Number(j.firstStartedAt) || START_TIME,
+      benefits: j.benefits && typeof j.benefits === 'object' && /^\d{4}-\d{2}-\d{2}$/.test(String(j.benefits.date))
+        ? { date: String(j.benefits.date), count: Number(j.benefits.count) || 0 }
+        : null
     };
   }
 } catch { /* the file does not exist yet — start empty */ }
 let requestCount = lifetime.requests;
 let errorCount = lifetime.errors;
 
+// ── Manfaat hari ini ─────────────────────────────────────────────────────────
+// The count this site exists to raise: how many times today it handed a reader a
+// working page. Only a 2xx GET of a content path counts — machine endpoints
+// (/health, /api, /csp-report), static files (anything with a dot in the path) and
+// account surfaces benefit nobody. Keyed by server-local date and flushed with the
+// lifetime counters, so a noon deploy does not erase the morning.
+function localDate(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+const BENEFIT_PREFIX = /^\/(health|csp-report|api\/|admin|login|logout|ping|internal)/;
+function isBenefitPath(p) {
+  return p === '/' || (!BENEFIT_PREFIX.test(p) && !p.includes('.'));
+}
+let benefitToday = lifetime.benefits && lifetime.benefits.date === localDate()
+  ? lifetime.benefits
+  : { date: localDate(), count: 0 };
+
 function persistLifetime() {
   try {
     lifetime.requests = requestCount;
     lifetime.errors = errorCount;
+    lifetime.benefits = benefitToday;
     lifetime.firstStartedAt = Math.min(lifetime.firstStartedAt || START_TIME, START_TIME);
     fs.mkdirSync(path.dirname(LIFETIME_FILE), { recursive: true });
     const tmp = `${LIFETIME_FILE}.${process.pid}.tmp`;
@@ -3744,6 +3765,11 @@ app.use((req, res, next) => {
       console.error(`[http] ${line}`);
     } else if (process.env.LOG_REQUESTS !== '0') {
       console.log(`[http] ${line}`);
+    }
+    if (res.statusCode >= 200 && res.statusCode < 300 && req.method === 'GET' && isBenefitPath(req.path)) {
+      const today = localDate();
+      if (benefitToday.date !== today) benefitToday = { date: today, count: 0 };
+      benefitToday.count += 1;
     }
   });
   next();
@@ -21534,13 +21560,18 @@ app.get('/health', async (req, res) => {
       // queued/deadline/failed. See src/outbound.js — a deadline counter that never moves means
       // the guard is decorative, which is exactly the failure mode this line exists to catch.
       outbound: guardedStats(),
+      // Pages handed to readers today, since local midnight — persisted beside the
+      // lifetime counters so the day survives restarts. The one number that says the
+      // site is doing what it was built to do.
+      benefits: benefitToday,
       // What the daily auto-update last did, and how long ago. A status that cannot be
       // dated (or is older than the timer's own period) is reported as stale: silence
       // and a dead timer are indistinguishable from outside otherwise.
       update: updateStatus.read(),
     });
   } catch (error) {
-    res.status(503).json({ status: 'degraded', meilisearch: 'unreachable', error: safeError(error) });
+    // Degraded still reports the day's tally: the number matters most on the bad days.
+    res.status(503).json({ status: 'degraded', meilisearch: 'unreachable', benefits: benefitToday, error: safeError(error) });
   }
 });
 

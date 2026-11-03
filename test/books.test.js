@@ -127,6 +127,7 @@ test('prime walks every subject, survives one that throws, and retries the empti
   const got = await books.prime({
     gapMs: 0,
     log: () => {},
+    mirror: {}, // the disk must not decide what a unit test walks
     fetchOne: async (slug) => {
       asked.push(slug);
       if (failing.has(slug)) return { works: [], at: null, stale: false };
@@ -143,9 +144,32 @@ test('prime walks every subject, survives one that throws, and retries the empti
   await books.prime({
     gapMs: 0,
     log: () => {},
+    mirror: {},
     fetchOne: async (slug) => { asked.push(slug); throw new Error('socket hang up'); },
   });
   assert.strictEqual(asked.length, before + 2 * n, 'every subject is attempted twice even when the network is dead');
+});
+
+test('a restart inside the mirror\u2019s TTL is a warm start: fresh shelves are not searched again', async () => {
+  // Auto-update restarts the service on deploy; the catalogue belongs to the Internet
+  // Archive, and a shelf fetched an hour ago on this very box does not need re-fetching.
+  const fresh = { slug: 'poetry', at: new Date(Date.now() - 60 * 60 * 1000).toISOString(), works: [{ title: 'warm' }] };
+  const old = { slug: 'biology', at: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(), works: [{ title: 'cold' }] };
+  const asked = [];
+  const got = await books.prime({
+    gapMs: 0,
+    log: () => {},
+    mirror: { poetry: fresh, biology: old, 'no-such-shelf': { at: fresh.at, works: [] } },
+    fetchOne: async (slug) => { asked.push(slug); return { works: [{ title: 'x' }], at: Date.now(), stale: false }; },
+  });
+  const n = books.SUBJECTS.length;
+  assert.ok(!asked.includes('poetry'), 'the hour-old shelf came off the disk instead');
+  assert.ok(asked.includes('biology'), 'the day-old shelf is stale and got searched');
+  assert.strictEqual(got, n, 'everything ended up primed: one seeded, the rest fetched');
+  assert.strictEqual(asked.length, n - 1, 'exactly one subject was saved a catalogue call');
+  const served = await books.subject('poetry'); // fresh in memory now — no network, whatever the mirror said
+  assert.strictEqual(served.stale, false);
+  assert.deepStrictEqual(served.works, fresh.works, 'and the reader gets the mirrored list itself');
 });
 
 test('a subject the table does not know returns an empty list rather than throwing', async () => {
