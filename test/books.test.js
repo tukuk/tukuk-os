@@ -294,7 +294,7 @@ test('a shelf that is another shelf with an s on the end is not published twice'
     'stem prefixes both ways, so "atlas"/"atlases" match');
   assert.strictEqual(build.twinOfPublished('cells', { published: [{ term: 'cellules' }] }), 'cellules');
   // What must NOT be called a twin: two different topics that happen to share a small word.
-  assert.strictEqual(build.twinOfPublished('child development', state), null);
+  assert.strictEqual(build.twinOfPublished('child psychology', state), null);
   assert.strictEqual(build.twinOfPublished('children', { published: [{ term: 'child' }] }), 'child',
     'deliberately generous: the catalogue writes "Child" and "Children" as two spellings of one heading, and a crawler handed both finds the same books');
   assert.strictEqual(build.twinOfPublished('vessels', { published: [{ term: 'cells' }] }), null,
@@ -465,7 +465,7 @@ test('a run re-checks the shelves an older run published, and pays nothing for i
       b.saveShelf({ slug, term, title: term, found: 500, at: at(h), works: ids.map((id) => link(id, slug)) });
       state.published.push({ slug, term, title: term, works: ids.length, found: 500, at: at(h) });
     };
-    shelf('death', 'death', ['/works/OL1W'], 1);
+    shelf('amateur radio', 'amateur-radio', ['/works/OL1W'], 1);
     shelf('peur', 'peur', ['/works/OL2W', '/works/OL1W'], 2);          // foreign label, shares a work
     shelf('social science', 'social-science', ['/works/OL3W'], 3);
     shelf('social sciences', 'social-sciences', ['/works/OL4W'], 4);   // its twin, published later
@@ -484,11 +484,11 @@ test('a run re-checks the shelves an older run published, and pays nothing for i
   assert.deepStrictEqual(got.out.dropped.map((d) => d.term), ['peur', 'social sciences'],
     'the foreign label goes and the later twin goes, the earlier shelf stays');
   assert.strictEqual(got.out.kept, 2);
-  assert.deepStrictEqual(got.files, ['death.json', 'social-science.json'], 'a pruned shelf file is deleted, not hidden');
-  assert.deepStrictEqual(got.index, ['death', 'social science'], 'the index is rewritten with what is left');
-  // OL1W was on "death" as well as on "peur", so it stays; OL2W lived only on the pruned shelf.
+  assert.deepStrictEqual(got.files, ['amateur-radio.json', 'social-science.json'], 'a pruned shelf file is deleted, not hidden');
+  assert.deepStrictEqual(got.index, ['amateur radio', 'social science'], 'the index is rewritten with what is left');
+  // OL1W was on "amateur radio" as well as on "peur", so it stays; OL2W lived only on the pruned shelf.
   assert.deepStrictEqual(got.records, ['/works/OL1W', '/works/OL3W'], 'a work nothing links to leaves the store the sitemap is built from');
-  assert.deepStrictEqual(got.shelves, ['death', 'social-science'], 'and the inventory agrees with the disk');
+  assert.deepStrictEqual(got.shelves, ['amateur-radio', 'social-science'], 'and the inventory agrees with the disk');
   fs.rmSync(dir, { recursive: true, force: true });
 });
 
