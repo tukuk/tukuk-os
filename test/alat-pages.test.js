@@ -48,7 +48,20 @@ const PAGES = [
   { path: '/alat/countdown', marker: 'Countdown', ids: ['cd-name', 'cd-date', 'cd-time', 'cd-go', 'cd-out'] },
   { path: '/alat/grade', marker: 'Grade Calculator', ids: ['gr-cur', 'gr-goal', 'gr-wt', 'gr-go', 'gr-out'] },
   { path: '/alat/entity', marker: 'HTML Entities', ids: ['en-in', 'en-all', 'en-enc', 'en-dec', 'en-copy', 'en-out'] },
-  { path: '/alat/jwt', marker: 'JWT Decoder', ids: ['jw-tok', 'jw-go', 'jw-head', 'jw-claims'] }
+  { path: '/alat/jwt', marker: 'JWT Decoder', ids: ['jw-tok', 'jw-go', 'jw-head', 'jw-claims'] },
+  // ── third wave (Nov 2026 batch 2) ──
+  { path: '/alat/roman', marker: 'Roman Numerals', ids: ['rm-mode', 'rm-in', 'rm-go', 'rm-out'] },
+  { path: '/alat/number-to-words', marker: 'Number to Words', ids: ['nw-in', 'nw-mode', 'nw-go', 'nw-out'] },
+  { path: '/alat/duration', marker: 'Duration Converter', ids: ['du-in', 'du-unit', 'du-go', 'du-out'] },
+  { path: '/alat/validate', marker: 'Check Digit Validator', ids: ['va-kind', 'va-in', 'va-go', 'va-out'] },
+  { path: '/alat/unitprice', marker: 'Unit Price Comparison', ids: ['up-unit', 'up-ap', 'up-aq', 'up-bp', 'up-bq', 'up-go', 'up-out'] },
+  { path: '/alat/fuel', marker: 'Fuel Economy', ids: ['fu-km', 'fu-l', 'fu-p', 'fu-go', 'fu-out'] },
+  { path: '/alat/sleep', marker: 'Sleep-Cycle Calculator', ids: ['sl-mode', 'sl-time', 'sl-go', 'sl-out'] },
+  { path: '/alat/lorem', marker: 'Lorem Ipsum Generator', ids: ['lo-n', 'lo-classic', 'lo-go', 'lo-out'] },
+  { path: '/alat/aspect', marker: 'Aspect Ratio Calculator', ids: ['as-w', 'as-h', 'as-fw', 'as-fh', 'as-go', 'as-out'] },
+  { path: '/alat/cssunits', marker: 'CSS Unit Converter', ids: ['cu-v', 'cu-u', 'cu-r', 'cu-go', 'cu-out'] },
+  { path: '/alat/dice', marker: 'Dice Probability', ids: ['di-n', 'di-s', 'di-t', 'di-go', 'di-out'] },
+  { path: '/alat/download', marker: 'Download Time Calculator', ids: ['dn-size', 'dn-sz', 'dn-rate', 'dn-rt', 'dn-go', 'dn-out'] }
 ];
 
 for (const page of PAGES) {

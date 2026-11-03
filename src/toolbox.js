@@ -579,4 +579,522 @@ $('jw-go').onclick=render;$('jw-tok').oninput=render;`,
   <p>header.payload.signature — each segment base64url, the signature made with a key only the issuer holds. Anyone can read; only the issuer can make read-proof. That is why the honest design of a JWT decoder is <i>this page</i>: entirely local, explicitly non-verifying, and loud about expiry, because "the token decoded fine" has ended more security investigations than any bug. For debugging signature failures you need the library that verifies with the real key, not a website.</p>`,
 });
 
+// ── 13. /alat/roman — Roman numerals ───────────────────────────────────────────────
+TOOLKIT.push({
+  slug: 'roman', ic: '🏛️', name: 'Roman Numerals',
+  title: 'Roman Numeral Converter — 1 to 3999 Both Ways, With the Rules Shown | Tukuk-OS',
+  desc: 'Turn any number from 1 to 3999 into a Roman numeral and back, with the subtractive rules (IV, IX, XL, XC, CD, CM) explained and non-standard forms like IIII flagged. Runs in your browser.',
+  hero: 'Roman Numerals', sub: '1–3999 both ways · subtractive pairs enforced · IIII flagged, not swallowed',
+  navBlurb: 'Numbers to Roman and back with the real canonical rules — the page tells you IIII is a clock, not a document.',
+  hubBlurb: 'MMXXVI for any year or chapter number, both directions, with the six subtractive pairs enforced instead of guessed',
+  lead: 'Romans wrote numbers as letters: I=1, V=5, X=10, L=50, C=100, D=500, M=1000, and six exceptions where a smaller letter before a bigger one <i>subtracts</i> — IV(4), IX(9), XL(40), XC(90), CD(400), CM(900). This page converts both ways and checks the numeral is spelled <b>canonically</b>: IIII reads as 4, but the tool says so instead of pretending it is how Romans wrote it.',
+  form: `<div class="tl-form">
+  ${field('Direction', '<select id="rm-mode"><option value="i2r" selected>number → Roman</option><option value="r2i">Roman → number</option></select>')}
+  ${field('Value', '<input id="rm-in" type="text" value="2026" autocomplete="off" spellcheck="false">')}
+  <button class="tl-btn primary" id="rm-go" type="button">Convert</button>
+</div>
+<div class="tl-res" id="rm-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var V=[[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
+function toRoman(n){var s='';for(var i=0;i<V.length;i++){while(n>=V[i][0]){s+=V[i][1];n-=V[i][0];}}return s;}
+var VALS={I:1,V:5,X:10,L:50,C:100,D:500,M:1000};
+function fromRoman(s){var tot=0;
+ for(var i=0;i<s.length;i++){var v=VALS[s[i]];if(!v)return {err:'"'+s[i]+'" is not a Roman letter (only I V X L C D M exist)'};
+  var nv=VALS[s[i+1]]||0;if(v<nv){tot+=nv-v;i++;}else tot+=v;}
+ return {n:tot};}
+function render(){var mode=$('rm-mode').value,raw=$('rm-in').value.trim();
+ if(mode==='i2r'){var n=parseInt(raw,10);
+  if(!(n>=1&&n<=3999)){$('rm-out').innerHTML='<span class="tl-badge tl-no">out of range</span> With single symbols the system runs 1–3999; larger numbers needed an overline the ancients did not standardise. No fake M\u0304 here.';return;}
+  $('rm-out').innerHTML='<div class="tl-big">'+toRoman(n)+'</div><p class="meta">'+n+' = <b>'+toRoman(n)+'</b>, built greedily: subtract the largest value that fits (1000, 900, 500, 400\u2026) and append its letter. Where the greedy run would repeat a symbol four times, a subtractive pair steps in instead \u2014 4 is IV, not IIII.</p>';return;}
+ var s=raw.toUpperCase();
+ if(!s){$('rm-out').innerHTML='Type a numeral like MMXXVI.';return;}
+ var r=fromRoman(s);
+ if(r.err){$('rm-out').innerHTML='<span class="tl-badge tl-no">check input</span> '+r.err;return;}
+ if(!(r.n>=1&&r.n<=3999)||toRoman(r.n)!==s){$('rm-out').innerHTML='<span class="tl-badge tl-no">not canonical</span> '+s+' reads as '+r.n+', but the standard spelling of '+r.n+' is <b>'+toRoman(r.n)+'</b>. Clockfaces and movie credits love IIII and other old forms; modern documents do not.';return;}
+ $('rm-out').innerHTML='<div class="tl-big">'+r.n+'</div><p class="meta">'+s+' = '+r.n+'. Verified canonical: re-encoding '+r.n+' reproduces '+s+' letter for letter.</p>';}
+$('rm-go').onclick=render;$('rm-in').oninput=render;$('rm-mode').onchange=render;render();`,
+  seo: `<h2 class="section-title">Why there is no Roman zero</h2>
+  <p>Roman numerals count things, and a counting Roman had no symbol for nothing — the word <i>nulla</i> (nothing) served medieval mathematicians, and the letterless gaps in their abacus did the arithmetic. That absence is why the system has no place values and never needed one: each letter simply carries its own worth, added left to right, with the subtractive pairs as an agreed shorthand. This page refuses inputs above 3999 for the same honesty reason — the overline-for-times-a-thousand convention was never one convention, and picking one silently would be inventing history.</p>`,
+});
+
+// ── 14. /alat/number-to-words — words & cheque phrasing ──────────────────────
+TOOLKIT.push({
+  slug: 'number-to-words', ic: '🔤', name: 'Number to Words',
+  title: 'Number to Words Converter — English Words & Cheque Phrasing | Tukuk-OS',
+  desc: 'Write any number up to a septillion in English words, or in cheque form (dollars and cents spelled out). Short scale stated, no floating-point surprises. All in your browser.',
+  hero: 'Number to Words', sub: 'words or cheque form · short scale stated · exact to 24 digits',
+  navBlurb: 'Any number spelled out — including the cheque form banks actually ask for — exact up to 24 digits because it runs on integers, not floats.',
+  hubBlurb: 'fill the cheque line right: 1,234,567.89 becomes "one million two hundred thirty-four thousand… five hundred sixty-seven dollars and 89 cents", exactly',
+  lead: 'The number words that go on a cheque, a contract, or a headline. Input is handled as a <b>string of digits</b> and split in groups of three, so it stays exact far past the point where JavaScript numbers start rounding (2⁵³ ≈ 9.007×10¹⁵). The wording follows the US/international <b>short scale</b> — one million, one billion = 10⁹ — and says so, because long-scale Europe means 10¹² when it says billion.',
+  form: `<div class="tl-form">
+  ${field('Number', '<input id="nw-in" type="text" value="1234567.89" autocomplete="off">')}
+  ${field('Style', '<select id="nw-mode"><option value="words" selected>plain words</option><option value="cheque">cheque: dollars and cents</option><option value="british">UK: and after hundreds</option></select>')}
+  <button class="tl-btn primary" id="nw-go" type="button">Spell</button>
+</div>
+<div class="tl-res" id="nw-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var ONES=['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+var TENS=['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+var SCALES=['','thousand','million','billion','trillion','quadrillion','quintillion','sextillion','septillion'];
+function u100(n){return n<20?ONES[n]:TENS[Math.floor(n/10)]+(n%10?'-'+ONES[n%10]:'');}
+function u1000(n,uk){var h=Math.floor(n/100),r=n%100,out='';
+ if(h)out+=ONES[h]+' hundred'+(r?(uk?' and ':' '):'');
+ if(r)out+=u100(r);
+ return out;}
+function groupWords(digits,uk){var groups=[],s=digits;
+ while(s.length>3){groups.unshift(s.slice(-3));s=s.slice(0,-3);}groups.unshift(s);
+ var parts=[];
+ for(var i=0;i<groups.length;i++){var g=parseInt(groups[i],10);if(!g)continue;
+  var scale=groups.length-1-i;
+  if(scale>=SCALES.length)return {err:'above septillion'};
+  parts.push(u1000(g,uk)+(scale?' '+SCALES[scale]:''));}
+ if(!parts.length&&groups.length&&(s==='000'||digits==='0'||digits===''))return {w:'zero'};
+ return {w:parts.length?parts.join(' '):(digits==='0'?'zero':'')};}
+function render(){var raw=$('nw-in').value.replace(/[,\\s]/g,''),mode=$('nw-mode').value;
+ if(!/^-?\\d{1,24}(\\.\\d{1,2})?$/.test(raw)){$('nw-out').innerHTML='<span class="tl-badge tl-no">check input</span> Up to 24 whole digits, optional two decimal places (that is the cheque rule).';return;}
+ var neg=raw[0]==='-',rest=neg?raw.slice(1):raw,dot=rest.indexOf('.'),whole=dot<0?rest:rest.slice(0,dot),fr=dot<0?'':rest.slice(dot+1);
+ whole=whole.replace(/^0+(?=\\d)/,'');
+ if(/^0+$/.test(whole)&&/^0*$/.test(fr))neg=false;
+ var uk=mode==='british';
+ var g=groupWords(whole,uk);
+ if(g.err){$('nw-out').innerHTML='<span class="tl-badge tl-no">too big</span> Short-scale names stop at septillion (10²⁴). Scientific words exist; cheque names do not.';return;}
+ var out=(neg?'minus ':'')+g.w;
+ if(mode==='cheque'){
+  var cents=fr?(fr+'0').slice(0,2):'00';
+  out=out+' dollars and '+cents+' cents'+(cents==='00'?' — write 00/100 exactly':'');
+  out+='<span class="meta"> · bank style: append /100 and the line reads like an instrument, not a blog post.</span>';
+ }else if(fr){out+=' point';for(var i=0;i<fr.length;i++)out+=' '+ONES[+fr[i]];}
+ $('nw-out').innerHTML='<div class="tl-pick" style="font-size:1.1rem">'+out+'</div><p class="meta">Short scale: a billion here is 10⁹. In long-scale languages the same words mean 10¹² — translate numbers carefully.</p>';}
+$('nw-go').onclick=render;$('nw-in').oninput=render;$('nw-mode').onchange=render;render();`,
+  seo: `<h2 class="section-title">Why 9007199254740993 is where normal calculators die</h2>
+  <p>JavaScript stores numbers as IEEE-754 doubles: above 2⁵³ the spacing between representable values exceeds 1, and 9007199254740993 silently becomes \u202692. Pages that take your figure "as a number" therefore spell the last digits <i>wrong</i> on large sums. This one keeps your input as a digit string and converts group by group, so a twenty-four-digit number gets exactly the words it asked for. The hyphen rule follows standard English style (twenty-six, one hundred and one); the Oxford "and" after hundreds is the British variant, selectable above.</p>`,
+});
+
+// ── 15. /alat/duration — seconds to human time ───────────────────────────────
+TOOLKIT.push({
+  slug: 'duration', ic: '⏲️', name: 'Duration Converter',
+  title: 'Duration Converter — Seconds to Days, Hours, Minutes | Tukuk-OS',
+  desc: 'Convert any span of time between seconds, minutes, hours, days and weeks the way humans say it (2d 8h 16m 40s), the other direction included. Browser-local.',
+  hero: 'Duration Converter', sub: 'seconds ⇄ human · d·h·m·s breakdown · no fake months',
+  navBlurb: 'A raw span of seconds read the way people say it — 2d 8h 16m 40s — and back, refusing to pretend a month has a fixed length.',
+  hubBlurb: 'turn 202600 seconds into "2 days, 8 hours, 16 minutes, 40 seconds" — and back — with the month/ambiguity traps named',
+  lead: 'Machines count seconds; humans say "two and a half days". This page converts a single span between s, min, h, d and wk, prints the natural breakdown, and deliberately <b>stops at weeks</b>: a month is 28–31 days and a year 365 or 366, so any "months" answer would be a guess about your calendar.',
+  form: `<div class="tl-form">
+  ${field('Amount', '<input id="du-in" type="number" step="any" value="202600">')}
+  ${field('Unit', '<select id="du-unit"><option value="s" selected>seconds</option><option value="min">minutes</option><option value="h">hours</option><option value="d">days</option><option value="wk">weeks</option></select>')}
+  <button class="tl-btn primary" id="du-go" type="button">Convert</button>
+</div>
+<div class="tl-res" id="du-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var PER={s:1,min:60,h:3600,d:86400,wk:604800};
+function human(t){var d=Math.floor(t/86400),h=Math.floor(t%86400/3600),m=Math.floor(t%3600/60),s=Math.floor(t%60);
+ var parts=[];if(d)parts.push(d+'d');if(h)parts.push(h+'h');if(m)parts.push(m+'m');if(s)parts.push(s+'s');
+ if(!parts.length)parts.push(Math.round(t*10)/10+'s');return parts.join(' ');}
+function render(){var v=parseFloat($('du-in').value),u=$('du-unit').value;
+ if(!isFinite(v)||v<0){$('du-out').innerHTML='<span class="tl-badge tl-no">check input</span> A duration is a non-negative number of '+u+'.';return;}
+ var t=v*PER[u];
+ var rows=[['Seconds',t.toLocaleString('en-US',{maximumFractionDigits:3})],
+  ['Minutes',t/60],['Hours',t/3600],['Days',t/86400],['Weeks',t/604800]];
+ var tbl='<table class="tl-tab"><tbody>'+rows.map(function(r){
+  return '<tr><td>'+r[0]+'</td><td>'+(typeof r[1]==='number'?(r[1].toLocaleString('en-US',{maximumFractionDigits:6})):r[1])+'</td></tr>';}).join('')+'</tbody></table>';
+ var d=Math.floor(t/86400),wk=Math.floor(d/7),dd=d%7;
+ $('du-out').innerHTML='<div class="tl-big">'+human(t)+'</div>'+tbl+
+ '<p class="meta">In whole units: '+(wk?wk+' week'+(wk===1?'':'s')+' + ':'')+dd+' day'+(dd===1?'':'s')+' + '+Math.floor(t%86400/3600)+' h — no month row on purpose: months run 28–31 days, so "X months" is always a calendar claim, not an arithmetic one.</p>';}
+$('du-go').onclick=render;$('du-in').oninput=render;$('du-unit').onchange=render;render();`,
+  seo: `<h2 class="section-title">The three duration mistakes this avoids</h2>
+  <p>First: "minutes" typed into a seconds field — the unit selector multiplies explicitly instead of guessing. Second: converting to months/years by dividing by 30 — this page stops at weeks and says why. Third: daylight saving. "48 hours from 23:00 the Saturday before clocks spring forward" is <i>not</i> 23:00 two days later on wall-clock time; a duration of 172,800 seconds is, and the two answers differ by an hour twice a year. Durations are physical; dates are politics.</p>`,
+});
+
+// ── 16. /alat/validate — check-digit validator ───────────────────────────────
+TOOLKIT.push({
+  slug: 'validate', ic: '🧾', name: 'Check Digit Validator',
+  title: 'Card, IBAN, ISBN & Barcode Validator — Luhn, Mod-97, Mod-11 | Tukuk-OS',
+  desc: 'Validate a card number (Luhn), an IBAN (mod-97), an ISBN-10/13 or an EAN/UPC barcode — the real published algorithms with the working shown, nothing typed leaving your device.',
+  hero: 'Check Digit Validator', sub: 'Luhn · IBAN mod-97 · ISBN · EAN — the maths printed, in your browser',
+  navBlurb: 'Does this card/IBAN/ISBN/barcode pass its own check digit? The published algorithm, the working printed, and the honest limit: validity is not ownership.',
+  hubBlurb: 'test a card, IBAN, ISBN or barcode against its own check digit — the arithmetic shown, and nothing you type goes anywhere',
+  lead: 'Four everyday identifiers carry a final digit computed from all the others. This page runs each published algorithm — <b>Luhn</b> (cards), <b>ISO 7064 mod-97</b> (IBAN), <b>mod-11</b> (ISBN-10) and <b>mod-10×3</b> (ISBN-13/EAN/UPC) — and prints the working. One thing it will never claim: a valid check digit means the number is <i>real and yours</i>. It means only that it was built correctly.',
+  form: `<div class="tl-form">
+  ${field('Standard', '<select id="va-kind"><option value="luhn" selected>Card (Luhn)</option><option value="iban">IBAN (mod-97)</option><option value="isbn13">ISBN-13 / EAN (mod10×3)</option><option value="isbn10">ISBN-10 (mod-11)</option></select>')}
+  ${field('Number', '<input id="va-in" type="text" value="4242 4242 4242 4242" autocomplete="off" spellcheck="false" style="min-width:260px">')}
+  <button class="tl-btn primary" id="va-go" type="button">Validate</button>
+</div>
+<div class="tl-res" id="va-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function luhnCheck(digits){var sum=0,alt=false;
+ for(var i=digits.length-1;i>=0;i--){var d=+digits[i];
+  if(alt){d*=2;if(d>9)d-=9;}
+  sum+=d;alt=!alt;}
+ return {sum:sum,ok:sum%10===0};}
+function mod10x3(digits){var sum=0;
+ for(var i=0;i<digits.length-1;i++)sum+=+digits[i]*(i%2?3:1);
+ var chk=(10-sum%10)%10,work='\u03a3 digit\u00d7weight(1,3,1,3\u2026) over the first 12 = '+sum+'; check = (10 \u2212 ('+sum+' mod 10)) mod 10 = '+chk;
+ return {ok:chk===+digits[digits.length-1],expected:chk,work:work};}
+function isbn10(s){var sum=0;
+ for(var i=0;i<9;i++)sum+=(+s[i])*(10-i);
+ var lc=s[9],expected=(11-sum%11)%11;
+ return {ok:(lc==='X'?10:+lc)===expected,work:'\u03a3 d\u00d7(10\u2212i) over the first nine digits = '+sum+'; the tenth character must bring the total to a multiple of 11, so it is '+(expected===10?'X':expected)+' \u2014 you wrote '+lc+'.'};}
+function ibanCheck(raw){var s=raw.replace(/[ -]/g,'').toUpperCase();
+ if(!/^[A-Z]{2}\\d{2}[A-Z0-9]{10,30}$/.test(s))return {err:'IBAN = 2 letters, 2 digits check, then the account string'};
+ var moved=s.slice(4)+s.slice(0,4),num='';
+ for(var i=0;i<moved.length;i++){var c=moved[i];num+=c>='A'&&c<='Z'?(c.charCodeAt(0)-55):c;}
+ var r=BigInt(num)%97n;
+ return {ok:r===1n,work:'rearranged BBAN+country+check as digits, mod 97 = '+r+' (must be 1)',country:s.slice(0,2),check:s.slice(2,4)};}
+function render(){var kind=$('va-kind').value,raw=$('va-in').value;
+ var out=$('va-out');
+ if(kind==='iban'){var r=ibanCheck(raw);
+  if(r.err){out.innerHTML='<span class="tl-badge tl-no">check input</span> '+r.err;return;}
+  out.innerHTML=(r.ok?'<span class="tl-badge tl-ok">VALID</span>':'<span class="tl-badge tl-no">INVALID</span>')+
+   '<p class="tl-pick">'+raw.replace(/[ -]/g,'').toUpperCase()+'</p><p>'+r.work+'. Country prefix '+r.country+' — note: the SWIFT/SEPA registry that maps country → expected IBAN length is not reproduced here, so length-plausible formats pass even if the national registry would reject them.</p>';return;}
+ var d=raw.replace(/[ -]/g,'').toUpperCase();
+ if(kind==='isbn10'){if(!/^\\d{9}[\\dX]$/.test(d)){out.innerHTML='<span class="tl-badge tl-no">check input</span> ISBN-10 is nine digits plus a check character (0\u20139 or X); spaces and hyphens are ignored.';return;}}
+ else if(!/^\\d+$/.test(d)){out.innerHTML='<span class="tl-badge tl-no">check input</span> Digits only (spaces and hyphens ignored).';return;}
+ var res,big;
+ if(kind==='luhn'){
+  if(d.length<12||d.length>19){out.innerHTML='<span class="tl-badge tl-no">wrong length</span> Card numbers run 12–19 digits; this has '+d.length+'.';return;}
+  res=luhnCheck(d);
+  big='<p>Working: double every second digit from the right (subtract 9 when a doubling passes 9), add everything \u2014 sum = '+res.sum+', and '+res.sum+' mod 10 = '+(res.sum%10)+(res.ok?' \u2014 zero is the pass condition':' \u2014 not zero, so a well-formed card number would end differently')+'.</p>';
+  out.innerHTML=(res.ok?'<span class="tl-badge tl-ok">VALID</span>':'<span class="tl-badge tl-no">INVALID</span>')+'<p class="tl-pick">'+d+'</p>'+big+'<p class="meta">Prefix tells the network: 4\u2026 Visa, 5[1-5]\u2026 Mastercard, 3[47]\u2026 Amex, 6011/65\u2026 Discover. A valid Luhn number is arithmetically well-formed — it is not proof of existence, and trying to divine one is carding, a crime. This tool checks numbers you already hold.</p>';return;}
+ if(kind==='isbn13'){if(d.length!==13){out.innerHTML='<span class="tl-badge tl-no">wrong length</span> ISBN-13/EAN needs exactly 13 digits.';return;}
+  res=mod10x3(d);out.innerHTML=(res.ok?'<span class="tl-badge tl-ok">VALID</span>':'<span class="tl-badge tl-no">INVALID</span>')+'<p class="tl-pick">'+d+'</p><p>'+res.work+(res.ok?'':' \u2014 this number\\'s check digit should be '+res.expected)+'</p>';return;}
+ if(kind==='isbn10'){var r10=isbn10(d);
+  out.innerHTML=(r10.ok?'<span class="tl-badge tl-ok">VALID</span>':'<span class="tl-badge tl-no">INVALID</span>')+'<p class="tl-pick">'+d+'</p><p>'+r10.work+'</p><p class="meta">Since 2007 new books carry ISBN-13; 978-prefix ISBN-10s are bar-code conversions of the same number.</p>';return;}}
+$('va-go').onclick=render;$('va-in').oninput=render;$('va-kind').onchange=render;render();`,
+  seo: `<h2 class="section-title">What a check digit can and cannot tell you</h2>
+  <p>These digits catch <i>typos</i>, not fraud: Luhn catches any single-digit error and most transpositions; mod-97 catches essentially every single-character error and most two-character ones. They were designed in an age when the hostile act was a mistyped slip, not an adversarial forgery — and a check digit cannot stop anyone who computes it, which is why no payment system accepts a number on Luhn alone. For IBANs, SEPA additionally demands the country-specific length and BBAN shape; a real transfer validates against the issuer, and the fee message you get back is the only thing that ever proves an account exists.</p>`,
+});
+
+// ── 17. /alat/unitprice — price per unit comparison ──────────────────────
+TOOLKIT.push({
+  slug: 'unitprice', ic: '\ud83d\uded2', name: 'Unit Price Comparison',
+  title: 'Unit Price Calculator \u2014 Which Packet Is Actually Cheaper? | Tukuk-OS',
+  desc: 'Compare two products by price per gram, ml, piece or square metre: the cheaper rate, how much cheaper, and what the rival pack would cost at that rate. Browser-local.',
+  hero: 'Unit Price Comparison', sub: 'per g \u00b7 ml \u00b7 piece \u00b7 m\u00b2 \u2014 the shelf-label question, answered',
+  navBlurb: 'The 500\u202fg vs 1\u202fkg decision settled by price per unit, with the percentage gap and what the other pack would cost at the winner\u2019s rate.',
+  hubBlurb: 'two packets, one truth: the cheaper-per-gram option, by how much, and what the other would have to cost to match',
+  lead: 'Supermarket shelf labels answer one question \u2014 <b>cost per standard amount</b> \u2014 and this page does the same for the two products in your hands. Enter both sizes in the same unit (the kg and litre options scale by 1000 for you). One thing maths cannot see: a family-size pack you throw away half of is not a bargain, so the verdict is about rates, not about your fridge.',
+  form: `<div class="tl-form">
+  ${field('Compare as', '<select id="up-unit"><option value="g" selected>grams \u2014 sizes in g</option><option value="kg">grams \u2014 sizes in kg</option><option value="ml">ml \u2014 sizes in ml</option><option value="l">ml \u2014 sizes in litres</option><option value="ea">per piece</option><option value="m2">per m\u00b2</option></select>')}
+  ${field('A \u00b7 price', '<input id="up-ap" type="number" min="0" step="0.01" value="4.99">')}
+  ${field('A \u00b7 size', '<input id="up-aq" type="number" min="0.0001" step="any" value="500">')}
+  ${field('B \u00b7 price', '<input id="up-bp" type="number" min="0" step="0.01" value="8.50">')}
+  ${field('B \u00b7 size', '<input id="up-bq" type="number" min="0.0001" step="any" value="1000">')}
+  <button class="tl-btn primary" id="up-go" type="button">Compare</button>
+</div>
+<div class="tl-res" id="up-out">\u2014</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function money(x){return '$'+x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:5});}
+var SCALE={g:1,kg:1000,ml:1,l:1000,ea:1,m2:1};
+var BASE={g:'g',kg:'g',ml:'ml',l:'ml',ea:'piece',m2:'m\u00b2'};
+function render(){var u=$('up-unit').value,k=SCALE[u],base=BASE[u];
+ var ap=parseFloat($('up-ap').value),aq=(parseFloat($('up-aq').value)||0)*k;
+ var bp=parseFloat($('up-bp').value),bq=(parseFloat($('up-bq').value)||0)*k;
+ if(!(ap>0)||!(aq>0)||!(bp>0)||!(bq>0)){$('up-out').innerHTML='<span class="tl-badge tl-no">check inputs</span> Both products need a positive price and size.';return;}
+ var pa=ap/aq,pb=bp/bq;
+ var same=Math.abs(pa-pb)<1e-12;
+ if(same){$('up-out').innerHTML='<div class="tl-big">same rate</div><p class="meta">Both cost '+money(pa)+' per '+base+' \u2014 pick the size you will actually use before it turns.</p>';return;}
+ var cheap=pa<pb?'A':'B',dear=pa<pb?'B':'A';
+ var pc=Math.min(pa,pb),pd=Math.max(pa,pb);var pct=(pd-pc)/pd*100;
+ var dearQty=dear==='A'?aq:bq;
+ $('up-out').innerHTML='<div class="tl-big">'+cheap+' by '+pct.toFixed(1)+'%</div>'+
+ '<table class="tl-tab"><tbody>'+
+ '<tr><td>A: '+aq.toLocaleString('en-US')+' '+base+' for '+money(ap)+'</td><td>'+money(pa)+' / '+base+'</td></tr>'+
+ '<tr><td>B: '+bq.toLocaleString('en-US')+' '+base+' for '+money(bp)+'</td><td>'+money(pb)+' / '+base+'</td></tr>'+
+ '<tr><td>Cheaper rate</td><td>'+money(pc)+' per '+base+' ('+cheap+')</td></tr>'+
+ '<tr><td>'+dear+' at '+cheap+'\u2019s rate would cost</td><td>'+money(pc*dearQty)+'</td></tr>'+
+ '</tbody></table><p class="meta">$ shown for readability \u2014 the comparison is unitless. \u201c'+pct.toFixed(1)+'% cheaper\u201d is measured against the dearer rate, which is how the phrase should be read.</p>';}
+$('up-go').onclick=render;$('up-ap').oninput=render;$('up-aq').oninput=render;$('up-bp').oninput=render;$('up-bq').oninput=render;$('up-unit').onchange=render;render();`,
+  seo: `<h2 class="section-title">Why the bigger pack is not always the better buy</h2>
+  <p>Unit-price gaps shrink near round sizes, and the maths stays honest either way: 4.99/500\u202fg against 8.50/1\u202fkg is a real 14.8% saving per gram, but the same algorithm run on two packs within a cent of each other just says \u201csame rate\u201d. Waste is a unit price too \u2014 at those rates, a 25%-cheaper kilo you end up composting costs far more than the pack you finish.</p>`,
+});
+
+// ── 18. /alat/fuel — fuel economy ─────────────────────────────────────────────
+TOOLKIT.push({
+  slug: 'fuel', ic: '\u26fd', name: 'Fuel Economy Calculator',
+  title: 'Fuel Consumption Calculator \u2014 L/100\u202fkm, km/L and Cost per Distance | Tukuk-OS',
+  desc: 'Turn trip distance, fuel used and price into L/100\u202fkm, km/L, US MPG and the cost per 100\u202fkm and per trip \u2014 both consumption traditions shown. In your browser.',
+  hero: 'Fuel Economy', sub: 'L/100\u202fkm \u21c4 km/L \u21c4 MPG \u00b7 cost per 100 \u00b7 your trip, one division',
+  navBlurb: 'The pump-and-odometer maths both traditions ask for \u2014 L/100\u202fkm and km/L and US MPG \u2014 plus what the trip actually cost.',
+  hubBlurb: '480 km on 30 litres: 6.25\u202fL/100\u202fkm, 16\u202fkm/L, 37.6 US MPG \u2014 and the cost per 100\u202fkm at your pump price',
+  lead: 'Two countries measure the same car in opposite directions: Europe divides fuel by distance (L/100\u202fkm \u2014 <i>smaller is better</i>), the US and UK divide distance by fuel (MPG \u2014 <i>bigger is better</i>). This page prints both from the same three numbers, because mixing them up is the single most common fuel-economy error \u2014 and the two scales are reciprocals, which are not linear: dropping from 10 to 5\u202fL/100\u202fkm saves far more fuel than dropping from 5 to 2.5.',
+  form: `<div class="tl-form">
+  ${field('Distance', '<input id="fu-km" type="number" min="0.1" step="any" value="480">')}
+  <span class="meta">km</span>
+  ${field('Fuel used', '<input id="fu-l" type="number" min="0.01" step="any" value="30">')}
+  <span class="meta">litres</span>
+  ${field('Price per litre', '<input id="fu-p" type="number" min="0" step="0.01" value="1.85">')}
+  <button class="tl-btn primary" id="fu-go" type="button">Calculate</button>
+</div>
+<div class="tl-res" id="fu-out">\u2014</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function money(x){return '$'+x.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmt(x,d){return x.toLocaleString('en-US',{maximumFractionDigits:d==null?2:d});}
+var USGAL=3.785411784,MILE=1.609344;
+function render(){var km=parseFloat($('fu-km').value),l=parseFloat($('fu-l').value),p=parseFloat($('fu-p').value)||0;
+ if(!(km>0)||!(l>0)){$('fu-out').innerHTML='<span class="tl-badge tl-no">check inputs</span> Distance and fuel must both be positive.';return;}
+ var lp100=l/km*100,kml=km/l,mpg=kml*USGAL/MILE;
+ $('fu-out').innerHTML='<div class="tl-big">'+fmt(lp100)+' L/100\u202fkm</div>'+
+ '<table class="tl-tab"><tbody>'+
+ '<tr><td>km per litre</td><td>'+fmt(kml)+' km/L</td></tr>'+
+ '<tr><td>US miles per gallon</td><td>'+fmt(mpg,1)+' MPG</td></tr>'+
+ '<tr><td>UK (imperial) miles per gallon</td><td>'+fmt(mpg*1.20094,1)+' MPG</td></tr>'+
+ '<tr><td>Cost per 100\u202fkm</td><td>'+money(lp100*p)+'</td></tr>'+
+ '<tr><td>Cost of this '+fmt(km,0)+'\u202fkm trip</td><td>'+money(l*p)+'</td></tr>'+
+ '<tr><td>CO\u2082 (~2.31\u202fkg per litre)</td><td>~'+fmt(l*2.31,1)+'\u202fkg</td></tr>'+
+ '</tbody></table><p class="meta">Recalculate with the tank\u2019s real fill-to-fill figures (same pump, same run) \u2014 top-ups after a dry tank understate consumption. Currency shown as $; the maths is unitless.</p>';}
+$('fu-go').onclick=render;$('fu-km').oninput=render;$('fu-l').oninput=render;$('fu-p').oninput=render;render();`,
+  seo: `<h2 class="section-title">The UK gallon, and why this page flags it</h2>
+  <p>The imperial gallon is 4.54609\u202fl, not the US 3.78541\u202fl \u2014 20.1% more \u2014 so a \u201c40\u202fMPG\u201d car in a British review is 33.3\u202fMPG by American numbers. Rather than guess which MPG you meant, this page labels both. And before comparing your figure against a brochure: advertised consumption is measured on a different track than your road (literally \u2014 WLTP runs warmer, lighter and unloaded), so expect real numbers 15\u201330% above the sticker.</p>`,
+});
+
+// ── 19. /alat/sleep — sleep-cycle calculator ──────────────────────────────────
+TOOLKIT.push({
+  slug: 'sleep', ic: '\ud83d\ude34', name: 'Sleep-Cycle Calculator',
+  title: 'Sleep Cycle Calculator \u2014 Bedtimes for 90-Minute Cycles | Tukuk-OS',
+  desc: 'Work out the best times to fall asleep for your wake-up, using 90-minute sleep cycles and ~15 minutes to drop off \u2014 six cycles down to four. In your browser.',
+  hero: 'Sleep-Cycle Calculator', sub: '90-min cycles \u00b7 6\u202f\u00b7 5\u202f\u00b7 4 \u00b7 wake at the top of a cycle',
+  navBlurb: 'The napkin maths of sleep: count back in 90-minute cycles from your alarm and see which bedtimes wake you mid-cycle-free.',
+  hubBlurb: 'alarm at 06:30? be asleep by 21:15, 22:45 or 00:15 \u2014 the cycle model, the maths shown, no medical claims',
+  lead: 'Sleep runs in cycles of roughly 90 minutes; waking <i>inside</i> deep sleep is the grogginess people blame on \u201clacking sleep\u201d. This page counts back from your alarm in whole cycles (6\u202f\u00d7\u202f90 = 9\u202fh, 5\u202f\u00d7\u202f90 = 7.5\u202fh, 4\u202f\u00d7\u202f90 = 6\u202fh) and adds about 15 minutes to fall asleep. The honest caveat is printed with every answer: real cycle length varies 70\u2013120 minutes between people and nights, so this is a good model, not a measurement \u2014 and it makes no medical claim.',
+  form: `<div class="tl-form">
+  ${field('I want to', '<select id="sl-mode"><option value="wake" selected>wake at \u2026 (show bedtimes)</option><option value="bed">fall asleep at \u2026 (show alarms)</option></select>')}
+  ${field('Time', '<input id="sl-time" type="time" value="06:30">')}
+  <button class="tl-btn primary" id="sl-go" type="button">Calculate</button>
+</div>
+<div class="tl-res" id="sl-out">\u2014</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var FALL=15,CY=90;
+function hhmm(min){min=((min%1440)+1440)%1440;var h=Math.floor(min/60),m=min%60;return (h<10?'0':'')+h+':'+(m<10?'0':'')+m;}
+function render(){var v=$('sl-time').value;
+ if(!/^\\d{1,2}:\\d{2}$/.test(v)){$('sl-out').innerHTML='<span class="tl-badge tl-no">check input</span> Pick a time on the clock.';return;}
+ var parts=v.split(':'),t=(+parts[0])*60+(+parts[1]);
+ var to=$('sl-mode').value==='wake';
+ var rows=[[6,'9\u202fh \u2014 the full night'],[5,'7\u202fh 30\u202fm \u2014 the standard adult target'],[4,'6\u202fh \u2014 the short-but-clean option']];
+ var html='<table class="tl-tab"><tbody>';
+ rows.forEach(function(r){var off=r[0]*CY+FALL;
+  var time=to?hhmm(t-off):hhmm(t+off);
+  html+='<tr><td>'+r[0]+' cycles \u00b7 '+r[1]+'</td><td>'+(to?'sleep by <b>'+time+'</b>':'alarm at <b>'+time+'</b>')+'</td></tr>';});
+ $('sl-out').innerHTML=html+'</tbody></table>'+'<p class="meta">Model: cycles of '+CY+'\u202fmin + '+FALL+'\u202fmin to fall asleep. Waking at the <i>end</i> of a cycle avoids the deep-sleep alarm; but real cycles run 70\u2013120\u202fmin and shift through the night, so treat the nearest slot, not the exact minute, as the advice. No medical claim \u2014 chronic tiredness is a doctor topic, not a clock topic.</p>';}
+$('sl-go').onclick=render;$('sl-time').oninput=render;$('sl-mode').onchange=render;render();`,
+  seo: `<h2 class="section-title">Where the 90 minutes comes from</h2>
+  <p>Measured polysomnography cycles \u2014 light sleep, deep sleep, REM \u2014 average close to 90 minutes in adults, first appearing in sleep research of the 1970s. The average is the point: your personal mean may be 80 or 100, and the model cannot know it without data. If the predicted wake-times consistently feel wrong by the same amount, that offset <i>is</i> your personal cycle length \u2014 nudge the math by it rather than trusting 90 forever.</p>`,
+});
+
+// ── 20. /alat/lorem — lorem ipsum generator ──────────────────────────────
+TOOLKIT.push({
+  slug: 'lorem', ic: '\ud83d\udcdd', name: 'Lorem Ipsum Generator',
+  title: 'Lorem Ipsum Generator \u2014 Real Cicero, Not Character Salad | Tukuk-OS',
+  desc: 'Placeholder text with correct Latin quantities, from one paragraph to twenty, optionally opening with the classic \u201cLorem ipsum dolor sit amet\u201d. Browser-local.',
+  hero: 'Lorem Ipsum Generator', sub: 'grammatically fake, structurally real \u00b7 1\u201320 paragraphs',
+  navBlurb: 'Proper placeholder text \u2014 scrambled from the real De\u202fFinibus word bank, variable sentence lengths, no \u201casdfgh\u201d filler.',
+  hubBlurb: 'the industry\u2019s placeholder text, generated honestly: pseudo-Latin from the actual Cicero word bank, in as many paragraphs as your mockup needs',
+  lead: 'Lorem ipsum is not random letters: it descends from a scrambled passage of Cicero\u2019s <i>De\u202fFinibus\u202fBonorum\u202fet\u202fMalorum</i> (45\u202fBC) and has set type since the 1500s. Cheap generators ignore that and emit character salad that reads obviously fake at a glance \u2014 which defeats the entire purpose of placeholder text (<i>making the layout look real without the words competing with it</i>). This one draws from the real word bank with Latin-plausible sentence structure, and is transparent about being gibberish if you translate it.',
+  form: `<div class="tl-form">
+  ${field('Paragraphs', '<input id="lo-n" type="number" min="1" max="20" step="1" value="3">')}
+  <label style="display:flex;align-items:center;gap:8px"><input id="lo-classic" type="checkbox" checked> open with \u201cLorem ipsum dolor sit amet\u2026\u201d</label>
+  <button class="tl-btn primary" id="lo-go" type="button">Generate</button>
+</div>
+<div class="tl-res" id="lo-out">\u2014</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var WORDS=['lorem','ipsum','dolor','sit','amet','consectetur','adipiscing','elit','sed','do','eiusmod','tempor','incididunt','ut','labore','et','dolore','magna','aliqua','enim','ad','minim','veniam','quis','nostrud','exercitation','ullamco','laboris','nisi','aliquip','ex','ea','commodo','consequat','duis','aute','irure','in','reprehenderit','voluptate','velit','esse','cillum','eu','fugiat','nulla','pariatur','excepteur','sint','occaecat','cupidatat','non','proident','sunt','culpa','qui','officia','deserunt','mollit','anim','id','est','laborum','quasi','architecto','beatae','vitae','dicta','explicabo','nemo','ipsam','quia','voluptatem','accusantium','rem','provident','corrupti','quos','dolores','eos','rationum','sequi','nesciunt','neque','porro','quisquam','dignissimos','ducimus','blanditiis','praesentium','voluptatum','deleniti','atque','tenatur','sapiente','maiores','repudiandae','molestiae','consequatur','aut','illum','iste','natus','error','voluptates','recusandae','quas'];
+var OPEN='Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.';
+function make(seed){var s=seed>>>0||1;return function(){s^=s<<13;s>>>=0;s^=s>>>17;s^=s<<5;s>>>=0;return s/4294967296;};}
+function sentence(r){var len=6+Math.floor(r()*14),out=WORDS[Math.floor(r()*WORDS.length)];
+ for(var i=1;i<len;i++)out+=(r()<0.18?', ':' ')+WORDS[Math.floor(r()*WORDS.length)];
+ return out.charAt(0).toUpperCase()+out.slice(1)+(r()<0.12?'!':'.');}
+function render(){var n=Math.min(20,Math.max(1,Math.round(parseFloat($('lo-n').value)||3)));
+ var seed=Date.now()>>>0,r=make(seed),paras=[];
+ for(var p=0;p<n;p++){var sent=[];
+  if(p===0&&$('lo-classic').checked)sent.push(OPEN);
+  var count=3+Math.floor(r()*4);
+  for(var i=0;i<count;i++)sent.push(sentence(r));
+  paras.push(sent.join(' '));}
+ $('lo-out').innerHTML='<p class="meta" style="margin-top:0">seed '+(seed%100000)+' \u00b7 press Generate again for fresh text</p>'+
+  paras.map(function(t){return '<blockquote class="tl-pick" style="display:block;margin:0 0 10px">'+t+'</blockquote>';}).join('');}
+$('lo-go').onclick=render;$('lo-n').oninput=render;$('lo-classic').onchange=render;render();`,
+  seo: `<h2 class="section-title">A 2,000-year-old placeholder</h2>
+  <p>The text comes from section 1.32\u20131.33 of Cicero\u2019s De\u202fFinibus, on ethical hedonism \u2014 which makes lorem ipsum, ironically, about pleasure. Typesetters scrambled it to keep eyes off the words; in the 1960s Letraset sheets carried it, and desktop publishing made it universal. Keeping that tradition honest means fake Latin with real <i>shape</i>: variable sentence lengths, clause commas, paragraph openings \u2014 the properties a mockup needs from text, without any readable content stealing attention from the design.</p>`,
+});
+
+// ── 21. /alat/aspect — aspect ratio calculator ────────────────────────────
+TOOLKIT.push({
+  slug: 'aspect', ic: '\ud83d\udcd0', name: 'Aspect Ratio Calculator',
+  title: 'Aspect Ratio Calculator \u2014 Simplify, Resize and Compare | Tukuk-OS',
+  desc: 'Reduce any width \u00d7 height to its simplest ratio, name the nearest standard (16:9, 4:3, 3:2, 21:9\u2026), fit it inside a box, and scale both sides by a percentage. Browser-local.',
+  hero: 'Aspect Ratio Calculator', sub: 'simplify \u00b7 nearest standard \u00b7 fit inside a box \u00b7 exact scaling',
+  navBlurb: 'Turn 1920\u00d71080 into 16:9, check what a crop actually is, and resize to fit any box with the rounding error printed.',
+  hubBlurb: 'the ratio behind your screenshot, simplified by Euclid\u2019s algorithm, matched to the nearest standard, fitted into any box',
+  lead: 'Three jobs done exactly once: <b>simplify</b> a width \u00d7 height by their greatest common divisor (Euclid, ~300\u202fBC, still the right algorithm), <b>name</b> the nearest common format with the true percentage difference shown so you can see when \u201c16:9\u201d is actually 1.9% off, and <b>fit</b> the frame inside a maximum box using whichever side runs out first \u2014 the way every real image resizer works.',
+  form: `<div class="tl-form">
+  ${field('Width', '<input id="as-w" type="number" min="1" step="1" value="1920">')}
+  ${field('Height', '<input id="as-h" type="number" min="1" step="1" value="1080">')}
+  ${field('Fit inside', '<input id="as-fw" type="number" min="1" step="1" value="800">')}
+  ${field('\u00d7', '<input id="as-fh" type="number" min="1" step="1" value="600">')}
+  <button class="tl-btn primary" id="as-go" type="button">Calculate</button>
+</div>
+<div class="tl-res" id="as-out">\u2014</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function gcd(a,b){a=Math.abs(a);b=Math.abs(b);while(b){var t=a%b;a=b;b=t;}return a;}
+var STD=[[16,9],[4,3],[3,2],[21,9],[1,1],[16,10],[5,4],[32,9],[2,3],[9,16]];
+function render(){var w=Math.round(parseFloat($('as-w').value)),h=Math.round(parseFloat($('as-h').value));
+ var fw=Math.round(parseFloat($('as-fw').value)),fh=Math.round(parseFloat($('as-fh').value));
+ if(!(w>0)||!(h>0)){$('as-out').innerHTML='<span class="tl-badge tl-no">check inputs</span> Width and height need positive whole numbers (pixels are whole).';return;}
+ var g=gcd(w,h)||1,rw=w/g,rh=h/g;
+ var r=w/h,best=null,bd=1e9;
+ STD.forEach(function(s){var d=Math.abs(s[0]/s[1]-r);if(d<bd){bd=d;best=s;}});
+ var dpct=(r/(best[0]/best[1])-1)*100;
+ var rows='<tr><td>Simplified ratio</td><td>'+rw+':'+rh+'</td></tr>'+
+  '<tr><td>As a decimal</td><td>'+r.toFixed(4)+'</td></tr>'+
+  '<tr><td>Nearest standard</td><td>'+best[0]+':'+best[1]+' \u00b7 '+(Math.abs(dpct)<0.005?'exact':'the real frame is '+Math.abs(dpct).toFixed(1)+'% '+(dpct>0?'wider':'narrower'))+'</td></tr>'+
+  '<tr><td>Orientation</td><td>'+(w>h?'landscape \u2014 '+fmt(w)+'\u00d7'+fmt(h):w<h?'portrait \u2014 '+fmt(w)+'\u00d7'+fmt(h):'square \u2014 '+fmt(w)+'\u00d7'+fmt(h))+'</td></tr>'+
+  '<tr><td>Megapixels</td><td>'+(w*h/1e6).toFixed(2)+' MP</td></tr>';
+ if(fw>0&&fh>0){var s=Math.min(fw/w,fh/h);var sw2=Math.round(w*s),sh2=Math.round(h*s);
+  rows+='<tr><td>Largest fit inside '+fmt(fw)+'\u00d7'+fmt(fh)+'</td><td>'+fmt(sw2)+'\u00d7'+fmt(sh2)+' ('+(s*100).toFixed(1)+'%)</td></tr>';}
+ $('as-out').innerHTML='<div class="tl-big">'+best[0]+':'+best[1]+'</div><table class="tl-tab"><tbody>'+rows+'</tbody></table><p class="meta">The simplified ratio is exact (Euclid\u2019s gcd); \u201cnearest standard\u201d compares the decimal ratio, and the percentage tells you when your frame only looks like 16:9.</p>';}
+function fmt(n){return n.toLocaleString('en-US');}
+$('as-go').onclick=render;$('as-w').oninput=render;$('as-h').oninput=render;$('as-fw').oninput=render;$('as-fh').oninput=render;render();`,
+  seo: `<h2 class="section-title">Why 1920\u00d71080 is exactly 16:9 but 1280\u00d7720 feels the same</h2>
+  <p>They reduce to the same fraction \u2014 16/9 \u2014 which is the entire content of the phrase \u201csame aspect ratio\u201d: identical shape, different size. Resolution adds pixels; ratio only shapes them. That is why a 16:9 video letterboxes on a 16:10 laptop with black bars top and bottom (the shapes genuinely differ by 5.6% of height) and why \u201cfullscreen\u201d either crops the edges or stretches faces. The gcd on this page is the same reduction your maths teacher used for fractions \u2014 Euclid, Elements VII, still the fastest way to it after 2,300 years.</p>`,
+});
+
+// ── 22. /alat/cssunits — CSS unit converter ──────────────────────────────
+TOOLKIT.push({
+  slug: 'cssunits', ic: '\ud83d\udccf', name: 'CSS Unit Converter',
+  title: 'CSS Unit Converter \u2014 px, rem, pt and % With Your Real Root Size | Tukuk-OS',
+  desc: 'Convert between px, rem, pt and a percentage of the root font size using your actual 16\u202fpx (or chosen) root \u2014 with the em ambiguity explained, not silently guessed.',
+  hero: 'CSS Unit Converter', sub: 'px \u21c4 rem \u21c4 pt \u21c4 % \u00b7 your root size \u00b7 em left honest',
+  navBlurb: 'px to rem to pt with your real root font size, and an honest note about the one unit (em) that depends on context this page cannot see.',
+  hubBlurb: '24\u202fpx is 1.5\u202frem at a 16\u202fpx root \u2014 the whole conversion table, with the em footgun explained instead of fake-converted',
+  lead: 'One input value, every unit it equals, at the root font size you choose (default 16\u202fpx, the CSS spec\u2019s initial value). <b>pt</b> is CSS\u2019s print unit \u2014 defined as 1/72\u202finch at 96\u202fdpi, so 1\u202fpt = 4/3\u202fpx exactly. <b>rem</b> is simply value \u00f7 root size. And <b>em</b> is deliberately <i>not</i> in the table: em resolves against the element\u2019s <i>own</i> inherited font size, which a converter on a website cannot know \u2014 the note under the table gives the one rule that keeps em from biting you.',
+  form: `<div class="tl-form">
+  ${field('Value', '<input id="cu-v" type="number" step="any" value="24">')}
+  ${field('From', '<select id="cu-u"><option value="px" selected>px</option><option value="rem">rem</option><option value="pt">pt</option><option value="pct">% of root</option></select>')}
+  ${field('Root font size', '<input id="cu-r" type="number" min="8" max="32" step="0.5" value="16">')}
+  <span class="meta">px</span>
+  <button class="tl-btn primary" id="cu-go" type="button">Convert</button>
+</div>
+<div class="tl-res" id="cu-out">\u2014</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function num(x){return x.toLocaleString('en-US',{maximumFractionDigits:4});}
+function render(){var v=parseFloat($('cu-v').value),u=$('cu-u').value,root=parseFloat($('cu-r').value);
+ if(!isFinite(v)){ $('cu-out').innerHTML='<span class="tl-badge tl-no">check input</span> Enter a number \u2014 negative sizes are legal in CSS, NaN is not.';return;}
+ if(!(root>0)){ $('cu-out').innerHTML='<span class="tl-badge tl-no">check root</span> Root size must be positive.';return;}
+ var px;
+ if(u==='px')px=v;
+ else if(u==='rem')px=v*root;
+ else if(u==='pt')px=v*96/72;
+ else px=v/100*root;
+ var rows=[['px',num(px)+' px'],['rem',num(px/root)+' rem'],['pt',num(px*72/96)+' pt'],['% of root',num(px/root*100)+'%'],['inches (CSS: 96 per inch)',num(px/96)+' in']];
+ $('cu-out').innerHTML='<div class="tl-big">'+num(px)+' px</div>'+
+ '<table class="tl-tab"><tbody>'+rows.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>';}).join('')+'</tbody></table>'+
+ '<p class="meta">No em row on purpose: em multiplies the element\u2019s <i>inherited</i> font size, so 2\u202fem means 32\u202fpx on a 16\u202fpx body and 24\u202fpx inside a 12\u202fpx caption \u2014 a page like this one converting it \u201cfor you\u201d would be guessing. Rule of thumb: rem for global scale, em for padding/sizes that should track the component\u2019s own text.</p>';}
+$('cu-go').onclick=render;$('cu-v').oninput=render;$('cu-u').onchange=render;$('cu-r').oninput=render;render();`,
+  seo: `<h2 class="section-title">The pt is not the Word \u201cpoint\u201d you know</h2>
+  <p>DTP uses 72\u202fpt = 1\u202finch and print measures at ~72\u202f\u201cdpi\u201d, so 12\u202fpt looked the same size on screen and paper. CSS kept the unit but anchored it to the screen: a CSS inch is 96\u202fpx, a CSS pt is 4/3\u202fpx \u2014 so 12\u202fpt renders as 16\u202fpx, which is why browsers\u2019 default text size is 16\u202fpx and is called \u201cmedium\u201d in the spec. When a design tool\u2019s pt and your stylesheet\u2019s pt disagree by a third, this is the disagreement. For web work px and rem cover almost everything; pt earns its place only in @media print.</p>`,
+});
+
+// ── 23. /alat/dice — dice probability ──────────────────────────────────────
+TOOLKIT.push({
+  slug: 'dice', ic: '\ud83c\udfb2', name: 'Dice Probability',
+  title: 'Dice Probability Calculator \u2014 Exact Odds for Any Dice Pool | Tukuk-OS',
+  desc: 'Exact probability of rolling equal to or at least a target sum with 2\u201310 dice of any sides \u2014 every outcome counted by big-integer convolution, not simulated.',
+  hero: 'Dice Probability', sub: '2\u201310 dice \u00b7 any sides \u00b7 exact counts, never a simulation',
+  navBlurb: 'The true 2d6 curve computed as exact counts \u2014 21 of 36 outcomes are 7 or better \u2014 with the full distribution as a table.',
+  hubBlurb: 'exact dice odds by convolution over every outcome \u2014 not a Monte Carlo guess \u2014 up to 10d20, with the full curve shown',
+  lead: 'A dice pool has sides^dice outcomes \u2014 10d20 is 10<sup>13</sup>, all countable exactly with integer arithmetic, which is what this page does: convolve one die at a time and read off the counts. No randomness, no simulation error, and the percentages are true fractions of the count, so the answer cannot change between visits. The mean and most-likely total come out of the same table.',
+  form: `<div class="tl-form">
+  ${field('Dice', '<input id="di-n" type="number" min="2" max="10" step="1" value="2">')}
+  ${field('Sides per die', '<input id="di-s" type="number" min="2" max="20" step="1" value="6">')}
+  ${field('Target sum', '<input id="di-t" type="number" min="2" step="1" value="7">')}
+  <button class="tl-btn primary" id="di-go" type="button">Calculate</button>
+</div>
+<div class="tl-res" id="di-out">\u2014</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function render(){var n=Math.round(parseFloat($('di-n').value)),s=Math.round(parseFloat($('di-s').value)),t=Math.round(parseFloat($('di-t').value));
+ var out=$('di-out');
+ if(!(n>=2&&n<=10)||!(s>=2&&s<=20)){out.innerHTML='<span class="tl-badge tl-no">check inputs</span> 2\u201310 dice, 2\u201320 sides \u2014 beyond that the table still works but your browser waits.';return;}
+ var lo=n,hi=n*s;
+ if(!(t>=lo&&t<=hi)){out.innerHTML='<span class="tl-badge tl-no">impossible target</span> '+n+'d'+s+' totals run '+lo+'\u2013'+hi+'; '+t+' cannot happen (probability 0 \u2014 say it with confidence).';return;}
+ var dp=[],k;for(k=0;k<=hi;k++)dp[k]=0n;dp[0]=1n;
+ for(var d=0;d<n;d++){var nd=[];for(k=0;k<=hi;k++)nd[k]=0n;
+  for(var sum=d;sum<=s*d;sum++){var c=dp[sum];if(c===0n)continue;
+   for(var face=1;face<=s;face++)nd[sum+face]=nd[sum+face]+c;}
+  dp=nd;}
+ var totaln=0n,ge=0n,mode=lo,mc=-1n;
+ for(k=lo;k<=hi;k++){totaln+=dp[k];if(k>=t)ge+=dp[k];if(dp[k]>mc){mc=dp[k];mode=k;}}
+ var eq=dp[t];
+ function pct(x){return (Number(x)/Number(totaln)*100).toFixed(2)+'%';}
+ var full=hi-lo<=40,rows2='';
+ for(k=lo;k<=hi;k++){if(!full&&Math.abs(k-t)>4)continue;
+  var bar='';var cells=Math.round(Number(dp[k])/Number(totaln)*240);
+  for(var b=0;b<cells;b++)bar+='\u2587';
+  rows2+='<tr><td'+(k===t?' style="font-weight:700"':'')+'>'+k+'</td><td>'+Number(dp[k]).toLocaleString('en-US')+'</td><td>'+pct(dp[k])+'</td><td style="opacity:.7">'+bar+'</td></tr>';}
+ out.innerHTML='<div class="tl-big">'+pct(ge)+' <span class="meta" style="font-size:1rem">for \u2265 '+t+'</span></div>'+
+  '<table class="tl-tab"><tbody>'+
+  '<tr><td>Outcomes counted</td><td>'+Number(totaln).toLocaleString('en-US')+' (= '+s+'^'+n+')</td></tr>'+
+  '<tr><td>P(exactly '+t+')</td><td>'+pct(eq)+' \u00b7 '+Number(eq).toLocaleString('en-US')+' ways</td></tr>'+
+  '<tr><td>P(at least '+t+')</td><td>'+pct(ge)+'</td></tr>'+
+  '<tr><td>P(at most '+t+')</td><td>'+pct(totaln-ge+eq)+'</td></tr>'+
+  '<tr><td>Mean total</td><td>'+(n*(s+1)/2)+'</td></tr>'+
+  '<tr><td>Most likely total</td><td>'+mode+' \u00b7 '+pct(mc)+'</td></tr>'+
+  '</tbody></table>'+
+  '<p class="meta">Distribution '+(full?'of every total:':'near the target \u2014 the full '+lo+'\u2013'+hi+' spread is too wide to print:')+'</p>'+
+  '<table class="tl-tab"><thead><tr><th>Total</th><th style="text-align:right">Ways</th><th style="text-align:right">Prob.</th><th></th></tr></thead><tbody>'+rows2+'</tbody></table>'+
+  '<p class="meta">Counts are exact integers \u2014 one die convolved at a time \u2014 so the percentages never change between visits, unlike a simulation.</p>';}
+$('di-go').onclick=render;$('di-n').oninput=render;$('di-s').oninput=render;$('di-t').oninput=render;render();`,
+  seo: `<h2 class="section-title">Why the curve peaks where it does</h2>
+  <p>A total is not an outcome — it is a <i>set</i> of outcomes, and the middle of the range has the most ways to be built: 7 on 2d6 arrives six ways (1+6 through 6+1) while 2 and 12 arrive once each, so the counts form a triangle that rounds toward a bell as dice pile up (the central limit theorem, arriving at a board-game table). The “at least” column is what game rules usually need: P(\u2265\u202f7) on 2d6 is 21/36\u202f=\u202f58.33%, not 50%, because the peak itself counts — the same asymmetry that makes 7 both the most-rolled total and the number gamblers pay you to avoid.</p>`,
+});
+
+// ── 24. /alat/download — download time estimator ────────────────────────
+TOOLKIT.push({
+  slug: 'download', ic: '\u23ec', name: 'Download Time Calculator',
+  title: 'Download Time Calculator \u2014 File Size \u00f7 Connection Speed | Tukuk-OS',
+  desc: 'How long will this file take: size in MB/GB against Mbps or MB/s, with the 8-bits-per-byte trap, decimal-vs-binary sizes, and a realistic 85% line row.',
+  hero: 'Download Time Calculator', sub: 'size \u00f7 throughput \u00b7 bits vs bytes shown \u00b7 85% reality row',
+  navBlurb: 'The two-minute question answered twice: theoretical minimum and the 85%-of-line-rate figure ISPs actually let you have.',
+  hubBlurb: '4.7\u202fGB at 100\u202fMbps is 6\u202fmin 16\u202fs, not 38 \u2014 the bits/bytes and decimal/binary traps both handled, plus a realistic row',
+  lead: 'One division answers it \u2014 but only after two traps: <b>speeds are advertised in bits</b> (Mbps) while <b>files are measured in bytes</b> (\u00d78 apart), and a \u201c1\u202fGB\u201d is 10\u2079 bytes to the shop but 2\u00b3\u2070 to your operating system. The page prints the theoretical figure and a realistic one at 85% of line rate, because TCP, TLS and disk writes never run at spec.',
+  form: `<div class="tl-form">
+  ${field('File size', '<input id="dn-size" type="number" min="0.001" step="any" value="4.7">')}
+  ${field('', '<select id="dn-sz"><option value="KB">KB</option><option value="MB">MB</option><option value="GB" selected>GB</option><option value="TB">TB</option></select>')}
+  ${field('Connection', '<input id="dn-rate" type="number" min="1" step="any" value="100">')}
+  ${field('', '<select id="dn-rt"><option value="Mbps" selected>Mbps (bits)</option><option value="MBps">MB/s (bytes)</option><option value="Gbps">Gbps (bits)</option></select>')}
+  <button class="tl-btn primary" id="dn-go" type="button">Calculate</button>
+</div>
+<div class="tl-res" id="dn-out">\u2014</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var SZ={KB:1e3,MB:1e6,GB:1e9,TB:1e12};
+var SP={Mbps:1e6,MBps:8e6,Gbps:1e9};
+function htime(t){if(t<1)return (t*1000).toFixed(0)+'\u202fms';
+ var h=Math.floor(t/3600),m=Math.floor(t%3600/60),s=Math.round(t%60);
+ var p=[];if(h)p.push(h+'\u202fh');if(h||m)p.push(m+'\u202fm');p.push(s+'\u202fs');return p.join(' ');}
+function render(){var v=parseFloat($('dn-size').value),u=$('dn-sz').value,r=parseFloat($('dn-rate').value),ru=$('dn-rt').value;
+ if(!(v>0)||!(r>0)){$('dn-out').innerHTML='<span class="tl-badge tl-no">check inputs</span> File size and speed both need to be positive numbers.';return;}
+ var bytes=v*SZ[u],bits=bytes*8,sec=bits/(r*SP[ru]);
+ $('dn-out').innerHTML='<div class="tl-big">'+htime(sec)+'</div>'+
+ '<table class="tl-tab"><tbody>'+
+ '<tr><td>Theoretical (full line rate)</td><td>'+htime(sec)+'</td></tr>'+
+ '<tr><td>Realistic (85% of line rate)</td><td>'+htime(sec/0.85)+'</td></tr>'+
+ '<tr><td>Slow connection (60%)</td><td>'+htime(sec/0.6)+'</td></tr>'+
+ '<tr><td>File is</td><td>'+bytes.toLocaleString('en-US')+' bytes = '+(bytes/1024).toLocaleString('en-US',{maximumFractionDigits:1})+' KiB / '+(bytes/1048576).toLocaleString('en-US',{maximumFractionDigits:1})+' MiB / '+(bytes/1073741824).toLocaleString('en-US',{maximumFractionDigits:2})+' GiB</td></tr>'+
+ '</tbody></table>'+
+ '<p class="meta">Sizes use the decimal convention the shops use (1\u202fGB = 10\u2079 bytes); your OS divides by 1024 and will call the same file a few percent smaller. Upload into cloud storage runs the same maths in reverse \u2014 but many home lines are 1/10 the download rate.</p>';}
+$('dn-go').onclick=render;$('dn-size').oninput=render;$('dn-rate').oninput=render;$('dn-sz').onchange=render;$('dn-rt').onchange=render;render();`,
+  seo: `<h2 class="section-title">Why your \u201c100\u202fMbps\u201d plan gives you 85\u202fMbps</h2>
+  <p>The advertised rate is the physical-layer payload budget; Ethernet framing, TCP handshakes, TLS record-keeping, and the router\u2019s own CPU each take a cut, and 80\u201390% is the honest landing zone on a good day. On Wi-Fi add distance, walls and neighbours\u2019 channels \u2014 which is why the 60% row exists. If a download runs exactly the theoretical time, you got a faster link than advertised, not a calculator that flattered you.</p>`,
+});
+
 module.exports = { TOOLKIT, toolkitPage, navItems, hubLines, sitemapPaths };

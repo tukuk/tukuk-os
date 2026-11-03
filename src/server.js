@@ -12821,7 +12821,7 @@ function toolsNav() {
 }
 
 function alatHubPage() {
-  const body = `<p><b>The honest kind of useful.</b> Forty-one small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your files, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
+  const body = `<p><b>The honest kind of useful.</b> Fifty-three small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your files, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
   <h2 class="section-title">In the toolbox</h2>
   <p><b><a href="/alat/unit">📐 Unit converter</a></b> — eight categories with exact, definition-based factors (1 inch really is 2.54 cm); every unit in the category updates at once.</p>
   <p><b><a href="/alat/date">📅 Date &amp; age calculator</a></b> — counting days between deadlines, ages to the day, working days between dates, and the reliable <i>days-until-birthday</i>.</p>
@@ -12858,7 +12858,7 @@ function alatHubPage() {
   <p class="meta">Prefer maps and time? The neighbouring <a href="/maps">Maps &amp; Navigation</a> cluster adds routing, distances, sun times and world clocks. Everything on tukuk.org is free without an account.</p>`;
   return worldDoc({
     title: 'Everyday Tools — Converters, Calculators, PDF, JSON, Hashing & Generators | Tukuk-OS',
-    desc: 'Forty-one useful tools that run entirely in your browser: unit conversion, date and age maths, base and fraction converters, prime checks, statistics, salary and tip calculators, countdowns, JWT and HTML-entity decoding, WCAG contrast, password generation, image format conversion, images-to-PDF, PDF merge and split, JSON formatting, checksums, Base64, time zones, UUIDs, cron and more — private, free, no account.',
+    desc: 'Fifty-three useful tools that run entirely in your browser: unit conversion, date and age maths, base and fraction converters, prime checks, statistics, salary and tip calculators, countdowns, JWT and HTML-entity decoding, Roman numerals, number-to-words, durations, check-digit validation, unit price, fuel, sleep cycles, dice odds, aspect ratios, CSS units and more — private, free, no account.',
     selfUrl: 'https://tukuk.org/alat',
     heroTitle: '🧰 Everyday Tools', heroSub: 'Converters · calculators · checkers · generators — all computed on your device',
     css: TOOLS_CSS, body,
@@ -23459,7 +23459,7 @@ $('bd-idea').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preven
   }, worldNav('Keep going', [
     { href: '/games', icon: '🕹️', name: 'Game Arcade', blurb: 'Ready-to-play 3D and HTML5 games — the same templates the Builder publishes from.' },
     { href: '/a', icon: '🧩', name: 'Community apps', blurb: 'Everything our visitors have published through the Builder, in one index.' },
-    { href: '/alat', icon: '🧰', name: 'Everyday Tools', blurb: 'Forty-one browser-local tools: converters, calculators, PDF, JSON and more.' },
+    { href: '/alat', icon: '🧰', name: 'Everyday Tools', blurb: 'Fifty-three browser-local tools: converters, calculators, PDF, JSON and more.' },
   ]));
 }
 

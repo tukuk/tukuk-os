@@ -200,6 +200,121 @@ test('jwt: decodes header and claims locally, keeps the warning honest', () => {
   assert.ok(claims.includes('issued at'), 'registered claim named');
 });
 
+// ── batch 2 (Nov 2026) — same standard: hand-derived maths, not snapshots ──
+test('roman: 2026 is MMXXVI, and IIII is flagged not swallowed', () => {
+  const { dom } = runTool(bySlug('roman'));
+  assert.ok(dom.get('rm-out')._html.includes('MMXXVI'), '2026 = MMXXVI');
+  const back = runTool(bySlug('roman'), { 'rm-mode': 'r2i', 'rm-in': 'IIII' });
+  assert.ok(back.dom.get('rm-out')._html.includes('not canonical'), 'IIII must be called non-canonical');
+});
+
+test('number-to-words: 1,234,567.89 spells short-scale and says point eight nine', () => {
+  const { dom } = runTool(bySlug('number-to-words'));
+  const out = dom.get('nw-out')._html;
+  assert.ok(out.includes('one million two hundred thirty-four thousand five hundred sixty-seven'), out);
+  assert.ok(out.includes('point eight nine'), 'decimal digits read out');
+});
+
+test('number-to-words: 2^53+1 spells exactly — the float trap this page exists for', () => {
+  const { dom } = runTool(bySlug('number-to-words'), { 'nw-in': '9007199254740993' });
+  const out = dom.get('nw-out')._html;
+  assert.ok(out.includes('nine quadrillion'), out);
+  assert.ok(out.includes('nine hundred ninety-three'), 'last digit must NOT round to \u2026two (float)');
+});
+
+test('number-to-words: cheque mode names dollars and cents', () => {
+  const { dom } = runTool(bySlug('number-to-words'), { 'nw-mode': 'cheque' });
+  assert.ok(dom.get('nw-out')._html.includes('dollars and 89 cents'));
+});
+
+test('duration: 202600 s is 2d 8h 16m 40s down to the seconds', () => {
+  const { dom } = runTool(bySlug('duration'));
+  assert.ok(dom.get('du-out')._html.includes('2d 8h 16m 40s'), dom.get('du-out')._html.slice(0, 120));
+});
+
+test('validate: 4242\u2026 passes Luhn and prints the working (sum 80)', () => {
+  const { dom } = runTool(bySlug('validate'));
+  const out = dom.get('va-out')._html;
+  assert.ok(out.includes('tl-ok'), 'default card number must be VALID');
+  assert.ok(out.includes('sum = 80'), '8 fours doubled to 8 + 8 twos = 80');
+});
+
+test('validate: the classic IBAN, ISBN-13 and ISBN-10 examples all pass', () => {
+  const iban = runTool(bySlug('validate'), { 'va-kind': 'iban', 'va-in': 'DE89 370400440532013000' });
+  assert.ok(iban.dom.get('va-out')._html.includes('mod 97 = 1'), 'textbook IBAN must verify');
+  const i13 = runTool(bySlug('validate'), { 'va-kind': 'isbn13', 'va-in': '9780306406157' });
+  assert.ok(i13.dom.get('va-out')._html.includes('tl-ok'), 'known-good ISBN-13');
+  const i10 = runTool(bySlug('validate'), { 'va-kind': 'isbn10', 'va-in': '048665088X' });
+  assert.ok(i10.dom.get('va-out')._html.includes('tl-ok'), 'Dover reprint ISBN-10 with X check');
+});
+
+test('validate: a broken check digit is rejected with the expected digit named', () => {
+  const bad = runTool(bySlug('validate'), { 'va-kind': 'isbn13', 'va-in': '9780306406158' });
+  const out = bad.dom.get('va-out')._html;
+  assert.ok(out.includes('tl-no'), 'must be INVALID');
+  assert.ok(out.includes('should be 7'), 'and say what the check digit is');
+});
+
+test('unitprice: 4.99/500\u202fg vs 8.50/1\u202fkg \u2014 B wins by 14.8%', () => {
+  const { dom } = runTool(bySlug('unitprice'));
+  const out = dom.get('up-out')._html;
+  // A = 0.00998/g, B = 0.0085/g; gap (0.00998-0.0085)/0.00998 = 14.829\u2026 hand-checked
+  assert.ok(out.includes('B by 14.8%'), out.slice(0, 140));
+  assert.ok(out.includes('0.00998'), 'per-gram rate shown to real precision');
+});
+
+test('fuel: 480 km on 30 L is 6.25 L/100 km, 16 km/L, 37.6 US MPG', () => {
+  const { dom } = runTool(bySlug('fuel'));
+  const out = dom.get('fu-out')._html;
+  assert.ok(out.includes('6.25 L/100'), out.slice(0, 100));
+  assert.ok(out.includes('16 km/L'));
+  assert.ok(out.includes('37.6 MPG'), 'km/L \u00d7 1.609344 / 3.785411784 = 37.598');
+  assert.ok(out.includes('$11.56'), 'cost per 100 km at 1.85/L');
+});
+
+test('sleep: alarm at 06:30 offers 21:15, 22:45 and 00:15 bedtimes', () => {
+  const { dom } = runTool(bySlug('sleep'));
+  const out = dom.get('sl-out')._html;
+  // 6\u00d790+15=555 min before 390 = 21:15; 5\u00d790+15=465 \u2192 22:45; 4\u00d790+15=375 \u2192 00:15
+  for (const t of ['21:15', '22:45', '00:15']) assert.ok(out.includes(t), 'missing ' + t);
+});
+
+test('lorem: the classic opener is intact when requested', () => {
+  const { dom } = runTool(bySlug('lorem'));
+  assert.ok(dom.get('lo-out')._html.includes('Lorem ipsum dolor sit amet, consectetur adipiscing elit'));
+});
+
+test('aspect: 1920\u00d71080 reduces to 16:9 and fits 800\u00d7450 inside 800\u00d7600', () => {
+  const { dom } = runTool(bySlug('aspect'));
+  const out = dom.get('as-out')._html;
+  assert.ok(out.includes('16:9'), out.slice(0, 100));
+  assert.ok(out.includes('800\u00d7450'), 'fit row');
+  assert.ok(out.includes('2.07 MP'), '1920\u00d71080/1e6 = 2.0736');
+});
+
+test('cssunits: 24 px at root 16 is 1.5 rem and 18 pt', () => {
+  const { dom } = runTool(bySlug('cssunits'));
+  const out = dom.get('cu-out')._html;
+  assert.ok(out.includes('1.5 rem'), out.slice(0, 200));
+  assert.ok(out.includes('18 pt'), 'px \u00d7 72/96');
+});
+
+test('dice: 2d6 hits 7 exactly 16.67% and clears it 58.33% of the time', () => {
+  const { dom } = runTool(bySlug('dice'));
+  const out = dom.get('di-out')._html;
+  // 6/36 and 21/36 \u2014 hand-counted from the 36 outcomes, not simulated
+  assert.ok(out.includes('16.67%'), out.slice(0, 200));
+  assert.ok(out.includes('58.33%'), 'P(\u22657) = 21/36');
+  assert.ok(out.includes('(= 6^2)'), 'total outcomes row shows 36 = 6^2');
+});
+
+test('download: 4.7 GB at 100 Mbps is 6 m 16 s at line rate', () => {
+  const { dom } = runTool(bySlug('download'));
+  const out = dom.get('dn-out')._html;
+  // 4.7e9 \u00d7 8 bits / 1e8 bit/s = 376 s exactly; the tool joins with \u202f thin spaces
+  assert.ok(out.includes('6\u202fm 16\u202fs'), out.slice(0, 160));
+});
+
 function bySlug(slug) {
   const t = TOOLKIT.find((x) => x.slug === slug);
   assert.ok(t, 'tool ' + slug + ' vanished from the registry');
