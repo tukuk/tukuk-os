@@ -17,6 +17,7 @@
  * fallback mode, but the process itself never exits on boot-time errors — the search engine
  * and the static pages must remain reachable even if Meilisearch or Ollama is offline.
  */
+const crypto = require('crypto');
 const config = require('./src/config');
 const { ensureIndex, health } = require('./src/meili');
 const crawler = require('./src/crawler');
@@ -39,6 +40,17 @@ const warmup = require('./src/warmup');
 const books = require('./src/books');
 const recipes = require('./src/recipes');
 const radar = require('./src/radar');
+
+// RETIRED (Nov 2026): the music-charts / movies / football sections were taken down —
+// third-party chart data, film metadata and match feeds are somebody else's copyright.
+// Their blog posts went with them. syncPostsFromContent only imports, so on installs
+// whose store file outlives the deleted content/blog/*.md we drop the stored copies at
+// boot and purge their search docs (id = sha256(slug), same as blog-index.js) below.
+const RETIRED_POST_SLUGS = [
+  'how-music-charts-work-streams-sales-and-number-one',
+  'how-films-tell-stories-the-hidden-grammar-of-editing',
+  'how-football-tactics-evolved-from-pyramid-to-gegenpress',
+];
 
 // ── Runtime resilience guard ────────────────────────────────────────────────
 // The boot contract above is "the process never exits on subsystem errors", but
@@ -100,6 +112,10 @@ async function waitForMeili({ attempts = 30, delayMs = 1000 } = {}) {
 async function main() {
   console.log('[tukuk-os] starting search engine...');
   store.load();
+  RETIRED_POST_SLUGS.forEach((slug) => {
+    const dead = store.getPostBySlugAny(slug);
+    if (dead) store.deletePost(dead.id);
+  });
   net.start();
   const logged = queries.loadRecent();
   if (logged > 0) console.log(`[queries] ${logged} search log entries loaded`);
@@ -114,6 +130,10 @@ async function main() {
     console.log(`[meili] connected to ${config.meili.host}`);
     index = await ensureIndex();
     crawler.setIndex(index);
+    RETIRED_POST_SLUGS.forEach((slug) => {
+      const id = crypto.createHash('sha256').update(slug).digest('hex').slice(0, 16);
+      Promise.resolve(index.deleteDocument(id)).catch(() => {}); // /search must not offer a 404
+    });
     console.log(`[meili] index ready: ${config.indexName}`);
     // Index the blog content into the main corpus so the curated guides/blog posts
     // are searchable at /search (idempotent; non-blocking — don't hold up cold start).

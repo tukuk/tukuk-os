@@ -27,7 +27,6 @@ arcade (`/games`) and an app hub on the homepage, a live NASA data hub
 - [About](https://tukuk.org/about) · [Privacy](https://tukuk.org/privacy) · [Terms](https://tukuk.org/terms) · [Contact](https://tukuk.org/contact).
 - [NASA hub](https://tukuk.org/nasa): APOD, ISS, Mars, asteroids, EPIC, space weather, crew (JSON under `/api/nasa/*`).
 - [Radio](https://tukuk.org/radio) · [Music](https://tukuk.org/music) · [News](https://tukuk.org/news).
-- [World Music Charts](https://tukuk.org/charts): most-played charts for 90 countries from Apple Music feeds, with artist info and previews.
 
 ## Chat & apps
 - [T Chat](https://tukuk.org/apps/chat): chat PWA engineered for 2G/GPRS — receipt reads, offline queue, minimal data.

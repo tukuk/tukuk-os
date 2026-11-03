@@ -33,7 +33,6 @@ const PAIRS = [
   ['/bencana', '/disasters'],
   ['/peta', '/maps'],
   ['/peta/langit', '/maps/sky'],
-  ['/muzik', '/charts'],
   ['/bendera', '/flags'],
   ['/bendera/teka', '/flags/quiz'],
   ['/teknologi', '/technology'],
@@ -105,7 +104,7 @@ tanah-basah:wetlands air-panas:hot-springs terumbu-karang:coral-reefs kaldera:ca
 bendungan:dams pencakar-langit:skyscrapers jambatan:bridges mercu-suar:lighthouses terusan:canals
 menara:towers pelabuhan:ports terowong:tunnels gereja:churches museum:museums
 lapangan-terbang:airports istana:palaces universiti:universities stadium:stadiums
-kastil:castles masjid:mosques monumen:monuments katedral:cathedrals hospital:hospitals
+masjid:mosques monumen:monuments katedral:cathedrals hospital:hospitals
 hotel:hotels taman-botani:botanical-gardens taman:parks sinagog:synagogues perpustakaan:libraries
 kubu:fortifications balai-cerap:astronomical-observatories akuarium:aquariums banjaran:mountain-ranges
 tanah-kubur:cemeteries biara:monasteries patung:statues rumah-opera:opera-houses gurun:deserts

@@ -44,7 +44,6 @@ const modelhub = require('./brain/modelhub');
 const approuter = require('./brain/approuter');
 const websearch = require('./brain/websearch');
 const mediaSearch = require('./brain/media-search');
-const muzikApi = require('./muzik');
 const reranker = require('./brain/reranker');
 const builderGen = require('./builder-gen');
 const templates = require('./brain/templates');
@@ -93,9 +92,6 @@ const els = require('./elements');
 const sky = require('./deepsky');
 const pv = require('./proverbs');
 const nutrition = require('./nutrition');
-const movies = require('./movies');
-const football = require('./football');
-const tv = require('./tv');
 const cricket = require('./cricket');
 const olympics = require('./olympics');
 const rek = require('./rekod');
@@ -142,7 +138,6 @@ const mus = require('./museum');
 const ta = require('./tapak-arkologi');
 const uv = require('./universiti');
 const sdm = require('./stadium');
-const ks = require('./kastil');
 const mj = require('./masjid');
 const mm = require('./monumen');
 const ktl = require('./katedral');
@@ -505,10 +500,7 @@ const wgp = require('./celah-air');
 const mbs = require('./hospital-bersalin');
 const pks = require('./pusat-kesihatan');
 const klj = require('./kolej');
-const kpf = require('./kastil-prancis');
-const rkt = require('./runtuhan-kastil');
 const stm = require('./sekolah-tata');
-const mtb = require('./motte-bailey');
 const gdg = require('./gudang');
 const mkb = require('./menara-kubu');
 const bja = require('./bursa-jagung');
@@ -944,7 +936,7 @@ const CSP_STRICT = [
 // deliberately excepted again below: /nasa/iss.
 const CACHE_PUBLIC_EXTRA = [
   '', 'nasa',
-  'alat', 'flags', 'countries', 'charts', 'study', 'learn', 'academy', 'proverbs', 'history',
+  'alat', 'flags', 'countries', 'study', 'learn', 'academy', 'proverbs', 'history',
   'heritage', 'conservation-areas', 'elements', 'constellations', 'messier', 'records', 'cities', 'money', 'art', 'life',
   'mountains', 'lakes', 'islands', 'rivers', 'waterfalls', 'glaciers', 'blog',
   'docs', 'about', 'privacy', 'terms', 'contact', 'access', 'download', 'rekomendasi', 'os', 'cookies',
@@ -1685,47 +1677,6 @@ app.get('/nutrition/:slug', (req, res) => {
   res.status(200).type('html').send(nutritionFoodPage(f));
 });
 
-// ── FILM COMPLEX ROUTES (/movies*) — Notable Films of the World, STATIC ────────
-// Embedded data → can never 503 and never calls an external API. The genre route
-// (/movies/genre/:g) has 3 segments so it cannot collide with /movies/:slug (2).
-app.get('/movies', (req, res) => res.status(200).type('html').send(moviesHubPage()));
-app.get('/movies/genre/:g', (req, res) => {
-  const gr = movies.findGenre(req.params.g);
-  if (!gr) return res.status(404).type('html').send(moviesNotFound(req.params.g));
-  res.status(200).type('html').send(moviesGenrePage(gr));
-});
-// TV routes register BEFORE /movies/:slug — /movies/tv (2 segments) would otherwise
-// be swallowed as a film named "tv". The genre form (4 segments) cannot collide.
-app.get('/movies/tv', (req, res) => res.status(200).type('html').send(tvHubPage()));
-app.get('/movies/tv/genre/:g', (req, res) => {
-  const gr = tv.findTvGenre(req.params.g);
-  if (!gr) return res.status(404).type('html').send(tvNotFound(req.params.g));
-  res.status(200).type('html').send(tvGenrePage(gr));
-});
-app.get('/movies/tv/:slug', (req, res) => {
-  const s = tv.findShow(req.params.slug);
-  if (!s) return res.status(404).type('html').send(tvNotFound(req.params.slug));
-  res.status(200).type('html').send(tvShowPage(s));
-});
-app.get('/movies/:slug', (req, res) => {
-  const f = movies.findFilm(req.params.slug);
-  if (!f) return res.status(404).type('html').send(moviesNotFound(req.params.slug));
-  res.status(200).type('html').send(moviesFilmPage(f));
-});
-
-// ── FOOTBALL COMPLEX ROUTES (/football*) — World Cup history & Laws, STATIC ─────
-// Embedded data → can never 503 and never calls an external API. The tournament route
-// (/football/world-cup/:year) has 3 segments and /football/rules is a literal, so
-// nothing collides with the 2-segment /football/:x form (which we don't use).
-app.get('/football', (req, res) => res.status(200).type('html').send(footballHubPage()));
-app.get('/football/world-cup', (req, res) => res.status(200).type('html').send(footballWorldCupPage()));
-app.get('/football/world-cup/:year', (req, res) => {
-  const c = football.findCup(req.params.year);
-  if (!c) return res.status(404).type('html').send(footballNotFound(req.params.year));
-  res.status(200).type('html').send(footballTournamentPage(c));
-});
-app.get('/football/rules', (req, res) => res.status(200).type('html').send(footballRulesPage()));
-
 // ── CRICKET COMPLEX ROUTES (/cricket*) — World Cups & how the game is played ────
 // Embedded data → can never 503 and never calls an external API. The final route
 // (/cricket/world-cup/:year) has 3 segments and every other path is a literal.
@@ -2117,8 +2068,6 @@ function legacyRedirect(from, to, slugMap) {
   ['/peta/jam', '/maps/clock'],
   ['/peta/matahari', '/maps/sun'],
   ['/peta/langit', '/maps/sky'],
-  ['/muzik', '/charts'],
-  ['/muzik/:cc', '/charts/:cc'],
   ['/bendera', '/flags'],
   ['/bendera/teka', '/flags/quiz'],
   ['/bendera/studio', '/flags/studio'],
@@ -2253,8 +2202,6 @@ function legacyRedirect(from, to, slugMap) {
   ['/universiti', '/universities'],
   ['/stadium/:slug', '/stadiums/:slug'],
   ['/stadium', '/stadiums'],
-  ['/kastil/:slug', '/castles/:slug'],
-  ['/kastil', '/castles'],
   ['/masjid/:slug', '/mosques/:slug'],
   ['/masjid', '/mosques'],
   ['/monumen/:slug', '/monuments/:slug'],
@@ -2613,40 +2560,6 @@ app.get('/api/kamus/translate', limiter.search, async (req, res) => {
     res.json(await kamus.translate(req.query.text, req.query.from, req.query.to));
   } catch (e) {
     res.status(503).json({ ok: false, error: 'translation temporarily unavailable' });
-  }
-});
-
-// ── /charts — World Music Charts (Apple keyless feeds, 24h SWR cache in src/muzik.js) ──
-app.get('/charts', async (req, res) => {
-  try {
-    res.status(200).type('html').send(await muzikHubPage());
-  } catch (e) {
-    console.warn('[muzik] render failed:', e.message);
-    res.status(503).type('html').send(muzikBusy());
-  }
-});
-
-// The 30-second preview clip for one chart track (iTunes Lookup, cached a week).
-app.get('/charts/api/preview', limiter.search, async (req, res) => {
-  try {
-    res.json(await muzikApi.previewFor(req.query.id));
-  } catch (e) {
-    res.status(e.notFound ? 404 : 502).json({ error: 'preview unavailable', details: safeError(e) });
-  }
-});
-
-// One country's Top 25. The code must be a storefront we verified against the live feed.
-app.get('/charts/:cc', async (req, res) => {
-  const cc = String(req.params.cc || '').toLowerCase();
-  if (!muzikApi.hasCountry(cc)) {
-    res.status(404).type('html').send(muzikNotFoundPage());
-    return;
-  }
-  try {
-    res.status(200).type('html').send(await muzikChartPage(cc));
-  } catch (e) {
-    console.warn('[muzik/' + cc + '] render failed:', e.message);
-    res.status(503).type('html').send(muzikBusy());
   }
 });
 
@@ -3014,7 +2927,6 @@ geoRoutes('museums', mus, 'findMuseum', museumHubPage, museumRegionPage, museumP
 geoRoutes('archaeological-sites', ta, 'findArchaeologicalSite', tapakArkologiHubPage, tapakArkologiRegionPage, tapakArkologiPage, tapakArkologiNotFound);
 geoRoutes('universities', uv, 'findUniversity', universitiHubPage, universitiRegionPage, universitiPage, universitiNotFound);
 geoRoutes('stadiums', sdm, 'findStadium', stadiumHubPage, stadiumRegionPage, stadiumPage, stadiumNotFound);
-geoRoutes('castles', ks, 'findCastle', kastilHubPage, kastilRegionPage, kastilPage, kastilNotFound);
 geoRoutes('mosques', mj, 'findMosque', masjidHubPage, masjidRegionPage, masjidPage, masjidNotFound);
 geoRoutes('monuments', mm, 'findMonument', monumenHubPage, monumenRegionPage, monumenPage, monumenNotFound);
 geoRoutes('cathedrals', ktl, 'findCathedral', katedralHubPage, katedralRegionPage, katedralPage, katedralNotFound);
@@ -3380,10 +3292,7 @@ geoRoutes('water-gaps', wgp, 'findWaterGap', waterGapsHubPage, waterGapsRegionPa
 geoRoutes('maternity-hospitals', mbs, 'findMaternityHospital', maternityHospitalsHubPage, maternityHospitalsRegionPage, maternityHospitalsPage, maternityHospitalsNotFound);
 geoRoutes('community-health-centers', pks, 'findHealthCenter', healthCentersHubPage, healthCentersRegionPage, healthCentersPage, healthCentersNotFound);
 geoRoutes('colleges', klj, 'findCollege', collegesHubPage, collegesRegionPage, collegesPage, collegesNotFound);
-geoRoutes('chateaux', kpf, 'findChateau', chateauxHubPage, chateauxRegionPage, chateauxPage, chateauxNotFound);
-geoRoutes('castle-ruins', rkt, 'findCastleRuin', castleRuinsHubPage, castleRuinsRegionPage, castleRuinsPage, castleRuinsNotFound);
 geoRoutes('grammar-schools', stm, 'findGrammarSchool', grammarSchoolsHubPage, grammarSchoolsRegionPage, grammarSchoolsPage, grammarSchoolsNotFound);
-geoRoutes('motte-and-bailey-castles', mtb, 'findMotteBaileyCastle', motteBaileysHubPage, motteBaileysRegionPage, motteBaileysPage, motteBaileysNotFound);
 geoRoutes('warehouses', gdg, 'findWarehouse', warehousesHubPage, warehousesRegionPage, warehousesPage, warehousesNotFound);
 geoRoutes('fortified-towers', mkb, 'findFortifiedTower', fortifiedTowersHubPage, fortifiedTowersRegionPage, fortifiedTowersPage, fortifiedTowersNotFound);
 geoRoutes('corn-exchanges', bja, 'findCornExchange', cornExchangesHubPage, cornExchangesRegionPage, cornExchangesPage, cornExchangesNotFound);
@@ -4735,7 +4644,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Only LIVE pages (those replying 200) — drop the ones already removed (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) so the sitemap is not stuffed with 404s.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/weather', '/weather/map', '/weather/extremes', '/weather/codes', '/weather/clouds', '/weather/wind', '/earthquakes', '/earthquakes/explained', '/holidays', '/holidays/world/asia', '/holidays/world/europe', '/holidays/world/americas', '/holidays/world/africa', '/holidays/world/oceania', '/holidays/2026', '/holidays/2027', '/holidays/long-weekends', '/holidays/explained', '/countries', '/countries/asia', '/countries/europe', '/countries/africa', '/statistics', '/disasters', '/wiki', '/traffic', '/today', '/maps', '/maps/distance', '/maps/sun', '/maps/clock', '/maps/sky', '/maps/live', '/maps/storm', '/alat', '/alat/unit', '/alat/date', '/alat/color', '/alat/password', '/alat/text', '/alat/bmi', '/alat/image', '/alat/dictionary', '/alat/percentage', '/alat/loan', '/alat/qr', '/alat/ip', '/alat/epoch', '/alat/random', '/alat/pdf', '/alat/json', '/alat/hash', '/alat/base64', '/alat/timezone', '/alat/uuid', '/alat/cron', '/alat/regex', '/alat/csv', '/alat/diff', '/alat/url', '/alat/char', '/alat/compass', '/alat/convert', '/alat/image-to-pdf', ...toolbox.sitemapPaths(), '/charts', '/charts/us', '/charts/gb', '/charts/jp', '/charts/kr', '/charts/ng', '/charts/br', '/charts/in', '/charts/my', '/charts/de', '/charts/id', '/charts/au', '/flags', '/flags/quiz', '/flags/studio', '/flags/united-states', '/flags/united-kingdom', '/flags/japan', '/flags/brazil', '/flags/india', '/flags/nigeria', '/flags/germany', '/flags/france', '/flags/malaysia', '/flags/singapore', '/flags/australia', '/flags/netherlands', '/flags/south-korea', '/flags/mexico', '/flags/saudi-arabia', '/social', '/technology', '/technology/new', '/technology/show', '/technology/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/air-quality', '/air-quality/oxygen', '/air-quality/breath', '/air-quality/carbon', '/academy', '/academy/sky', '/academy/weather', '/academy/earth', '/academy/air', '/academy/body', '/academy/life', '/academy/numbers', '/academy/internet', '/academy/things', '/academy/thinking', '/money', '/money/rates', '/art', '/life', '/elements', '/constellations', '/messier', '/proverbs', '/records', '/history', '/cities', '/heritage', '/conservation-areas', '/mountains', '/lakes', '/islands', '/rivers', '/waterfalls', '/caves', '/glaciers', '/bays', '/valleys', '/peninsulas', '/volcanoes', '/straits', '/archipelagos', '/gorges', '/hills', '/mountain-gaps', '/capes', '/lagoons', '/salt-lakes', '/seas', '/reservoirs', '/fjord', '/wetlands', '/hot-springs', '/coral-reefs', '/calderas', '/dams', '/skyscrapers', '/bridges', '/lighthouses', '/canals', '/towers', '/ports', '/tunnels', '/churches', '/museums', '/archaeological-sites', '/universities', '/stadiums', '/castles', '/mosques', '/monuments', '/cathedrals', '/hospitals', '/hotels', '/palaces', '/botanical-gardens', '/parks', '/synagogues', '/libraries', '/zoo', '/fortifications', '/astronomical-observatories', '/aquariums', '/mountain-ranges', '/cemeteries', '/airports', '/monasteries', '/statues', '/opera-houses', '/deserts', '/aqueducts', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/chateaux', '/castle-ruins', '/grammar-schools', '/motte-and-bailey-castles', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat', '/build'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/weather', '/weather/map', '/weather/extremes', '/weather/codes', '/weather/clouds', '/weather/wind', '/earthquakes', '/earthquakes/explained', '/holidays', '/holidays/world/asia', '/holidays/world/europe', '/holidays/world/americas', '/holidays/world/africa', '/holidays/world/oceania', '/holidays/2026', '/holidays/2027', '/holidays/long-weekends', '/holidays/explained', '/countries', '/countries/asia', '/countries/europe', '/countries/africa', '/statistics', '/disasters', '/wiki', '/traffic', '/today', '/maps', '/maps/distance', '/maps/sun', '/maps/clock', '/maps/sky', '/maps/live', '/maps/storm', '/alat', '/alat/unit', '/alat/date', '/alat/color', '/alat/password', '/alat/text', '/alat/bmi', '/alat/image', '/alat/dictionary', '/alat/percentage', '/alat/loan', '/alat/qr', '/alat/ip', '/alat/epoch', '/alat/random', '/alat/pdf', '/alat/json', '/alat/hash', '/alat/base64', '/alat/timezone', '/alat/uuid', '/alat/cron', '/alat/regex', '/alat/csv', '/alat/diff', '/alat/url', '/alat/char', '/alat/compass', '/alat/convert', '/alat/image-to-pdf', ...toolbox.sitemapPaths(), '/flags', '/flags/quiz', '/flags/studio', '/flags/united-states', '/flags/united-kingdom', '/flags/japan', '/flags/brazil', '/flags/india', '/flags/nigeria', '/flags/germany', '/flags/france', '/flags/malaysia', '/flags/singapore', '/flags/australia', '/flags/netherlands', '/flags/south-korea', '/flags/mexico', '/flags/saudi-arabia', '/social', '/technology', '/technology/new', '/technology/show', '/technology/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/air-quality', '/air-quality/oxygen', '/air-quality/breath', '/air-quality/carbon', '/academy', '/academy/sky', '/academy/weather', '/academy/earth', '/academy/air', '/academy/body', '/academy/life', '/academy/numbers', '/academy/internet', '/academy/things', '/academy/thinking', '/money', '/money/rates', '/art', '/life', '/elements', '/constellations', '/messier', '/proverbs', '/records', '/history', '/cities', '/heritage', '/conservation-areas', '/mountains', '/lakes', '/islands', '/rivers', '/waterfalls', '/caves', '/glaciers', '/bays', '/valleys', '/peninsulas', '/volcanoes', '/straits', '/archipelagos', '/gorges', '/hills', '/mountain-gaps', '/capes', '/lagoons', '/salt-lakes', '/seas', '/reservoirs', '/fjord', '/wetlands', '/hot-springs', '/coral-reefs', '/calderas', '/dams', '/skyscrapers', '/bridges', '/lighthouses', '/canals', '/towers', '/ports', '/tunnels', '/churches', '/museums', '/archaeological-sites', '/universities', '/stadiums', '/mosques', '/monuments', '/cathedrals', '/hospitals', '/hotels', '/palaces', '/botanical-gardens', '/parks', '/synagogues', '/libraries', '/zoo', '/fortifications', '/astronomical-observatories', '/aquariums', '/mountain-ranges', '/cemeteries', '/airports', '/monasteries', '/statues', '/opera-houses', '/deserts', '/aqueducts', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/grammar-schools', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat', '/build'];
   // The reading lists are live pages as well, and typing twenty-seven slugs into the array
   // above is how a page and its sitemap entry drift apart. Generated from the subject
   // table, so adding a subject to src/books.js publishes it here too.
@@ -4745,9 +4654,9 @@ app.get('/sitemap.xml', async (req, res) => {
   // themselves live in /sitemap-recipes.xml, which is built from what is actually served.
   staticPages.push('/recipes', ...rcp.SECTIONS.map((s) => `/recipes/${s.slug}`));
   // The world-reference clusters added this pass. Their detail pages live in the
-  // child sitemaps (sitemap-nutrition/movies/football/cricket/olympics.xml, declared in robots.txt); here we
+  // child sitemaps (sitemap-nutrition/cricket/olympics.xml, declared in robots.txt); here we
   // list the hubs so the master sitemap points crawlers at each cluster's front door.
-  staticPages.push('/nutrition', '/movies', '/football', '/cricket', '/olympics');
+  staticPages.push('/nutrition', '/cricket', '/olympics');
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -4991,33 +4900,6 @@ app.get('/sitemap-nutrition.xml', (req, res) => {
   const urls = [one('/nutrition', '0.9')]
     .concat(nutrition.CATEGORIES.map((c) => one(`/nutrition/category/${c.slug}`, '0.7')))
     .concat(nutrition.FOODS.map((f) => one(`/nutrition/${f.slug}`, '0.6')))
-    .join('\n');
-  res.type('application/xml').send(
-    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
-  );
-});
-
-// ── SITEMAP FILEM — the hub + every genre + every notable film (a static list) ──
-app.get('/sitemap-movies.xml', (req, res) => {
-  const today = new Date().toISOString().slice(0, 10);
-  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/movies', '0.9'), one('/movies/tv', '0.8')]
-    .concat(movies.GENRES.map((gr) => one(`/movies/genre/${gr.slug}`, '0.7')))
-    .concat(movies.FILMS.map((f) => one(`/movies/${f.slug}`, '0.6')))
-    .concat(tv.TV_GENRES.map((gr) => one(`/movies/tv/genre/${gr.slug}`, '0.7')))
-    .concat(tv.SHOWS.map((s) => one(`/movies/tv/${s.slug}`, '0.6')))
-    .join('\n');
-  res.type('application/xml').send(
-    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
-  );
-});
-
-// ── SITEMAP BOLA — the hub + World Cup list + every final + the Laws page ──
-app.get('/sitemap-football.xml', (req, res) => {
-  const today = new Date().toISOString().slice(0, 10);
-  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>yearly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const urls = [one('/football', '0.9'), one('/football/world-cup', '0.8'), one('/football/rules', '0.8')]
-    .concat(football.CUPS.map((c) => one(`/football/world-cup/${c.y}`, '0.6')))
     .join('\n');
   res.type('application/xml').send(
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
@@ -5388,7 +5270,6 @@ geoSitemap('museums', mus, 'MUSEUMS');
 geoSitemap('archaeological-sites', ta, 'SITES');
 geoSitemap('universities', uv, 'UNIVERSITIES');
 geoSitemap('stadiums', sdm, 'STADIUMS');
-geoSitemap('castles', ks, 'CASTLES');
 geoSitemap('mosques', mj, 'MOSQUES');
 geoSitemap('monuments', mm, 'MONUMENTS');
 geoSitemap('cathedrals', ktl, 'CATHEDRALS');
@@ -5747,10 +5628,7 @@ geoSitemap('water-gaps', wgp, 'WATERGAP');
 geoSitemap('maternity-hospitals', mbs, 'MATERNITY');
 geoSitemap('community-health-centers', pks, 'HLTCENTER');
 geoSitemap('colleges', klj, 'COLLEGES');
-geoSitemap('chateaux', kpf, 'CHATEAUX');
-geoSitemap('castle-ruins', rkt, 'CASTLERUIN');
 geoSitemap('grammar-schools', stm, 'GRAMSCHL');
-geoSitemap('motte-and-bailey-castles', mtb, 'MOTTEBAIL');
 geoSitemap('warehouses', gdg, 'WAREHSE');
 geoSitemap('fortified-towers', mkb, 'FORTTWR');
 geoSitemap('corn-exchanges', bja, 'CORNXCH');
@@ -6422,7 +6300,6 @@ const SITE_NAV = [
   ] },
   { title: 'Explore &amp; play', links: [
     { href: '/alat', label: 'Everyday Tools', short: 'Tools', key: 'alat', top: true },
-    { href: '/charts', label: 'World Music Charts', short: 'Music', key: 'muzik', top: true },
     { href: '/flags', label: 'Flags of the World', short: 'Flags', key: 'bendera', top: true },
     { href: '/learn', label: 'Learn', short: 'Learn', key: 'learn', top: true },
     { href: '/games', label: 'Game Arcade', short: 'Games', key: 'games', top: true },
@@ -6436,9 +6313,6 @@ const SITE_NAV = [
     { href: '/academy', label: 'Academy (50 Lessons)' },
     { href: '/recipes', label: 'World Recipes' },
     { href: '/nutrition', label: 'Food &amp; Calories' },
-    { href: '/movies', label: 'Notable Films of the World' },
-    { href: '/movies/tv', label: 'Notable TV Series' },
-    { href: '/football', label: 'Football &amp; the World Cup' },
     { href: '/cricket', label: 'Cricket &amp; the World Cup' },
     { href: '/olympics', label: 'Olympics Host Cities' },
     { href: '/money', label: 'World Currency Rates' },
@@ -6478,7 +6352,6 @@ const SITE_NAV = [
   ] },
   { title: 'Built world', links: [
     { href: '/museums', label: 'Museums of the World' },
-    { href: '/castles', label: 'Castles' },
     { href: '/cathedrals', label: 'Cathedrals' },
     { href: '/bridges', label: 'Bridges' },
     { href: '/skyscrapers', label: 'Skyscrapers' },
@@ -11288,366 +11161,6 @@ function nutritionNotFound(q) {
   }, nutritionNav());
 }
 
-// ── /movies — Notable Films of the World (STATIC embedded data) ─────────────
-const MOV_CSS = `.mov-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:16px 0}
-.mov-tile{display:block;border:1px solid var(--line);border-left:4px solid var(--accent,#4c8dff);border-radius:9px;padding:12px 15px;background:var(--panel,#171a21);text-decoration:none;color:inherit}
-.mov-tile .mt{font-weight:700;font-size:1.02rem}
-.mov-tile .my{color:var(--accent,#4c8dff);font-weight:600}
-.mov-tile .md{font-size:.86rem;color:var(--muted,#9aa3b2);margin-top:3px}
-.mov-lead{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:16px 0}
-.mov-year{text-align:center;border:1px solid var(--line);border-radius:12px;padding:12px 20px;background:var(--panel,#171a21)}
-.mov-year .big{font-size:1.9rem;font-weight:800;color:var(--accent,#4c8dff);line-height:1}
-.mov-year .unit{font-size:.78rem;color:var(--muted,#9aa3b2)}
-.mov-tag{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 11px;font-size:.82rem;margin:2px 4px 2px 0;background:var(--panel,#171a21);text-decoration:none;color:inherit}
-.mov-award{border-left:3px solid #f5c518;background:var(--panel,#171a21);padding:9px 14px;border-radius:0 8px 8px 0;margin:14px 0;font-size:.94rem}
-@media(max-width:680px){.mov-grid{grid-template-columns:1fr}}`;
-const MOV_GENRE_EMOJI = {
-  'Drama': '🎭', 'Comedy': '😄', 'Romance': '❤️', 'Action & Adventure': '💥', 'Crime': '🕵️',
-  'Thriller': '😰', 'Mystery': '❓', 'Horror': '👻', 'Sci-Fi & Fantasy': '🚀', 'Fantasy': '🐉',
-  'Animation': '🎨', 'War': '🎖️', 'History': '🏛️', 'Musical': '🎵',
-};
-
-function movCard(f) {
-  return `<a class="mov-tile" href="/movies/${f.slug}"><div><span class="mt">${escapeHtml(f.t)}</span> <span class="my">(${f.y})</span></div><div class="md">${escapeHtml(f.d)} · ${escapeHtml(f.g.join(', '))}</div></a>`;
-}
-
-function moviesNav() {
-  return worldNav('Notable Films — tukuk.org/movies', [{
-    href: '/movies', icon: '🎬', name: 'Every film, one page',
-    blurb: `Facts and a plain-English premise for ${movies.FILMS.length} acclaimed and widely-seen films from around the world — year, director, country, language, running time and prize.`,
-  }, {
-    href: '/movies/tv', icon: '📺', name: 'TV series collection',
-    blurb: `The companion list: ${tv.SHOWS.length} notable television series from ${tv.TV_COUNTRIES.length} countries of origin — years, creator, network, seasons and episode count.`,
-  }].concat(movies.GENRES.map((gr) => ({
-    href: `/movies/genre/${gr.slug}`, icon: MOV_GENRE_EMOJI[gr.name] || '🎞️', name: gr.name,
-    blurb: `${gr.items.length} films in the ${gr.name.toLowerCase()} genre, with director, country and running time for each.`,
-  }))));
-}
-
-function moviesHubPage() {
-  const toc = movies.GENRES.map((gr) => `<a href="/movies/genre/${gr.slug}">${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${escapeHtml(gr.name)} (${gr.items.length})</a>`).join(' · ');
-  const dec = movies.DECADES.map((d) => `<span class="mov-tag">${escapeHtml(d.label)} · ${d.items.length}</span>`).join(' ');
-  const sections = movies.GENRES.map((gr) => `<h2 class="section-title" id="${gr.slug}">${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${escapeHtml(gr.name)} <span class="meta">(${gr.items.length} films)</span></h2><div class="mov-grid">${gr.items.map(movCard).join('')}</div>`).join('');
-  const body = `<p>Cinema is one of the things people everywhere love and search for most. This collection gathers ${movies.FILMS.length} widely-acclaimed and widely-seen films from many countries and languages — from Japan and France to South Korea, Brazil, Mexico and the United States. Each entry is a single page with the settled facts (year, director, country, language, running time, genres and any major prize) plus a short, spoiler-free description of what the film is about. We deliberately publish <b>no star-ratings or box-office totals</b>, because those change constantly and we cannot verify them offline — this is an honest reference to what a film <em>is</em>, not a score.</p>
-  <h2 class="section-title">Browse by genre</h2><p>${toc}</p>
-  <h2 class="section-title">Browse by decade</h2><p>${dec}</p>
-  <p>Looking for television? The companion collection of <a href="/movies/tv">notable TV series of the world</a> works the same way — one page per series with years, creator, country, network and episode count.</p>
-  ${sections}
-  <p class="meta">Titles, dates, names and running times are widely-documented facts; every synopsis is our own original wording and avoids spoiler endings. Stored statically on our server — no external call when you load a page.</p>`;
-  return worldDoc({
-    title: 'Notable Films of the World — Year, Director & Premise | Tukuk-OS',
-    desc: `Facts and spoiler-free premises for ${movies.FILMS.length} acclaimed films from around the world: year, director, country, language, running time, genre and major prizes.`,
-    selfUrl: 'https://tukuk.org/movies',
-    heroTitle: '🎬 Notable Films of the World', heroSub: `${movies.FILMS.length} films · ${movies.GENRES.length} genres · many countries & languages`,
-    css: MOV_CSS, body,
-  }, moviesNav());
-}
-
-function moviesGenrePage(gr) {
-  const siblings = movies.GENRES.filter((x) => x.slug !== gr.slug);
-  const otherLinks = `<h2 class="section-title">More genres</h2><p>${siblings.map((x) => `<a href="/movies/genre/${x.slug}">${MOV_GENRE_EMOJI[x.name] || '🎞️'} ${escapeHtml(x.name)}</a>`).join(' · ')}.</p>`;
-  const body = `<p class="back-link"><a href="/movies">&larr; All films</a></p>
-  <p><b>${escapeHtml(gr.name)}</b> has ${gr.items.length} films in this collection, listed oldest first. Each tile opens a page with the director, country, language, running time and a short premise.</p>
-  <div class="mov-grid">${gr.items.map(movCard).join('')}</div>
-  ${otherLinks}
-  <p class="meta">Settled facts with original synopsis text. Stored statically.</p>`;
-  const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${gr.name} films`, description: `${gr.items.length} notable ${gr.name.toLowerCase()} films.`, url: `https://tukuk.org/movies/genre/${gr.slug}`,
-    mainEntity: { '@type': 'ItemList', itemListElement: gr.items.map((f, i) => ({ '@type': 'ListItem', position: i + 1, name: f.t, url: `https://tukuk.org/movies/${f.slug}` })) },
-  }).replace(/</g, '\u003c');
-  return worldDoc({
-    title: `${gr.name} Films — Notable ${gr.name} Movies | Tukuk-OS`,
-    desc: `${gr.items.length} notable ${gr.name.toLowerCase()} films with year, director, country, language and running time.`,
-    selfUrl: `https://tukuk.org/movies/genre/${gr.slug}`,
-    heroTitle: `${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${gr.name} Films`, heroSub: `${gr.items.length} films · oldest first`,
-    ld, css: MOV_CSS, body,
-  }, moviesNav());
-}
-
-function moviesFilmPage(f) {
-  const rows = [
-    ['Director', escapeHtml(f.d)],
-    ['Country of origin', escapeHtml(f.c)],
-    ['Language', escapeHtml(f.l)],
-    ['Running time', `${f.rt} min`],
-    ['Genres', f.g.map((g) => `<a class="mov-tag" href="/movies/genre/${movies.slugify(g)}">${MOV_GENRE_EMOJI[g] || '🎞️'} ${escapeHtml(g)}</a>`).join('')],
-  ].map((x) => `<tr><th>${x[0]}</th><td>${x[1]}</td></tr>`).join('');
-  const award = f.aw ? `<div class="mov-award">🏆 <b>${escapeHtml(f.aw)}</b></div>` : '';
-  const related = movies.relatedFilms(f, 6);
-  const relBlock = related.length ? `<h2 class="section-title">More films like this</h2><div class="mov-grid">${related.map(movCard).join('')}</div>` : '';
-  const body = `<p class="back-link"><a href="/movies">&larr; All films</a></p>
-  <div class="mov-lead"><div class="mov-year"><div class="big">${f.y}</div><div class="unit">release year</div></div>
-  <div style="flex:1;min-width:220px"><h2 class="section-title" style="margin-top:0">${escapeHtml(f.t)} (${f.y})</h2><p class="meta">Directed by ${escapeHtml(f.d)} · ${escapeHtml(f.c)} · ${escapeHtml(f.l)} · ${f.rt} min</p></div></div>
-  ${award}
-  <h2 class="section-title">What the film is about</h2><p>${escapeHtml(f.s)}</p>
-  <h2 class="section-title">Film at a glance</h2><table class="world-table">${rows}</table>
-  ${relBlock}
-  <p class="meta">Year, director, country, language and running time are widely-documented facts; the description is our own and avoids spoiler endings. No rating is shown because we cannot verify a changing score offline. Stored statically.</p>`;
-  const ld = JSON.stringify([
-    { '@context': 'https://schema.org', '@type': 'Movie', name: f.t, image: undefined, datePublished: String(f.y), director: { '@type': 'Person', name: f.d }, countryOfOrigin: { '@type': 'Country', name: f.c }, inLanguage: f.l, duration: `PT${f.rt}M`, genre: f.g, description: f.s, url: `https://tukuk.org/movies/${f.slug}` },
-    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Notable Films', item: 'https://tukuk.org/movies' },
-      { '@type': 'ListItem', position: 2, name: f.g[0], item: `https://tukuk.org/movies/genre/${movies.slugify(f.g[0])}` },
-      { '@type': 'ListItem', position: 3, name: f.t, item: `https://tukuk.org/movies/${f.slug}` },
-    ] },
-  ]).replace(/</g, '\u003c');
-  return worldDoc({
-    title: `${f.t} (${f.y}) — Director, Country & Premise | Tukuk-OS`,
-    desc: `${f.t} (${f.y}), directed by ${f.d}. ${f.c}, ${f.l}, ${f.rt} min. Genres, prizes and a spoiler-free premise of what the film is about.`,
-    selfUrl: `https://tukuk.org/movies/${f.slug}`,
-    heroTitle: `🎬 ${f.t}`, heroSub: `${f.y} · ${f.d} · ${f.g.join(', ')}`,
-    ld, css: MOV_CSS, body,
-  }, moviesNav());
-}
-
-function moviesNotFound(q) {
-  return worldDoc({
-    title: 'Film not found | Notable Films of the World — Tukuk-OS',
-    desc: 'That film was not recognised — browse the full collection of notable films instead.',
-    selfUrl: 'https://tukuk.org/movies', robots: 'noindex,follow',
-    heroTitle: 'Film not found', heroSub: `Nothing matched “${String(q || '')}”`,
-    css: MOV_CSS,
-    body: `<p>We could not match that to one of our films. Open <a href="/movies">the full collection</a> and browse by genre or decade.</p>`,
-  }, moviesNav());
-}
-
-// ── /movies/tv — Notable Television Series of the World (STATIC embedded data) ─
-// Same shell and vocabulary as /movies: MOV_CSS, genre emoji, one tile per entry.
-function tvCard(s) {
-  return `<a class="mov-tile" href="/movies/tv/${s.slug}"><div><span class="mt">${escapeHtml(s.t)}</span> <span class="my">(${escapeHtml(s.y)})</span></div><div class="md">${escapeHtml(s.d)} · ${escapeHtml(s.c)} · ${escapeHtml(s.g.join(', '))}</div></a>`;
-}
-
-function tvHubPage() {
-  const toc = tv.TV_GENRES.map((gr) => `<a href="/movies/tv/genre/${gr.slug}">${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${escapeHtml(gr.name)} (${gr.items.length})</a>`).join(' · ');
-  const co = tv.TV_COUNTRIES.map((x) => `<span class="mov-tag">${escapeHtml(x.name)} · ${x.items.length}</span>`).join(' ');
-  const sections = tv.TV_GENRES.map((gr) => `<h2 class="section-title" id="${gr.slug}">${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${escapeHtml(gr.name)} <span class="meta">(${gr.items.length} series)</span></h2><div class="mov-grid">${gr.items.map(tvCard).join('')}</div>`).join('');
-  const body = `<p>Television is the thing almost everyone in the world watches, and much of the most-watched television ever made was not made in Hollywood. This companion collection gathers ${tv.SHOWS.length} notable series from ${tv.TV_COUNTRIES.length} countries of origin — the United States and the United Kingdom, but also Japan, India, Colombia, Germany, Spain, France, Denmark, South Korea and Turkey. Each entry is one page with the settled facts (years, creator, country, language, original network, seasons and episode count) plus a short premise of what the series is about. We publish <b>no star-ratings</b> and no viewership figures beyond the few records every source agrees on.</p>
-  <h2 class="section-title">Browse by genre</h2><p>${toc}</p>
-  <h2 class="section-title">Where they were made</h2><p>${co}</p>
-  ${sections}
-  <p class="meta">Titles, dates, names and episode counts are widely-documented facts; every description is our own original wording. See also the <a href="/movies">notable films collection</a>. Stored statically on our server — no external call when you load a page.</p>`;
-  const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Notable Television Series of the World', description: `Facts and premises for ${tv.SHOWS.length} notable TV series from around the world.`, url: 'https://tukuk.org/movies/tv',
-    mainEntity: { '@type': 'ItemList', itemListElement: tv.SHOWS.slice().sort((a, b) => a.t.localeCompare(b.t)).map((s, i) => ({ '@type': 'ListItem', position: i + 1, name: s.t, url: `https://tukuk.org/movies/tv/${s.slug}` })) },
-  }).replace(/</g, '\u003c');
-  return worldDoc({
-    title: 'Notable TV Series of the World — Years, Creator & Premise | Tukuk-OS',
-    desc: `Facts and plain-English premises for ${tv.SHOWS.length} notable television series from around the world: years, creator, country, language, network, seasons and episode count.`,
-    selfUrl: 'https://tukuk.org/movies/tv',
-    heroTitle: '📺 Notable TV Series of the World', heroSub: `${tv.SHOWS.length} series · ${tv.TV_GENRES.length} genres · ${tv.TV_COUNTRIES.length} countries of origin`,
-    ld, css: MOV_CSS, body,
-  }, moviesNav());
-}
-
-function tvGenrePage(gr) {
-  const siblings = tv.TV_GENRES.filter((x) => x.slug !== gr.slug);
-  const otherLinks = `<h2 class="section-title">More genres</h2><p>${siblings.map((x) => `<a href="/movies/tv/genre/${x.slug}">${MOV_GENRE_EMOJI[x.name] || '🎞️'} ${escapeHtml(x.name)}</a>`).join(' · ')}.</p>`;
-  const body = `<p class="back-link"><a href="/movies/tv">&larr; All TV series</a></p>
-  <p><b>${escapeHtml(gr.name)}</b> has ${gr.items.length} series in this collection, listed oldest first. Each tile opens a page with the creator, country, network, seasons and episode count.</p>
-  <div class="mov-grid">${gr.items.map(tvCard).join('')}</div>
-  ${otherLinks}
-  <p class="meta">Settled facts with original descriptions. Stored statically.</p>`;
-  const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${gr.name} TV series`, description: `${gr.items.length} notable ${gr.name.toLowerCase()} television series.`, url: `https://tukuk.org/movies/tv/genre/${gr.slug}`,
-    mainEntity: { '@type': 'ItemList', itemListElement: gr.items.map((s, i) => ({ '@type': 'ListItem', position: i + 1, name: s.t, url: `https://tukuk.org/movies/tv/${s.slug}` })) },
-  }).replace(/</g, '\u003c');
-  return worldDoc({
-    title: `${gr.name} TV Series — Notable ${gr.name} Shows | Tukuk-OS`,
-    desc: `${gr.items.length} notable ${gr.name.toLowerCase()} television series with years, creator, country, network and episode count.`,
-    selfUrl: `https://tukuk.org/movies/tv/genre/${gr.slug}`,
-    heroTitle: `${MOV_GENRE_EMOJI[gr.name] || '🎞️'} ${gr.name} TV Series`, heroSub: `${gr.items.length} series · oldest first`,
-    ld, css: MOV_CSS, body,
-  }, moviesNav());
-}
-
-function tvShowPage(s) {
-  const firstYear = parseInt(String(s.y), 10);
-  const rows = [
-    ['Creator / writer', escapeHtml(s.d)],
-    ['Country of origin', escapeHtml(s.c)],
-    ['Language', escapeHtml(s.l)],
-    ['Original network', escapeHtml(s.n)],
-    ['Seasons', escapeHtml(s.se)],
-  ];
-  if (s.ep != null) rows.push(['Episodes', `${s.ep}`]);
-  rows.push(['Genres', s.g.map((g) => `<a class="mov-tag" href="/movies/tv/genre/${tv.slugify(g)}">${MOV_GENRE_EMOJI[g] || '🎞️'} ${escapeHtml(g)}</a>`).join('')]);
-  const table = `<table class="world-table">${rows.map((x) => `<tr><th>${x[0]}</th><td>${x[1]}</td></tr>`).join('')}</table>`;
-  const record = s.f ? `<div class="mov-award">🏅 <b>${escapeHtml(s.f)}</b></div>` : '';
-  const related = tv.SHOWS.filter((x) => x.slug !== s.slug && x.g.some((g) => s.g.includes(g))).slice(0, 6);
-  const relBlock = related.length ? `<h2 class="section-title">More series like this</h2><div class="mov-grid">${related.map(tvCard).join('')}</div>` : '';
-  const body = `<p class="back-link"><a href="/movies/tv">&larr; All TV series</a></p>
-  <div class="mov-lead"><div class="mov-year"><div class="big">${escapeHtml(String(firstYear))}</div><div class="unit">first aired</div></div>
-  <div style="flex:1;min-width:220px"><h2 class="section-title" style="margin-top:0">${escapeHtml(s.t)} (${escapeHtml(s.y)})</h2><p class="meta">${escapeHtml(s.d)} · ${escapeHtml(s.c)} · ${escapeHtml(s.l)} · ${escapeHtml(s.n)}</p></div></div>
-  ${record}
-  <h2 class="section-title">What the series is about</h2><p>${escapeHtml(s.s)}</p>
-  <h2 class="section-title">Series at a glance</h2>${table}
-  ${relBlock}
-  <p class="meta">Years, names, network and episode counts are widely-documented facts; the description is our own. No rating is shown because we cannot verify a changing score offline. Stored statically.</p>`;
-  const ld = JSON.stringify([
-    { '@context': 'https://schema.org', '@type': 'CreativeWorkSeries', name: s.t, datePublished: String(firstYear), creator: { '@type': 'Person', name: s.d }, countryOfOrigin: { '@type': 'Country', name: s.c }, inLanguage: s.l, genre: s.g, abstract: s.s, url: `https://tukuk.org/movies/tv/${s.slug}` },
-    { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Notable Films', item: 'https://tukuk.org/movies' },
-      { '@type': 'ListItem', position: 2, name: 'TV Series', item: 'https://tukuk.org/movies/tv' },
-      { '@type': 'ListItem', position: 3, name: s.g[0], item: `https://tukuk.org/movies/tv/genre/${tv.slugify(s.g[0])}` },
-      { '@type': 'ListItem', position: 4, name: s.t, item: `https://tukuk.org/movies/tv/${s.slug}` },
-    ] },
-  ]).replace(/</g, '\u003c');
-  return worldDoc({
-    title: `${s.t} (${escapeHtml(s.y)}) — Creator, Country & Premise | Tukuk-OS`,
-    desc: `${s.t} (${escapeHtml(s.y)}), created by ${s.d}. ${s.c}, ${s.l}, ${s.n}${s.ep != null ? `, ${s.ep} episodes` : ''}. Seasons, genres and a plain-English premise of what the series is about.`,
-    selfUrl: `https://tukuk.org/movies/tv/${s.slug}`,
-    heroTitle: `📺 ${s.t}`, heroSub: `${s.y} · ${s.d} · ${s.g.join(', ')}`,
-    ld, css: MOV_CSS, body,
-  }, moviesNav());
-}
-
-function tvNotFound(q) {
-  return worldDoc({
-    title: 'TV series not found | Notable TV Series of the World — Tukuk-OS',
-    desc: 'That series was not recognised — browse the full collection of notable TV series instead.',
-    selfUrl: 'https://tukuk.org/movies/tv', robots: 'noindex,follow',
-    heroTitle: 'TV series not found', heroSub: `Nothing matched “${String(q || '')}”`,
-    css: MOV_CSS,
-    body: `<p>We could not match that to one of our series. Open <a href="/movies/tv">the full TV collection</a> and browse by genre or country of origin.</p>`,
-  }, moviesNav());
-}
-
-// ── /football — World Cup history & the Laws of the Game (STATIC embedded data) ─
-const FBALL_CSS = `/* The accent green was #22c55e, which is 2.28:1 on the white light-theme card — axe
-   color-contrast, WCAG 1.4.3 wants 4.5 — and no single green clears both surfaces: 4.5:1 on
-   white needs a relative luminance at or below .183, while the #171a21 panel needs at or above
-   .200. So the ink follows the theme: #15803d is 5.02:1 on white (4.72:1 on the page bg), and
-   #4ade80 is 9.99:1 on the panel. */
-:root{--fb-ink:#4ade80}
-:root[data-theme="light"]{--fb-ink:#15803d}
-.fb-row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;border:1px solid var(--line);border-left:4px solid #1a7f4e;border-radius:9px;padding:11px 15px;margin:8px 0;background:var(--panel,#171a21)}
-.fb-row .fy{font-weight:800;color:var(--fb-ink);font-size:1.05rem;min-width:3.4rem}
-.fb-row .fw{font-weight:700}
-.fb-row .fl{font-size:.86rem;color:var(--muted,#9aa3b2)}
-.fb-row .fs{font-weight:700;text-align:right;white-space:nowrap}
-.fb-champ{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:7px 0;background:var(--panel,#171a21)}
-.fb-champ .n{font-weight:700;flex:1}
-.fb-champ .t{color:var(--fb-ink);font-weight:800}
-.fb-trophy{display:inline-block;background:#f5c518;color:#151922;border-radius:999px;padding:1px 9px;font-weight:800;font-size:.8rem}
-.fb-law{border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:10px 0;background:var(--panel,#171a21)}
-.fb-law .ln{display:inline-block;background:#1a7f4e;color:#fff;border-radius:7px;padding:1px 9px;font-weight:800;margin-right:8px}
-.fb-law .lt{font-weight:700}
-.fb-lead{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin:16px 0}
-.fb-card{border:1px solid var(--line);border-radius:12px;padding:14px 20px;background:var(--panel,#171a21)}
-.fb-card .big{font-size:1.7rem;font-weight:800;color:var(--fb-ink);line-height:1}
-.fb-card .unit{font-size:.78rem;color:var(--muted,#9aa3b2)}
-@media(max-width:680px){.fb-row{grid-template-columns:auto 1fr}.fb-row .fs{text-align:left}}`;
-
-function fbCupRow(c) {
-  return `<a class="fb-row" href="/football/world-cup/${c.y}" style="text-decoration:none;color:inherit"><span class="fy">${c.y}</span><span><span class="fw">${escapeHtml(c.win)}</span> <span class="fl">beat ${escapeHtml(c.run)} — host: ${escapeHtml(c.host)}</span></span><span class="fs">${escapeHtml(c.score)}</span></a>`;
-}
-
-function footballNav() {
-  return worldNav('Football — tukuk.org/football', [
-    { href: '/football/world-cup', icon: '🏆', name: 'World Cup roll of honour', blurb: `Every ${football.CUPS.length} Men's FIFA World Cup final since 1930 — host, champion, runner-up and the score.` },
-    { href: '/football/rules', icon: '📘', name: 'The Laws of the Game', blurb: 'The 17 laws that govern football everywhere, in plain English — pitch, offside, fouls, penalties and set pieces.' },
-  ]);
-}
-
-function footballHubPage() {
-  const top3 = football.CHAMPIONS.slice(0, 3).map((c) => `<span class="fb-champ"><span class="n">${escapeHtml(c.name)}</span><span class="t">${c.titles} ${c.titles === 1 ? 'title' : 'titles'}</span></span>`).join('');
-  const body = `<p>Association football — <b>soccer</b> — is the world's most popular sport: played in almost every country and watched by more people than any other game. The <b>FIFA World Cup</b>, held every four years, is the single most-watched sporting event on Earth. This page keeps the settled facts of that history and a plain-English guide to how the game is actually played.</p>
-  <div class="fb-lead"><div class="fb-card"><div class="big">${football.CUPS.length}</div><div class="unit">World Cups played</div></div><a class="fb-card" href="/football/world-cup" style="text-decoration:none;color:inherit"><div class="big">🏆</div><div class="unit">Full roll of honour</div></a><a class="fb-card" href="/football/rules" style="text-decoration:none;color:inherit"><div class="big">${football.LAWS.length}</div><div class="unit">Laws of the Game</div></a></div>
-  <h2 class="section-title">The most successful nations</h2>${top3}
-  <p class="meta">Brazil leads with ${football.CHAMPIONS[0].titles} titles. Two World Cups (1942, 1946) were cancelled during the Second World War.</p>
-  <h2 class="section-title">Where to go next</h2><p><a href="/football/world-cup">🏆 Every World Cup final, 1930 to today</a> &nbsp;·&nbsp; <a href="/football/rules">📘 The 17 Laws of the Game</a></p>`;
-  return worldDoc({
-    title: 'Football — World Cup History & the Laws of the Game | Tukuk-OS',
-    desc: `The FIFA World Cup roll of honour (${football.CUPS.length} finals since 1930) and the 17 Laws of the Game in plain English — the settled facts of the world's most popular sport.`,
-    selfUrl: 'https://tukuk.org/football',
-    heroTitle: '⚽ Football', heroSub: `World Cup history & the Laws of the Game · ${football.CUPS.length} tournaments`,
-    css: FBALL_CSS, body,
-  }, footballNav());
-}
-
-function footballWorldCupPage() {
-  const champRows = football.CHAMPIONS.map((c) => `<div class="fb-champ"><span class="n">${escapeHtml(c.name)}</span><span class="fb-trophy">${c.titles} ${c.titles === 1 ? 'title' : 'titles'}</span><span class="fl">${c.years.join(', ')}</span></div>`).join('');
-  const finalRows = football.CUPS.map(fbCupRow).join('');
-  const body = `<p class="back-link"><a href="/football">&larr; Football home</a></p>
-  <h2 class="section-title">Roll of honour — most titles</h2>${champRows}
-  <h2 class="section-title">Every final, year by year</h2>${finalRows}
-  <p class="meta">${football.NEXT_CUP.y}: hosted by ${escapeHtml(football.NEXT_CUP.host)} — ${escapeHtml(football.NEXT_CUP.note)}</p>`;
-  const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'FIFA World Cup finals', description: 'Every Men\u2019s FIFA World Cup final with host, champion, runner-up and score.', url: 'https://tukuk.org/football/world-cup',
-    mainEntity: { '@type': 'ItemList', itemListElement: football.CUPS.map((c, i) => ({ '@type': 'ListItem', position: i + 1, name: `${c.y} FIFA World Cup`, url: `https://tukuk.org/football/world-cup/${c.y}` })) },
-  }).replace(/</g, '\u003c');
-  return worldDoc({
-    title: 'FIFA World Cup Winners — Every Final, 1930 to Today | Tukuk-OS',
-    desc: `All ${football.CUPS.length} Men\u2019s FIFA World Cup finals: host nation, champion, runner-up and the score, plus the roll of honour of titles per country.`,
-    selfUrl: 'https://tukuk.org/football/world-cup', ld,
-    heroTitle: '🏆 World Cup Roll of Honour', heroSub: `${football.CUPS.length} finals since 1930`,
-    css: FBALL_CSS, body,
-  }, footballNav());
-}
-
-function footballTournamentPage(c) {
-  const prev = football.findCup(c.y - 4);
-  const next = football.findCup(c.y + 4);
-  const nav = `<p class="back-link">${prev ? `<a href="/football/world-cup/${prev.y}">&larr; ${prev.y}</a>` : ''}${prev && next ? ' · ' : ''}${next ? `<a href="/football/world-cup/${next.y}">${next.y} &rarr;</a>` : ''} &nbsp; <a href="/football/world-cup">All finals</a></p>`;
-  const rows = [
-    ['Host', escapeHtml(c.host)],
-    ['Champion', `🏆 ${escapeHtml(c.win)}`],
-    ['Runner-up', escapeHtml(c.run)],
-    ['Final score', `${escapeHtml(c.score)}${c.how ? ' (' + escapeHtml(c.how) + ')' : ''}`],
-  ].map((x) => `<tr><th>${x[0]}</th><td>${x[1]}</td></tr>`).join('');
-  const body = `<p class="back-link"><a href="/football/world-cup">&larr; All World Cup finals</a></p>
-  <div class="fb-lead"><div class="fb-card"><div class="big">${c.y}</div><div class="unit">World Cup</div></div><div style="flex:1;min-width:220px"><h2 class="section-title" style="margin-top:0">${escapeHtml(c.win)} win the ${c.y} World Cup</h2><p class="meta">Hosted by ${escapeHtml(c.host)}</p></div></div>
-  <p>${escapeHtml(c.note)}</p>
-  <table class="world-table">${rows}</table>
-  ${nav}`;
-  const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'SportsEvent', name: `${c.y} FIFA World Cup`, startDate: String(c.y),
-    description: `${c.win} won the ${c.y} FIFA World Cup, hosted by ${c.host}, beating ${c.run} ${c.score}${c.how ? ' (' + c.how + ')' : ''}.`,
-    url: `https://tukuk.org/football/world-cup/${c.y}`,
-    competitor: [{ '@type': 'SportsTeam', name: c.win, description: 'Champion' }, { '@type': 'SportsTeam', name: c.run, description: 'Runner-up' }],
-  }).replace(/</g, '\u003c');
-  return worldDoc({
-    title: `${c.y} FIFA World Cup — ${c.win} Beat ${c.run} (${c.score}) | Tukuk-OS`,
-    desc: `${c.win} won the ${c.y} World Cup hosted by ${c.host}, beating ${c.run} ${c.score}${c.how ? ' ' + c.how : ''}.`,
-    selfUrl: `https://tukuk.org/football/world-cup/${c.y}`, ld,
-    heroTitle: `🏆 ${c.y} World Cup`, heroSub: `${c.win} beat ${c.run} ${c.score}`,
-    css: FBALL_CSS, body,
-  }, footballNav());
-}
-
-function footballRulesPage() {
-  const laws = football.LAWS.map((l) => `<div class="fb-law" id="law-${l.n}"><span class="ln">${l.n}</span><span class="lt">${escapeHtml(l.t)}</span><p>${escapeHtml(l.s)}</p></div>`).join('');
-  const toc = football.LAWS.map((l) => `<a class="mov-tag" style="display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 11px;font-size:.82rem;margin:2px 4px 2px 0;text-decoration:none;color:inherit" href="#law-${l.n}">${l.n}. ${escapeHtml(l.t)}</a>`).join(' ');
-  const body = `<p class="back-link"><a href="/football">&larr; Football home</a></p>
-  <p>Football is governed by just <b>${football.LAWS.length} laws</b>, maintained by the International Football Association Board (IFAB). They are short enough that a child can play by them and detailed enough to settle arguments at every level of the game. Here is each one in plain English.</p>
-  <p>${toc}</p>
-  ${laws}
-  <p class="meta">Law titles are official; the summaries are our own wording of objective rules. Stored statically — no external call when you load a page.</p>`;
-  const ld = JSON.stringify({
-    '@context': 'https://schema.org', '@type': 'TechArticle', headline: 'The 17 Laws of the Game',
-    description: 'Plain-English summaries of the 17 laws that govern association football.', url: 'https://tukuk.org/football/rules',
-    about: football.LAWS.map((l) => ({ '@type': 'Thing', name: `${l.n}. ${l.t}`, description: l.s })),
-  }).replace(/</g, '\u003c');
-  return worldDoc({
-    title: 'The 17 Laws of the Game (Football) — Explained in Plain English | Tukuk-OS',
-    desc: 'All 17 Laws of the Game that govern association football — pitch, players, offside, fouls, penalties and set pieces — summarised in plain English.',
-    selfUrl: 'https://tukuk.org/football/rules', ld,
-    heroTitle: '📘 The Laws of the Game', heroSub: `${football.LAWS.length} laws, in plain English`,
-    css: FBALL_CSS, body,
-  }, footballNav());
-}
-
-function footballNotFound(q) {
-  return worldDoc({
-    title: 'Not found | Football on Tukuk-OS',
-    desc: 'That football page was not recognised — see the World Cup roll of honour or the Laws of the Game instead.',
-    selfUrl: 'https://tukuk.org/football', robots: 'noindex,follow',
-    heroTitle: 'Not found', heroSub: `Nothing matched “${String(q || '')}”`,
-    css: FBALL_CSS,
-    body: `<p>We could not match that. Try <a href="/football/world-cup">the World Cup roll of honour</a> or <a href="/football/rules">the Laws of the Game</a>.</p>`,
-  }, footballNav());
-}
-
 // ── /cricket — World Cup history & how the game is played (STATIC embedded data) ─
 const CK_CSS = `/* #f59e0b was 2.14:1 on the white light-theme card (axe color-contrast) but 8.11:1 on the
    #171a21 panel, so only the light theme needs a different amber: #b45309 is 5.02:1 on white.
@@ -11694,7 +11207,7 @@ function cricketHubPage() {
   <h2 class="section-title">The most successful 50-over nations</h2>${top3}
   <p class="meta">Australia leads with ${cricket.CHAMPIONS_ODI[0].titles} titles; India (2007, 2013, 2024) leads the T20 roll with ${cricket.CHAMPIONS_T20[0].titles}.</p>
   <h2 class="section-title">Where to go next</h2><p><a href="/cricket/world-cup">🏆 Every Cricket World Cup final, 1975 to today</a> &nbsp;·&nbsp; <a href="/cricket/t20-world-cup">⚡ Every T20 World Cup champion</a> &nbsp;·&nbsp; <a href="/cricket/rules">📘 How the game is played</a></p>
-  <p>Nearly two billion people first fell for cricket through a radio or a television in the last fifty years — the <a href="/movies/tv">TV series collection</a> carries the shows the world watched alongside it, and <a href="/football">football's World Cup record</a> sits next door.</p>`;
+  <p>Nearly two billion people first fell for cricket through a radio or a television in the last fifty years — and the test matches, ODIs and T20s that followed are still watched the same way: family gathered round one screen.</p>`;
   return worldDoc({
     title: 'Cricket — World Cup History & How the Game Is Played | Tukuk-OS',
     desc: `The ICC Cricket World Cup and T20 World Cup rolls of honour (${cricket.CUPS.length + cricket.T20S.length} tournaments), champions per nation and the basics of how cricket is played, in plain English.`,
@@ -11844,7 +11357,7 @@ function olympicsHubPage() {
   <div class="ol-lead"><div class="ol-card"><div class="big ol-rings">◎◎◎</div><div class="unit">since 1896</div></div><a class="ol-card" href="/olympics/summer" style="text-decoration:none;color:inherit"><div class="big">☀️</div><div class="unit">${olympics.SUMMER.length} Summer editions</div></a><a class="ol-card" href="/olympics/winter" style="text-decoration:none;color:inherit"><div class="big">❄️</div><div class="unit">${olympics.WINTER.length} Winter editions</div></a></div>
   <h2 class="section-title">What everyone agrees on</h2>${facts}
   <h2 class="section-title">Where to go next</h2><p><a href="/olympics/summer">☀️ Every Summer Games, 1896 to today</a> &nbsp;·&nbsp; <a href="/olympics/winter">❄️ Every Winter Games, 1924 to today</a></p>
-  <p class="meta">Upcoming: ${olympics.NEXT_WINTER.y} (${escapeHtml(olympics.NEXT_WINTER.city)}) and ${olympics.NEXT_SUMMER.y} (${escapeHtml(olympics.NEXT_SUMMER.city)}) — their results are not part of this static record until decided. See also <a href="/football">football</a> and <a href="/cricket">cricket</a>, the world's two biggest annual-and-quadrennial games.</p>`;
+  <p class="meta">Upcoming: ${olympics.NEXT_WINTER.y} (${escapeHtml(olympics.NEXT_WINTER.city)}) and ${olympics.NEXT_SUMMER.y} (${escapeHtml(olympics.NEXT_SUMMER.city)}) — their results are not part of this static record until decided. See also <a href="/cricket">cricket</a>, the other great quadrennial spectacle the world shares.</p>`;
   const ld = JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Olympic Games — every host since 1896', description: 'Every Summer and Winter Olympic Games with host city and country, including cancelled editions.', url: 'https://tukuk.org/olympics',
     mainEntity: { '@type': 'ItemList', itemListElement: olympics.SUMMER.map((g, i) => ({ '@type': 'ListItem', position: i + 1, name: olName('summer', g.y), url: `https://tukuk.org/olympics/summer/${g.y}` })) },
@@ -15307,156 +14820,6 @@ function charPage() {
     }).replace(/</g, '\\u003c'),
   }, toolsNav());
 }
-// ── /charts — World Music Charts (SSR over the 24h SWR cache in src/muzik.js) ──────
-const MUZIK_CSS = `.mz-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}
-@media(max-width:900px){.mz-tiles{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:540px){.mz-tiles{grid-template-columns:1fr}}
-.mz-tile{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px;background:var(--panel,#171a21);text-decoration:none;color:inherit;min-width:0}
-.mz-tile:hover{border-color:var(--accent,#4c8dff)}
-.mz-tile img{width:54px;height:54px;border-radius:8px;object-fit:cover;flex:none}
-.mz-tile b{display:block;font-size:.9rem;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mz-tile span{display:block;font-size:.78rem;color:var(--muted,#9aa3b2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mz-tile .cc{font-size:.82rem;margin-bottom:2px;color:var(--muted,#9aa3b2)}
-.mz-reg{color:var(--accent,#4c8dff);margin:16px 0 4px;font-size:1rem}
-.mz-chip{display:inline-flex;gap:7px;align-items:center;border:1px solid var(--line);border-radius:999px;padding:5px 12px;margin:3px;text-decoration:none;color:inherit;font-size:.85rem;background:var(--panel,#171a21)}
-.mz-chip:hover{border-color:var(--accent,#4c8dff)}
-.mz-li{display:flex;gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:8px 12px;margin:6px 0;background:var(--panel,#171a21)}
-.mz-li .rk{width:28px;text-align:right;font-weight:700;color:var(--muted,#9aa3b2);flex:none}
-.mz-li img{width:52px;height:52px;border-radius:8px;object-fit:cover;flex:none}
-.mz-li .tt{flex:1;min-width:0}
-.mz-li .tt b{display:block;font-size:.93rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mz-li .tt b a{color:inherit;text-decoration:none}
-.mz-li .tt b a:hover{color:var(--accent,#4c8dff);text-decoration:underline}
-.mz-li .tt span{font-size:.78rem;color:var(--muted,#9aa3b2)}
-.mz-go{flex:none;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--bg,#10131a);color:inherit;font-size:1rem;cursor:pointer}
-.mz-go:hover{border-color:var(--accent,#4c8dff);color:var(--accent,#4c8dff)}
-.mz-bar{position:fixed;left:0;right:0;bottom:0;display:none;gap:12px;align-items:center;background:var(--panel,#171a21);border-top:1px solid var(--line);padding:8px 16px;z-index:60}
-.mz-bar.on{display:flex}
-.mz-bar img{width:40px;height:40px;border-radius:8px;flex:none;visibility:hidden}
-.mz-prog{height:4px;background:var(--line);border-radius:2px;margin-top:6px;overflow:hidden}
-.mz-prog i{display:block;height:100%;width:0;background:var(--accent,#4c8dff)}
-.mz-x{border:1px solid var(--line);border-radius:8px;background:none;color:inherit;padding:6px 10px;cursor:pointer}`;
-
-function muzikNav() {
-  return worldNav('World Music Charts — tukuk.org/charts', [
-    { href: '/charts', icon: '🌍', name: 'All Country Charts', blurb: 'Every country with a live Top 25 on one page — pick a storefront and see what the world is playing today.' },
-    { href: '/charts/us', icon: '🇺🇸', name: 'United States', blurb: 'Today’s American Top 25 with a 30-second preview of every song.' },
-    { href: '/charts/gb', icon: '🇬🇧', name: 'United Kingdom', blurb: 'Today’s British Top 25 — the chart that has moved pop for seven decades.' },
-    { href: '/charts/jp', icon: '🇯🇵', name: 'Japan', blurb: 'Today’s Japanese Top 25 — often a world entirely its own, and better for it.' },
-    { href: '/charts/kr', icon: '🇰🇷', name: 'South Korea', blurb: 'Today’s Korean Top 25, home of the biggest fandom machine on the planet.' },
-    { href: '/charts/ng', icon: '🇳🇬', name: 'Nigeria', blurb: 'Today’s Nigerian Top 25 — Afrobeats’ home ground.' },
-    { href: '/charts/br', icon: '🇧🇷', name: 'Brazil', blurb: 'Today’s Brazilian Top 25 — funk, sertanejo and whatever the radio can’t stop playing.' },
-  ]);
-}
-
-async function muzikHubPage() {
-  const w = await muzikApi.worldTop();
-  const tiles = w.tiles.map((t) => `<a class="mz-tile" href="/charts/${t.cc}"><img src="${escapeHtml(t.song.artwork)}" width="54" height="54" loading="lazy" alt="">`
-    + `<div style="min-width:0"><div class="cc">${t.country.flag} ${escapeHtml(t.country.name)}</div>`
-    + `<b>№ 1 · ${escapeHtml(t.song.name)}</b><span>${escapeHtml(t.song.artist)}</span></div></a>`).join('');
-  const byRegion = muzikApi.REGIONS.map((r) => `<h2 class="mz-reg">${r}</h2><div>`
-    + muzikApi.allCountries().filter((c) => c.region === r)
-      .map((c) => `<a class="mz-chip" href="/charts/${c.cc}">${c.flag} ${escapeHtml(c.name)}</a>`).join('')
-    + '</div>').join('');
-  const body = `<p><b>What is each country listening to right now?</b> Every day Apple publishes a “Most Played” chart per country storefront — streams and radio, counted by the same company that pays the labels. We fetch them all, cache them for a day, and put the whole world’s listening on one page. No account, no cookie wall, no algorithm pretending to be news.</p>
-  <h2 class="section-title">Today’s № 1 around the world</h2>
-  <div class="mz-tiles">${tiles}</div>
-  <h2 class="section-title">All ${muzikApi.allCountries().length} country charts</h2>
-  <p>Pick a country and you get its live <b>Top 25</b> — album art, genre, release year, and a one-tap <b>30-second preview</b> of every single song, played right here.</p>
-  ${byRegion}
-  <h2 class="section-title">Where the numbers come from</h2>
-  <p>Charts are Apple’s public daily <i>Most Played</i> feeds; previews are the official iTunes 30-second clips. Our copies refresh every 24 hours, and every chart page states exactly when its feed was published — no invented rankings, no “trends” that aren’t. Countries whose feed Apple does not publish (we verified all of them live) simply aren’t listed.</p>
-  <p class="meta">Prefer live presenters and whole genres? The <a href="/social">community pages</a> link out to radio tools — charts are what people already played.</p>`;
-  return worldDoc({
-    title: 'World Music Charts — What Every Country Is Listening To Today | Tukuk-OS',
-    desc: 'Daily Top 25 charts for 90 countries — what each nation is actually playing right now, with album art and a 30-second preview of every song. Free, no account, updated daily from Apple’s public Most Played feeds.',
-    selfUrl: 'https://tukuk.org/charts',
-    heroTitle: '🎵 World Music Charts', heroSub: `Today’s № 1 in ${w.tiles.length} highlight countries · full Top 25 for ${muzikApi.allCountries().length} storefronts`,
-    css: MUZIK_CSS, body,
-    ld: JSON.stringify({
-      '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'World Music Charts',
-      description: 'Daily Apple Most Played charts for 90 countries with 30-second previews.',
-      url: 'https://tukuk.org/charts',
-      mainEntity: { '@type': 'ItemList', itemListElement: w.tiles.map((t, i) => ({ '@type': 'ListItem', position: i + 1, name: t.song.name + ' — ' + t.song.artist, url: 'https://tukuk.org/charts/' + t.cc })) },
-    }).replace(/</g, '\\u003c'),
-  }, muzikNav());
-}
-
-async function muzikChartPage(cc) {
-  const c = muzikApi.countryOf(cc);
-  const ch = await muzikApi.countryChart(cc);
-  const stale = Date.now() - ch.fetchedAt > 25 * 60 * 60 * 1000; // past TTL + an hour of grace
-  const rows = ch.rows.map((s) => `<div class="mz-li"><div class="rk">${s.rank}</div>`
-    + `<img src="${escapeHtml(s.artwork)}" width="52" height="52" loading="lazy" alt="">`
-    + `<div class="tt"><b><a href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.name)}</a></b>`
-    + `<span>${escapeHtml(s.artist)} · ${escapeHtml(s.genre)} · ${escapeHtml(String(s.releaseDate).slice(0, 4))}</span></div>`
-    + `<button class="mz-go" type="button" data-id="${escapeHtml(s.id)}" aria-label="Play a preview of ${escapeHtml(s.name)}">▶</button></div>`).join('');
-  const siblings = muzikApi.allCountries().filter((x) => x.region === c.region && x.cc !== c.cc)
-    .map((x) => `<a class="mz-chip" href="/charts/${x.cc}">${x.flag} ${escapeHtml(x.name)}</a>`).join('');
-  const body = `${stale ? '<p class="meta">⚠ The Apple feed is briefly unreachable — this is the last chart we fetched successfully, published ' + escapeHtml(ch.updated) + '.</p>' : ''}
-  <div>${rows}</div>
-  <noscript><p>The play buttons need JavaScript, but the chart itself is plain server-rendered HTML.</p></noscript>
-  <h2 class="section-title">About this chart</h2>
-  <p>Apple’s <i>Most Played</i> for ${escapeHtml(c.name)}, published ${escapeHtml(ch.updated)} — a mix of streaming plays and radio listenership in that storefront, refreshed daily. Song titles link out to Apple Music; ▶ plays the official 30-second preview clip from iTunes (a preview is a preview — the full track is longer, and we show its real length in the player).</p>
-  <h2 class="section-title">More from ${escapeHtml(c.region)}</h2>
-  <div>${siblings}</div>
-  <p class="meta">All countries: <a href="/charts">World Music Charts</a>.</p>
-  <div class="mz-bar" id="mz-bar"><img id="mz-art" width="40" height="40" alt="">
-    <div style="flex:1;min-width:0"><b id="mz-title" style="display:block;font-size:.9rem"></b><span id="mz-note" style="font-size:.78rem;color:var(--muted,#9aa3b2)"></span>
-    <div class="mz-prog"><i id="mz-fill"></i></div></div>
-    <button class="mz-x" id="mz-x" type="button" aria-label="Close player">✕</button>
-  </div>`;
-  const script = `<script>(function(){
-function $(id){return document.getElementById(id);}
-var audio=new Audio(),btns=[].slice.call(document.querySelectorAll('.mz-go'));
-function reset(){btns.forEach(function(b){b.textContent='▶';b.removeAttribute('data-on');});}
-btns.forEach(function(b){b.onclick=function(){
- if(b.getAttribute('data-on')){audio.pause();reset();return;}
- if(!audio.paused)audio.pause();
- reset();b.textContent='…';b.setAttribute('data-on','1');
- var id=b.getAttribute('data-id');
- fetch('/charts/api/preview?id='+encodeURIComponent(id)).then(function(r){
-  if(!r.ok)throw new Error('http '+r.status);return r.json();
- }).then(function(j){
-  if(!b.getAttribute('data-on'))return; // user moved on while we were fetching
-  $('mz-art').src=j.artwork;$('mz-art').style.visibility='visible';
-  $('mz-title').textContent=j.trackName+' — '+j.artist;
-  var fs=Math.round(j.fullMs/1000);
-  $('mz-note').textContent='official 30-second preview · full track '+(fs>0?fs+' s':'length unknown');
-  $('mz-bar').classList.add('on');
-  audio.src=j.previewUrl;
-  audio.play().then(function(){b.textContent='⏸';}).catch(function(){reset();$('mz-note').textContent='⚠ press play once more — browsers block sound until you interact';});
- }).catch(function(){
-  reset();$('mz-bar').classList.add('on');$('mz-art').style.visibility='hidden';
-  $('mz-title').textContent='⚠ preview unavailable right now';$('mz-note').textContent='';
- });
-};});
-audio.onended=function(){reset();$('mz-fill').style.width='0';};
-audio.ontimeupdate=function(){var d=audio.duration||1;$('mz-fill').style.width=Math.min(100,Math.round(audio.currentTime/d*100))+'%';};
-$('mz-x').onclick=function(){audio.pause();$('mz-bar').classList.remove('on');reset();};
-})();</script>`;
-  return worldDoc({
-    title: `${c.name} Music Chart Today — Top 25 With Previews | Tukuk-OS`,
-    desc: `Today's Apple Most Played Top 25 for ${c.name}: every song with album art, genre, release year and an official 30-second preview — free, no account needed.`,
-    selfUrl: `https://tukuk.org/charts/${c.cc}`,
-    heroTitle: `${c.flag} ${c.name} — Top 25`, heroSub: `№ 1 today: ${ch.rows[0].name} — ${ch.rows[0].artist}`,
-    css: MUZIK_CSS, body: body + script,
-    ld: JSON.stringify({
-      '@context': 'https://schema.org', '@type': 'WebPage', name: `${c.name} — Daily Top 25 Music Chart`,
-      description: `Apple Most Played chart for ${c.name} with 30-second previews.`,
-      url: `https://tukuk.org/charts/${c.cc}`,
-    }).replace(/</g, '\\u003c'),
-  }, muzikNav());
-}
-
-function muzikNotFoundPage() {
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>No chart for that country | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>🎵 No chart for that country</h1><p>Apple does not publish a Most Played feed for that storefront code (we only list countries whose feeds we verified live). Browse them all instead:</p><p><a href="/charts">→ World Music Charts</a></p></body></html>`;
-}
-
-function muzikBusy() {
-  return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Music charts briefly unavailable | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>🎵 World Music Charts</h1><p>The chart page failed to render while the server reloaded, or Apple’s feed was unreachable on a cold start. Please refresh in a moment.</p><p><a href="/">Back to Tukuk-OS</a></p></body></html>`;
-}
-
 // ── /flags — Flags of the World (flag images from the world-countries set, ──────
 // stories quoted from English Wikipedia, CC BY-SA — see src/bendera.js) ────────────
 const BENDERA_CSS = `.bd-search{width:100%;max-width:420px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:inherit;margin:14px 0}
@@ -16982,11 +16345,6 @@ function stadiumHubPage() { return geoHubPage(sdm, 'stadiums', STADIUM_CFG); }
 function stadiumRegionPage(r) { return geoRegionPage(r, sdm, 'stadiums', STADIUM_CFG); }
 function stadiumPage(x, sum) { return geoItemPage(x, sum, sdm, 'stadiums', STADIUM_CFG); }
 function stadiumNotFound(q) { return geoNotFound('stadiums', STADIUM_CFG, q); }
-const KASTIL_CFG = geoCfg({ base: 'castles', listKey: 'CASTLES', inRegion: 'castlesInRegion', byCountry: 'castleByCountry', unit: 'castles', singular: 'castle', titleCase: 'Castles', icon: '\ud83c\udff0', navBlurb: `Profiles of the world's castles \u2014 where each fortress stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable castles worldwide: location, country and what makes each castle significant.', subMetric: 'location & fortification', intro: `These are the world's most notable <b>castles</b> \u2014 fortified residences of nobility and royalty, ringed with walls, moats and keeps that dominated medieval landscapes and still define tourist routes today. Each profile shows where the castle stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'LandmarksStructureOrBuilding' });
-function kastilHubPage() { return geoHubPage(ks, 'castles', KASTIL_CFG); }
-function kastilRegionPage(r) { return geoRegionPage(r, ks, 'castles', KASTIL_CFG); }
-function kastilPage(x, sum) { return geoItemPage(x, sum, ks, 'castles', KASTIL_CFG); }
-function kastilNotFound(q) { return geoNotFound('castles', KASTIL_CFG, q); }
 const MASJID_CFG = geoCfg({ base: 'mosques', listKey: 'MOSQUES', inRegion: 'mosquesInRegion', byCountry: 'mosqueByCountry', unit: 'mosques', singular: 'mosque', titleCase: 'Mosques', icon: '\ud83d\udd4c', navBlurb: `Profiles of the world's mosques \u2014 where each stands, which country it is in, and a plain-English introduction.`, seoDesc: 'Introductions to notable mosques worldwide: location, country and what makes each mosque significant.', subMetric: 'location & architecture', intro: `These are the world's most notable <b>mosques</b> \u2014 Islamic places of worship, from early hypostyle halls to imperial Ottoman domes and vast modern complexes, centering the spiritual and civic life of Muslim communities. Each profile shows where the mosque stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'Mosque' });
 function masjidHubPage() { return geoHubPage(mj, 'mosques', MASJID_CFG); }
 function masjidRegionPage(r) { return geoRegionPage(r, mj, 'mosques', MASJID_CFG); }
@@ -19385,32 +18743,17 @@ function healthCentersRegionPage(r) { return geoRegionPage(r, pks, 'community-he
 function healthCentersPage(x, sum) { return geoItemPage(x, sum, pks, 'community-health-centers', HLTCENTER_CFG); }
 function healthCentersNotFound(q) { return geoNotFound('community-health-centers', HLTCENTER_CFG, q); }
 
-// ── BATCH AV: colleges, chateaux, castle ruins, grammar schools, motte-and-bailey, warehouses, fortified towers, corn exchanges, canal tunnels ──
+// ── BATCH AV: colleges, grammar schools, warehouses, fortified towers, corn exchanges, canal tunnels ──
 const COLLEGES_CFG = geoCfg({ base: 'colleges', listKey: 'COLLEGES', inRegion: 'collegesInRegion', byCountry: 'collegeByCountry', unit: 'colleges', singular: 'college', titleCase: 'Colleges', icon: '🎓', navBlurb: `Profiles of the world's colleges — residential and academic schools within universities and standalone institutions of higher learning.`, seoDesc: 'Introductions to notable colleges and residential campuses worldwide: location, country and the academic tradition of each institution.', subMetric: 'location & academic heritage', intro: `These are the world's notable <b>colleges</b> — historic seats of learning, from ancient university colleges to modern residential campuses, each granting degrees and shaping careers. Each profile shows where the college is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'EducationalOrganization' });
 function collegesHubPage() { return geoHubPage(klj, 'colleges', COLLEGES_CFG); }
 function collegesRegionPage(r) { return geoRegionPage(r, klj, 'colleges', COLLEGES_CFG); }
 function collegesPage(x, sum) { return geoItemPage(x, sum, klj, 'colleges', COLLEGES_CFG); }
 function collegesNotFound(q) { return geoNotFound('colleges', COLLEGES_CFG, q); }
-const CHATEAUX_CFG = geoCfg({ base: 'chateaux', listKey: 'CHATEAUX', inRegion: 'chateauxInRegion', byCountry: 'chateauByCountry', unit: 'chateaux', singular: 'chateau', titleCase: 'Chateaux', icon: '🏰', navBlurb: `Profiles of the world's chateaux — grand French and European country seats, castles and wine estates.`, seoDesc: 'Introductions to notable chateaux and manorial estates worldwide: location, country and the architecture and history of each house.', subMetric: 'location & estate heritage', intro: `These are the world's notable <b>chateaux</b> — the fortified houses, Renaissance palaces and wine-estate manors of France and beyond, many open as museums or still held by old families. Each profile shows where the chateau stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'HistoricBuilding' });
-function chateauxHubPage() { return geoHubPage(kpf, 'chateaux', CHATEAUX_CFG); }
-function chateauxRegionPage(r) { return geoRegionPage(r, kpf, 'chateaux', CHATEAUX_CFG); }
-function chateauxPage(x, sum) { return geoItemPage(x, sum, kpf, 'chateaux', CHATEAUX_CFG); }
-function chateauxNotFound(q) { return geoNotFound('chateaux', CHATEAUX_CFG, q); }
-const CASTLERUIN_CFG = geoCfg({ base: 'castle-ruins', listKey: 'CASTLERUIN', inRegion: 'castleRuinsInRegion', byCountry: 'castleRuinByCountry', unit: 'castle ruins', singular: 'castle ruin', titleCase: 'Castle Ruins', icon: '🏚️', navBlurb: `Profiles of the world's castle ruins — weathered fortresses and keeps left as romantic, roofless shells.`, seoDesc: 'Introductions to notable castle ruins and ruined fortresses worldwide: location, country and the history behind each decayed stronghold.', subMetric: 'location & ruin heritage', intro: `These are the world's notable <b>castle ruins</b> — strongholds battered by siege, neglect and time, now preserved as roofless monuments to the medieval world. Each profile shows where the ruin stands, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'HistoricBuilding' });
-function castleRuinsHubPage() { return geoHubPage(rkt, 'castle-ruins', CASTLERUIN_CFG); }
-function castleRuinsRegionPage(r) { return geoRegionPage(r, rkt, 'castle-ruins', CASTLERUIN_CFG); }
-function castleRuinsPage(x, sum) { return geoItemPage(x, sum, rkt, 'castle-ruins', CASTLERUIN_CFG); }
-function castleRuinsNotFound(q) { return geoNotFound('castle-ruins', CASTLERUIN_CFG, q); }
 const GRAMSCHL_CFG = geoCfg({ base: 'grammar-schools', listKey: 'GRAMSCHL', inRegion: 'grammarSchoolsInRegion', byCountry: 'grammarSchoolByCountry', unit: 'grammar schools', singular: 'grammar school', titleCase: 'Grammar Schools', icon: '📚', navBlurb: `Profiles of the world's grammar schools — historic selective schools, many founded centuries ago on a Latin curriculum.`, seoDesc: 'Introductions to notable grammar schools and ancient academies worldwide: location, country and the educational history of each school.', subMetric: 'location & schooling heritage', intro: `These are the world's notable <b>grammar schools</b> — endowment-funded schools of Latin and the classics, some tracing their charts back to the medieval and Tudor centuries. Each profile shows where the school is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'EducationalOrganization' });
 function grammarSchoolsHubPage() { return geoHubPage(stm, 'grammar-schools', GRAMSCHL_CFG); }
 function grammarSchoolsRegionPage(r) { return geoRegionPage(r, stm, 'grammar-schools', GRAMSCHL_CFG); }
 function grammarSchoolsPage(x, sum) { return geoItemPage(x, sum, stm, 'grammar-schools', GRAMSCHL_CFG); }
 function grammarSchoolsNotFound(q) { return geoNotFound('grammar-schools', GRAMSCHL_CFG, q); }
-const MOTTEBAIL_CFG = geoCfg({ base: 'motte-and-bailey-castles', listKey: 'MOTTEBAIL', inRegion: 'motteBaileysInRegion', byCountry: 'motteBaileyByCountry', unit: 'motte-and-bailey castles', singular: 'motte-and-bailey castle', titleCase: 'Motte-and-Bailey Castles', icon: '⛰️', navBlurb: `Profiles of the world's motte-and-bailey castles — early medieval fortresses of an earthen mound and a defended courtyard.`, seoDesc: 'Introductions to notable motte-and-bailey castles and earthwork fortifications worldwide: location, country and the Norman-era origins of each.', subMetric: 'location & earthwork heritage', intro: `These are the world's notable <b>motte-and-bailey castles</b> — the first timber strongholds of Norman and medieval Europe, raised on a dug earthen mound beside a defended courtyard. Each profile shows where the earthwork is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'HistoricBuilding' });
-function motteBaileysHubPage() { return geoHubPage(mtb, 'motte-and-bailey-castles', MOTTEBAIL_CFG); }
-function motteBaileysRegionPage(r) { return geoRegionPage(r, mtb, 'motte-and-bailey-castles', MOTTEBAIL_CFG); }
-function motteBaileysPage(x, sum) { return geoItemPage(x, sum, mtb, 'motte-and-bailey-castles', MOTTEBAIL_CFG); }
-function motteBaileysNotFound(q) { return geoNotFound('motte-and-bailey-castles', MOTTEBAIL_CFG, q); }
 const WAREHSE_CFG = geoCfg({ base: 'warehouses', listKey: 'WAREHSE', inRegion: 'warehousesInRegion', byCountry: 'warehouseByCountry', unit: 'warehouses', singular: 'warehouse', titleCase: 'Warehouses', icon: '📦', navBlurb: `Profiles of the world's warehouses — historic stores, bond stores and granaries that held the goods of trade.`, seoDesc: 'Introductions to notable historic warehouses and stores worldwide: location, country and the trade and cargo each building once held.', subMetric: 'location & commerce heritage', intro: `These are the world's notable <b>warehouses</b> — the bonded stores, wool warehouses and grain depots built to hold the wealth of trade, many now converted to new uses. Each profile shows where the warehouse is, which country it is in, and a plain-English introduction from Wikipedia.`, ldType: 'CivicStructure' });
 function warehousesHubPage() { return geoHubPage(gdg, 'warehouses', WAREHSE_CFG); }
 function warehousesRegionPage(r) { return geoRegionPage(r, gdg, 'warehouses', WAREHSE_CFG); }
@@ -23856,7 +23199,6 @@ const FEED_TILES = [
   { key: 'awak-angkasa', label: 'People in space', file: 'crew-last.json' },
   { key: 'resipi', label: 'Recipes', file: 'recipes-last.json' },
   { key: 'cuti', label: 'Holiday calendar', file: 'cuti-holidays.json' },
-  { key: 'muzik', label: 'Music charts', file: 'muzik-charts.json' },
 ];
 
 function feedTile({ label, file }) {

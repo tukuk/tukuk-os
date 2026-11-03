@@ -18,11 +18,8 @@ const udara = require('./udara');
 const bk = require('./books');
 const rcp = require('./recipes');
 const nutrition = require('./nutrition');
-const movies = require('./movies');
-const football = require('./football');
 const cricket = require('./cricket');
 const olympics = require('./olympics');
-const tv = require('./tv');
 
 /**
  * The front doors by path. One list, used twice: every document below is built from one of
@@ -31,7 +28,7 @@ const tv = require('./tv');
 const HUB_PATHS = [
   '/countries', '/weather', '/earthquakes', '/holidays', '/statistics',
   '/disasters', '/flags', '/maps', '/air-quality', '/academy', '/books', '/recipes',
-  '/nutrition', '/movies', '/football', '/cricket', '/olympics'
+  '/nutrition', '/cricket', '/olympics'
 ];
 
 /**
@@ -207,32 +204,6 @@ async function sectionHubs(logger = console) {
       ],
       keywords: ['nutrition', 'calories', 'food', 'protein', 'carbohydrate', 'sugar', 'fat', 'fibre', 'diet', 'serving size',
         'kalori', 'berapa kalori', 'combien de calories', 'cuántas calorías', 'wieviele kalorien', 'quantas calorias'],
-    },
-    {
-      url: '/movies',
-      title: `Notable Films of the World — ${movies.FILMS.length} Movies, Year, Director and Premise`,
-      description: `${movies.FILMS.length} acclaimed films from around the world with release year, director, country, language, running time, genres and a spoiler-free description of what each film is about.`,
-      lines: [
-        `What is The Godfather about? These pages answer with the year, the director, the country and a plain-English premise for each of ${movies.FILMS.length} widely-seen films, from Japan and France to South Korea, Brazil and the United States.`,
-        `Films are browsable by ${movies.GENRES.length} genres and by decade, oldest first within each list.`,
-        'No star-ratings or box-office totals are published, because those change constantly and cannot be verified offline — the pages say what a film is, not what it scored.',
-        `The companion collection at /movies/tv covers ${tv.SHOWS.length} notable television series from around the world — years, creator, country, network and episode count.`,
-        `Series in the TV collection include: ${tv.SHOWS.map((s) => s.t).join(', ')}.`,
-      ],
-      keywords: ['movies', 'films', 'film', 'movie', 'director', 'cinema', 'what is it about', 'best known films', 'genre',
-        'tv', 'tv series', 'television', 'best tv shows', 'séries', 'series de tv', 'fernsehserien'],
-    },
-    {
-      url: '/football',
-      title: `Football — World Cup History and the ${football.LAWS.length} Laws of the Game`,
-      description: `Every Men's FIFA World Cup final since 1930 — host, champion, runner-up and score — plus all ${football.LAWS.length} laws that govern football, in plain English.`,
-      lines: [
-        `Who won the World Cup? This roll of honour lists all ${football.CUPS.length} men's finals since 1930 with the host nation, the champion, the runner-up and the score.`,
-        football.CHAMPIONS.length ? `Which country has won the most World Cups? ${football.CHAMPIONS[0].name}, with ${football.CHAMPIONS[0].titles} titles (${football.CHAMPIONS[0].years.join(', ')}).` : '',
-        `How is football played? The ${football.LAWS.length} Laws of the Game — pitch, players, offside, fouls, free kicks and the penalty kick — are each explained in a short plain-English summary.`,
-      ],
-      keywords: ['football', 'soccer', 'world cup', 'fifa', 'laws of the game', 'offside', 'penalty', 'rules', 'champion',
-        'fußball', 'futbol', 'futebol', 'calcio', 'football world cup winners'],
     },
     {
       url: '/cricket',

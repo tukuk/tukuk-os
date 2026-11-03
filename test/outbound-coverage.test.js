@@ -41,9 +41,9 @@ why the module must own its own outage policy (see weather.js).`);
 test('the guard is registered for each module the survey blamed by name', () => {
   // The ten slowest requests in the 23 Oct window came from these four families. If one of these
   // names disappears from /health's `outbound` list, the guard for it was dropped by accident.
-  const expected = ['muzik', 'wang', 'nasa-api', 'nasa-assets'];
+  const expected = ['wang', 'nasa-api', 'nasa-assets'];
   const { guardedStats } = require('../src/outbound');
-  require('../src/muzik'); require('../src/wang'); require('../src/nasa');
+  require('../src/wang'); require('../src/nasa');
   const names = guardedStats().map((s) => s.name);
   for (const n of expected) assert.ok(names.includes(n), `${n} is not guarded — /health would not list it`);
 });

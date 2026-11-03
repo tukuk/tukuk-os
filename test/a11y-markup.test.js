@@ -258,7 +258,8 @@ test('the sports accents follow the theme instead of failing on white', () => {
   // #22c55e measured 2.28:1 and #f59e0b 2.14:1 on the white light-theme card. No single colour
   // clears both surfaces: 4.5:1 on white needs a relative luminance at or below .183, the #171a21
   // panel needs at or above .200. So each accent is a pair of theme-scoped tokens.
-  for (const [block, name, dark, light] of [['FBALL', 'fb-ink', '#4ade80', '#15803d'], ['CK', 'ck-ink', '#f59e0b', '#b45309']]) {
+  // (FBALL went with the /football section, Nov 2026 — cricket is the last themed grid left.)
+  for (const [block, name, dark, light] of [['CK', 'ck-ink', '#f59e0b', '#b45309']]) {
     const css = SERVER.match(new RegExp('const ' + block + '_CSS = `([\\s\\S]*?)`;'));
     assert.ok(css, `${block}_CSS is gone`);
     assert.ok(SERVER.includes(`:root{--${name}:${dark}}`), `--${name} lost its dark-theme value`);
