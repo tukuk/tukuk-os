@@ -1,0 +1,111 @@
+name: Catalogue truth
+
+# The books catalogue is a promise about other people's data: 878 subject strings,
+# each proven on the day it was curated to carry 30+ works on Open Library with the
+# product's exact-lowercase match. Open Library keeps editing itself while we sleep.
+# This lane re-runs the same proof on a rotating sample (scripts/catalogue-truth.js
+# tiles the catalogue by day-offset, so a run never checks the same shelves twice
+# in a row) and opens an issue only for the broken promise a page actually shows:
+# a shelf carrying ZERO works.
+#
+# Weekly, Sunday 06:10 UTC — a 120-shelf sample at 280ms/request takes a few
+# minutes, and shelves drifting thin (1–29 works) is printed but not paged for;
+# OL counts wobble and a monitor that cries at wobble gets muted within a month.
+on:
+  schedule:
+    - cron: '10 6 * * 0'
+  workflow_dispatch:
+    inputs:
+      sample:
+        description: 'How many shelves to verify this run'
+        required: false
+        default: '120'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: catalogue-truth
+  cancel-in-progress: false
+
+jobs:
+  truth:
+    name: Sampled shelves still carry books
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      # src/books.js needs axios (its production dependency set is what the app
+      # itself installs with), so this is the same --omit=dev install test.yml uses.
+      - name: Install
+        run: npm ci --omit=dev --no-audit --no-fund
+
+      # rc must come from PIPESTATUS, not from tee — the same bug the canary
+      # documents in its own copy (a swallowed exit code turns a red check green).
+      - name: Verify a rotating sample
+        id: truth
+        env:
+          # via env, not inline ${{ }} interpolation into the shell string.
+          SAMPLE: ${{ github.event.inputs.sample || '120' }}
+        run: |
+          node scripts/catalogue-truth.js --sample "${SAMPLE:-120}" | tee truth.log
+          echo "rc=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload truth log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalogue-truth-log
+          path: truth.log
+          retention-days: 30
+
+      - name: Open or close the tracking issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RC: ${{ steps.truth.outputs.rc }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          DEAD_TITLE="catalogue: a verified shelf lost its books"
+
+          find_open() { gh issue list --state open --search "\"$1\" in:title" --json number \
+                        --jq '.[0].number // empty'; }
+
+          # rc 2 means Open Library refused the checks — blindness, not verdict.
+          # Green with a note, like the canary's BLOCKED rule: a dead upstream
+          # must never pile issues onto this repo.
+          if [ "${RC:-1}" = "2" ]; then
+            echo "::warning title=Open Library was unreachable::the truth check could not run; no shelves were judged"
+            exit 0
+          fi
+
+          # Every conditional is an explicit if/fi — GitHub runs this under bash -e
+          # and a bare `[ -n "$X" ] && ...` aborts the step when the test is false.
+          if [ "${RC:-1}" = "0" ]; then
+            N="$(find_open "$DEAD_TITLE")"
+            if [ -n "$N" ]; then
+              gh issue close "$N" --comment "Shelves carry books again on the sampled sweep: $RUN_URL"
+            fi
+            echo "truth check passed"
+            exit 0
+          fi
+
+          STAMP="$(date -u +%FT%TZ)"
+          BODY="$(printf 'Verdict: dead shelves at %s\n\n```\n%s\n```\n\nRun: %s' \
+                   "$STAMP" "$(tail -40 truth.log)" "$RUN_URL")"
+          NUM="$(find_open "$DEAD_TITLE")"
+          if [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --body "$BODY"
+          else
+            gh issue create --title "$DEAD_TITLE" --body "$BODY"
+          fi
+          echo "catalogue truth failed — issue $NUM"
+          exit 1

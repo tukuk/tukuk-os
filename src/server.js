@@ -21545,6 +21545,26 @@ app.get('/api', (req, res) => {
   });
 });
 
+// The public shape of the backup witness: does an off-site copy exist, did the
+// last run succeed, and how long ago was it. A dry run (the installer's archive
+// proof) is reported as such — it proves the tar and git bundle build, not that
+// anything reached Google Drive. Missing state means the timer never ran at all,
+// which CI must be able to tell apart from a fresh good backup.
+function backupWitness() {
+  try {
+    const b = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'data', 'backup-last.json'), 'utf8'));
+    const atMs = Date.parse(b.at);
+    return {
+      configured: true,
+      ok: Boolean(b.ok),
+      dry: Boolean(b.dry),
+      ageHours: Number.isFinite(atMs) ? Math.max(0, Math.round((Date.now() - atMs) / 36000) / 10) : null,
+    };
+  } catch {
+    return { configured: false, ok: false, dry: false, ageHours: null };
+  }
+}
+
 app.get('/health', async (req, res) => {
   try {
     const meiliHealth = await health();
@@ -21568,6 +21588,12 @@ app.get('/health', async (req, res) => {
       // dated (or is older than the timer's own period) is reported as stale: silence
       // and a dead timer are indistinguishable from outside otherwise.
       update: updateStatus.read(),
+      // The nightly Drive backup as an age and a verdict — no file names, no errors,
+      // those live in /api/admin/overview. It is here because "is the off-site copy
+      // fresh?" must be answerable by something that has no access to the box
+      // (scripts/edge-connect.js in CI), which is the only way a GitHub-hosted
+      // pipeline can watch over backups without holding a key to the server.
+      backup: backupWitness(),
     });
   } catch (error) {
     // Degraded still reports the day's tally: the number matters most on the bad days.

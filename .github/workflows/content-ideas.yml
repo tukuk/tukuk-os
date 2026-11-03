@@ -1,0 +1,93 @@
+name: Content ideas
+
+# The growth target is measured in benefits served, and the machine that got the
+# books catalogue from 27 shelves to 878 was: propose a subject, prove it carries
+# 30+ real works on Open Library with the product's exact match, only then make
+# it a page. That pipeline used to run only when a human sat down to run it.
+# scripts/content-ideas.js is it automated: it harvests subject co-occurrences
+# from a rotating sample of today's shelves (better ideas than a typed-from-
+# memory list — they come from the same books our readers already hold), gates
+# them through the same three checks, and reports the ones that pass.
+#
+# This lane is a SUGGESTION, never a gate: it always ends green and talks to one
+# rolling issue instead of opening a new one each week. Curating a batch means
+# writing titles and blurbs, and that stays a reviewed commit by choice — the
+# machine decides what is TRUE (does the shelf carry books), a human decides
+# what is WORTH publishing and how it reads.
+on:
+  schedule:
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: content-ideas
+  cancel-in-progress: false
+
+jobs:
+  ideas:
+    name: Verified shelves we do not have yet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci --omit=dev --no-audit --no-fund
+
+      - name: Harvest and verify candidates
+        id: ideas
+        run: |
+          node scripts/content-ideas.js --seeds 8 --verify 30 | tee ideas.log
+          echo "rc=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload ideas log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: content-ideas-log
+          path: ideas.log
+          retention-days: 60
+
+      - name: Update the rolling ideas issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RC: ${{ steps.ideas.outputs.rc }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          IDEAS_TITLE="content ideas: verified shelves we do not have yet"
+
+          find_open() { gh issue list --state open --search "\"$1\" in:title" --json number \
+                        --jq '.[0].number // empty'; }
+
+          # rc 2 = Open Library was unreachable. A suggestion lane that cannot
+          # see its source stays quiet and green — no issue noise for blindness.
+          if [ "${RC:-1}" = "2" ]; then
+            echo "::warning title=Open Library was unreachable::no ideas could be harvested"
+            exit 0
+          fi
+
+          STAMP="$(date -u +%FT%TZ)"
+          BODY="$(printf 'Sweep at %s — candidates that passed the 30-exact-works bar (proof, not taste, decided this list):\n\n```\n%s\n```\n\nRun: %s' \
+                   "$STAMP" "$(sed -n '2,40p' ideas.log)" "$RUN_URL")"
+
+          # No --label: this repo has no guaranteed "enhancement" label, and a
+          # missing label makes gh fail the whole create.
+          NUM="$(find_open "$IDEAS_TITLE")"
+          if [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --body "$BODY"
+          else
+            gh issue create --title "$IDEAS_TITLE" --body "$BODY"
+          fi
+          echo "ideas sweep reported"
+          exit 0

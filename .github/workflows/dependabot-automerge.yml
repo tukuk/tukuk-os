@@ -1,0 +1,61 @@
+name: Dependabot auto-merge
+
+# Dependabot opens grouped patch/minor PRs on Tuesdays (see dependabot.yml). This
+# lane closes the loop the way the user chose: GitHub-hosted only, no agent
+# writing code, no runner on the production box — a dependency bump merges by
+# itself if and only if the real gate passes: test.yml on that PR (npm ci, lint
+# over every .js, the full node:test suite).
+#
+# Deliberate limits, all of them load-bearing:
+#   • patch/minor LABELS only — a major bump is a different decision and stays
+#     human-reviewed, matching dependabot.yml's grouping comment;
+#   • dependabot[bot] as author only — the if: on the job means a PR edited to
+#     carry those labels by a human does not ride this path;
+#   • gh pr checks --watch instead of gh pr merge --auto: --auto needs a branch
+#     protection rule with required checks, and this repo does not carry branch
+#     protection — watching the checks here enforces the gate without pretending
+#     settings exist that nobody configured.
+on:
+  pull_request:
+    types: [opened, synchronize, labeled]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: dependabot-automerge-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  automerge:
+    name: Approve and merge when CI is green
+    if: >-
+      github.actor == 'dependabot[bot]' &&
+      (contains(github.event.pull_request.labels.*.name, 'patch') ||
+       contains(github.event.pull_request.labels.*.name, 'minor'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Approve (the PR carries no human judgement, only this workflow's rules)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: >-
+          gh pr review --approve "$PR" --body
+          "Auto-approved by the dependabot-automerge lane — patch/minor only,
+          and it will not merge unless test.yml is green on this head."
+
+      - name: Wait for the real gate, then squash-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -uo pipefail
+          # --fail-fast: the first red check ends the watch. --watch polls every
+          # check on the HEAD commit, which includes the Tests workflow that runs
+          # npm ci + lint + npm test — the same suite a human would demand green.
+          if ! gh pr checks "$PR" --watch --fail-fast; then
+            echo "CI is not green on $PR — leaving the PR to a human"
+            exit 1
+          fi
+          gh pr merge "$PR" --squash --delete-branch

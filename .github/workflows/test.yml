@@ -6,6 +6,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Pinned explicitly (test/ops-hygiene.test.js now enforces it for every workflow):
+# a test job has no reason to hold a writable token, and the repo-wide default is a
+# setting someone can change without touching this file.
+permissions:
+  contents: read
+
 jobs:
   test:
     name: Unit (node:test)
