@@ -1735,7 +1735,7 @@ TOOLKIT.push({
 var $=function(id){return document.getElementById(id);};
 var cv=$('ds-canvas');
 var cx=(cv&&cv.getContext)?cv.getContext('2d'):null;
-var W=1080,H=1080,layers=[],sel=-1,seq=0,hist=[],future=[],acts=[],dsD=1,noGuide=false,mode='',grab=null;
+var W=1080,H=1080,layers=[],sel=-1,seq=0,hist=[],future=[],acts=[],dsD=1,noGuide=false,mode='',grab=null,expK=1,expMode=false;
 function num(v,d){v=parseFloat(v);return isNaN(v)?d:v;}
 function hex(v){return /^#[0-9a-fA-F]{6}$/.test(v)?v:'#000000';}
 function chk(id){var e=$(id);return !!(e&&e.checked);}
@@ -1808,12 +1808,13 @@ function useTpl(){var k=$('ds-tpl').value,T=TPL[k];if(!T)return;
  $('ds-out').textContent='Template loaded: '+k+' — every layer is editable, and Undo brings the old stack back.';}
 function draw(){
  if(!cx)return;
- var vw=(typeof window!=='undefined'&&window.innerWidth)?Math.min(window.innerWidth-70,760):760;
- dsD=Math.min(vw/W,(vw*1.35)/H);
- cv.style.width=Math.round(W*dsD)+'px';cv.style.height=Math.round(H*dsD)+'px';
- if(cv.width!==W)cv.width=W;if(cv.height!==H)cv.height=H;
+ if(!expMode){
+  var vw=(typeof window!=='undefined'&&window.innerWidth)?Math.min(window.innerWidth-70,760):760;
+  dsD=Math.min(vw/W,(vw*1.35)/H);
+  cv.style.width=Math.round(W*dsD)+'px';cv.style.height=Math.round(H*dsD)+'px';
+  if(cv.width!==W)cv.width=W;if(cv.height!==H)cv.height=H;}
  var A=hex($('ds-bga').value),B=hex($('ds-bgb').value),st=$('ds-bgs').value;
- cx.setTransform(1,0,0,1,0,0);cx.globalAlpha=1;cx.setLineDash([]);cx.shadowBlur=0;
+ cx.setTransform(expK,0,0,expK,0,0);cx.globalAlpha=1;cx.setLineDash([]);cx.shadowBlur=0;
  if(st==='solid'){cx.fillStyle=A;cx.fillRect(0,0,W,H);}
  else{var g=st==='radial'?cx.createRadialGradient(W/2,H*0.42,10,W/2,H*0.42,Math.max(W,H)*0.75)
    :cx.createLinearGradient(0,0,st==='dgrad'?W:0,st==='dgrad'?H:H);
@@ -1821,7 +1822,7 @@ function draw(){
   cx.fillStyle=g;cx.fillRect(0,0,W,H);}
  for(var i=0;i<layers.length;i++)drawLayer(layers[i],i===sel&&sel>=0);
  if(!noGuide&&chk('ds-guides'))drawGuides();
- cx.setTransform(1,0,0,1,0,0);cx.globalAlpha=1;cx.setLineDash([]);cx.shadowBlur=0;
+ cx.setTransform(expK,0,0,expK,0,0);cx.globalAlpha=1;cx.setLineDash([]);cx.shadowBlur=0;
 }
 function drawGuides(){
  cx.strokeStyle='rgba(148,163,184,0.4)';cx.lineWidth=1;cx.setLineDash([]);
@@ -2092,11 +2093,11 @@ bindClick('ds-dl',function(){if(!cx||typeof document==='undefined'||!document.cr
  var mime=f==='jpg'?'image/jpeg':(f==='webp'?'image/webp':'image/png');
  var oc=document.createElement('canvas');oc.width=W*k;oc.height=H*k;
  var o=oc.getContext?oc.getContext('2d'):null;if(!o||!o.scale)return;
- var keepSel=sel,keepD=dsD,realCx=cx;
- sel=-1;noGuide=true;cx=o;dsD=1;
+ var keepSel=sel,realCx=cx;
+ sel=-1;noGuide=true;cx=o;expMode=true;expK=k;
  if(f==='jpg'){o.fillStyle='#ffffff';o.fillRect(0,0,W*k,H*k);}
- o.scale(k,k);draw();
- cx=realCx;dsD=keepD;noGuide=false;sel=keepSel;
+ draw();
+ cx=realCx;noGuide=false;expMode=false;expK=1;sel=keepSel;
  dlUrl(oc.toDataURL(mime,0.92),'tukuk-design.'+(f==='jpg'?'jpg':(f==='webp'?'webp':'png')));
  draw();});
 W=num($('ds-w').value,1080);H=num($('ds-h').value,1080);
