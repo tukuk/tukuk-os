@@ -75,7 +75,7 @@ const PAGES = [
   { path: '/alat/printsize', marker: 'Print Size Calculator', ids: ['py-w', 'py-h', 'py-dpi', 'py-go', 'py-out'] },
   { path: '/alat/electricity', marker: 'Electricity Cost Calculator', ids: ['el-w', 'el-hrs', 'el-days', 'el-tar', 'el-go', 'el-out'] },
   { path: '/alat/pace', marker: 'Running Pace Calculator', ids: ['pc-dist', 'pc-h', 'pc-m', 'pc-s', 'pc-go', 'pc-out'] },
-  { path: '/alat/design', marker: 'Design Studio', ids: ['ds-size', 'ds-canvas', 'ds-addtext', 'ds-addcircle', 'ds-del', 'ds-dl', 'ds-out'] },
+  { path: '/alat/design', marker: 'Design Studio', ids: ['ds-size', 'ds-canvas', 'ds-tpl', 'ds-undo', 'ds-redo', 'ds-addtext', 'ds-addcircle', 'ds-addstar', 'ds-layers', 'ds-snap', 'ds-guides', 'ds-save', 'ds-open', 'ds-restore', 'ds-del', 'ds-fmt', 'ds-scale', 'ds-dl', 'ds-out'] },
   // ── fifth wave (Nov 2026 batch 4) ──
   { path: '/alat/water', marker: 'Water Target', ids: ['wa-kg', 'wa-ex', 'wa-cl', 'wa-pg', 'wa-hrs', 'wa-go', 'wa-out'] },
   { path: '/alat/compound', marker: 'Compound Interest', ids: ['ci-p', 'ci-c', 'ci-r', 'ci-f', 'ci-t', 'ci-go', 'ci-out'] },

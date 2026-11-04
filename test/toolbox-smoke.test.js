@@ -427,7 +427,35 @@ test('design: the studio boots with a real selection, not an empty page', () => 
   const { dom } = runTool(bySlug('design'));
   // The canvas has no 2D context in this shim, so the proof of life is the
   // selection readout: two default layers are added and the headline wins.
-  assert.ok(dom.get('ds-sel').textContent.includes('layer 2: headline'), dom.get('ds-sel').textContent);
+  assert.ok(dom.get('ds-sel').textContent.includes('layer 2 / 2: headline'), dom.get('ds-sel').textContent);
+  // v2: the layer panel is DOM, not canvas, so it must be populated too.
+  assert.ok(dom.get('ds-layers')._html.includes('headline'), 'layer list not rendered');
+  assert.ok(dom.get('ds-layers')._html.includes('accent circle'), 'both boot layers must be listed');
+});
+
+test('design: templates, undo and the layer controls work without a canvas', () => {
+  const { dom } = runTool(bySlug('design'));
+  // A template replaces the stack and announces itself; the shim has no cx,
+  // so everything that must survive is plain DOM bookkeeping.
+  dom.get('ds-tpl').value = 'hero';
+  dom.get('ds-tpl').onchange();
+  assert.ok(dom.get('ds-out')._html === '' && /Template loaded: hero/.test(dom.get('ds-out').textContent),
+    'template verdict missing: ' + dom.get('ds-out').textContent);
+  assert.ok(dom.get('ds-sel').textContent.includes('layer 4 / 4'), 'hero has four layers: ' + dom.get('ds-sel').textContent);
+  // Undo pops straight back to the two boot layers.
+  dom.get('ds-undo').click();
+  assert.ok(dom.get('ds-sel').textContent.includes('layer 2 / 2'), 'undo should restore the boot stack');
+  // Shape buttons add typed layers; hidden toggling keeps the list honest.
+  dom.get('ds-addstar').click();
+  assert.ok(dom.get('ds-sel').textContent.includes('star'), dom.get('ds-sel').textContent);
+  dom.get('ds-del').click();
+  assert.ok(dom.get('ds-sel').textContent.includes('layer 2 / 2'), 'delete removes the star again');
+  // Text edits rename the layer, and the save button needs no canvas either.
+  dom.get('ds-txt').value = 'Hello world today';
+  dom.get('ds-txt').oninput();
+  assert.ok(dom.get('ds-layers')._html.includes('Hello worl'), 'layer renamed: ' + dom.get('ds-layers')._html.slice(0, 200));
+  dom.get('ds-save').click();
+  assert.ok(/Design file saved/.test(dom.get('ds-out').textContent), dom.get('ds-out').textContent);
 });
 
 // ── batch 4 (Nov 2026) — hand-derived numbers again, swap-verified ──

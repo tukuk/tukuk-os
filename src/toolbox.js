@@ -1646,21 +1646,28 @@ $('pc-go').onclick=render;['pc-dist','pc-h','pc-m','pc-s'].forEach(function(i){$
 TOOLKIT.push({
   slug: 'design', ic: '\ud83c\udfa8', name: 'Design Studio',
   title: 'Free Online Design Studio — Poster & Social Image Maker, No Account | Tukuk-OS',
-  desc: 'A Canva-style canvas studio that runs entirely in your browser: gradient backgrounds, text, shapes and your own images as layers — drag, rotate, scale, export PNG at 2x. No sign-up, nothing uploaded.',
-  hero: 'Design Studio', sub: 'layers · drag · rotate · PNG export · zero uploads, ever',
-  navBlurb: 'The poster maker without the login wall: backgrounds, text, shapes and images as real layers, exported as PNG straight from your canvas.',
-  hubBlurb: 'make the social image yourself: gradient or solid background, layered text/shapes/photos, drag-wheel-export — and your file never leaves the tab',
-  lead: 'What a design tool should be in one page: a <b>canvas</b>, real <b>layers</b> (text, rectangles, circles, your own images), drag to move, wheel to scale, sliders for rotation and opacity, and a <b>PNG export</b> at up to 2× the working size. Every preset matches a real spec — Instagram square and story, YouTube thumbnail, Open Graph share card, A4 portrait. And unlike the platforms this borrows the idea from: there is no account, no watermark, no template warehouse, no upload — <b>your image exists only in this tab\u2019s memory</b>. Close it and it is gone; export before you refresh.',
+  desc: 'A Canva-style studio that runs entirely in your browser: templates, undo, drag handles, snap guides, five shapes, styled text, image layers, a layer list, autosave and PNG, JPG or WebP export up to 4×. No sign-up, nothing uploaded.',
+  hero: 'Design Studio', sub: 'templates · layers · undo · snap · rotate handles · PNG/JPG/WebP · zero uploads',
+  navBlurb: 'The poster maker without the login wall: starter templates, real layer editing with drag handles and rotation, snapping guides, undo history, autosave and PNG/JPG/WebP export up to 4×.',
+  hubBlurb: 'make the social image yourself: templates, layered text/shapes/photos, drag-handle-rotate-snap, undo, autosave, PNG-JPG-WebP export — and your file never leaves the tab',
+  lead: 'A design tool should be a canvas, a layer stack and an export button — and this page has all three, plus the things that make them usable: <b>six starter templates</b> built from real layer maths, <b>drag handles</b> to resize and a knob to rotate, <b>snap-to-grid</b> with centre and rule-of-thirds guides, <b>undo and redo</b> (40 steps, or Ctrl+Z), a <b>layer list</b> you can pick, hide and reorder, <b>autosave</b> to your browser so a refresh does not eat the work, and export as <b>PNG (transparent), JPG or WebP at up to 4×</b>. Keyboard: arrows nudge, Shift+arrows ×10, Ctrl+D duplicates, Ctrl+Z/Y undo/redo, Alt+click cycles layers. Everything is composited by your own browser — there is <b>no account, no watermark, no upload</b>; close the tab and the document is gone for good.',
   css: `
 .ds-bar,.ds-tools,.ds-edit{display:flex;flex-wrap:wrap;gap:.6rem;align-items:flex-end;margin:.7rem 0}
 .ds-bar label,.ds-edit label{display:flex;flex-direction:column;font-size:.78rem;gap:.2rem}
 .ds-bar input,.ds-bar select,.ds-edit input,.ds-edit select{min-width:4.5rem}
 .ds-edit input[type=color]{padding:1px;height:2rem}
+.ds-check{display:flex;flex-direction:row;align-items:center;gap:.35rem;font-size:.8rem}
 #ds-canvas{display:block;margin:.5rem auto;border:1px solid #334155;border-radius:.5rem;max-width:100%;touch-action:none;cursor:crosshair;background:#000}
 .ds-tools button,.ds-imgbtn{background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:.4rem;padding:.45rem .8rem;cursor:pointer;font-size:.85rem}
 .ds-tools button:hover,.ds-imgbtn:hover{background:#334155}
 .ds-imgbtn input{display:none}
 #ds-sel{margin-left:auto;font-size:.8rem}
+#ds-layers{display:flex;flex-direction:column;gap:.25rem;margin:.4rem 0}
+.ds-lay{display:flex;align-items:center;gap:.5rem;background:#111d2e;border:1px solid #24344a;border-radius:.35rem;padding:.3rem .55rem;cursor:pointer;font-size:.82rem}
+.ds-lay.on{border-color:#38bdf8;background:#152a3d}
+.ds-lay .ds-eye{background:none;border:none;padding:0 .2rem;cursor:pointer;font-size:.9rem;color:#94a3b8}
+.ds-lay .ds-nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ds-lay .ds-kd{color:#64748b;font-size:.72rem}
 `,
   form: `<div class="ds-bar">
   ${field('Canvas', '<select id="ds-size"><option value="1080x1080" selected>Instagram post · 1080×1080</option><option value="1080x1920">Story / Reel · 1080×1920</option><option value="1080x1350">Portrait post · 1080×1350</option><option value="1280x720">YouTube thumbnail · 1280×720</option><option value="1200x630">Share card (OG) · 1200×630</option><option value="1240x1754">A4 portrait · 1240×1754</option><option value="custom">Custom…</option></select>')}
@@ -1669,12 +1676,20 @@ TOOLKIT.push({
   ${field('BG colour', '<input id="ds-bga" type="color" value="#0f172a">')}
   ${field('BG accent', '<input id="ds-bgb" type="color" value="#7c3aed">')}
   ${field('Background', '<select id="ds-bgs"><option value="solid">solid</option><option value="vgrad" selected>vertical gradient</option><option value="dgrad">diagonal gradient</option><option value="radial">radial glow</option></select>')}
+  ${field('Template', '<select id="ds-tpl"><option value="">choose a starter…</option><option value="hero">Bold hero</option><option value="quote">Quote card</option><option value="badge">Announcement + sticker</option><option value="thumb">Thumbnail headline</option><option value="minimal">Minimal bar</option><option value="thirds">Grid thirds</option></select>')}
+  <button type="button" id="ds-undo" title="Ctrl+Z">Undo</button>
+  <button type="button" id="ds-redo" title="Ctrl+Y">Redo</button>
 </div>
 <canvas id="ds-canvas"></canvas>
 <div class="ds-tools">
   <button type="button" id="ds-addtext">+ Text</button>
   <button type="button" id="ds-addrect">+ Rectangle</button>
+  <button type="button" id="ds-addround">+ Rounded</button>
   <button type="button" id="ds-addcircle">+ Circle</button>
+  <button type="button" id="ds-addring">+ Ring</button>
+  <button type="button" id="ds-addtri">+ Triangle</button>
+  <button type="button" id="ds-addline">+ Line</button>
+  <button type="button" id="ds-addstar">+ Star</button>
   <label class="ds-imgbtn">+ Image<input type="file" id="ds-img" accept="image/*"></label>
   <button type="button" id="ds-dup">Duplicate</button>
   <button type="button" id="ds-back">Send back</button>
@@ -1682,39 +1697,145 @@ TOOLKIT.push({
   <button type="button" id="ds-del">Delete</button>
   <span id="ds-sel" class="meta">nothing selected</span>
 </div>
+<div id="ds-layers"></div>
+<div class="ds-bar">
+  <label class="ds-check"><input id="ds-snap" type="checkbox" checked> snap to grid + centre</label>
+  <label class="ds-check"><input id="ds-guides" type="checkbox" checked> show guides</label>
+  ${field('Grid', '<select id="ds-grid"><option value="24">24 px</option><option value="40" selected>40 px</option><option value="60">60 px</option><option value="108">108 px</option></select>')}
+  ${field('Auto-save', '<select id="ds-auto"><option value="1" selected>on (this browser)</option><option value="0">off</option></select>')}
+  <button type="button" id="ds-save">Save design file</button>
+  <label class="ds-imgbtn">Open design file<input type="file" id="ds-open" accept="application/json,.json"></label>
+  <button type="button" id="ds-restore">Restore last session</button>
+</div>
 <div class="ds-edit">
   ${field('Text', '<input id="ds-txt" type="text" value="" disabled>')}
   ${field('Font', '<select id="ds-font"><option value="Impact,Charcoal,sans-serif">Impact</option><option value="Georgia,serif" selected>Georgia</option><option value="Helvetica,Arial,sans-serif">Helvetica</option><option value="Trebuchet MS,sans-serif">Trebuchet</option><option value="Courier New,monospace">Courier</option></select>')}
+  ${field('Weight', '<select id="ds-wt"><option value="400">regular</option><option value="700" selected>bold</option></select>')}
+  ${field('Style', '<select id="ds-fst"><option value="n" selected>normal</option><option value="i">italic</option></select>')}
+  ${field('Align', '<select id="ds-tal"><option value="c" selected>centre</option><option value="l">left</option><option value="r">right</option></select>')}
   ${field('Size', '<input id="ds-ps" type="number" min="8" max="600" step="1" value="64">')}
+  ${field('Line %', '<input id="ds-lh" type="number" min="80" max="250" step="5" value="118">')}
+  ${field("Track", '<input id="ds-ls" type="number" min="-10" max="60" step="1" value="0">')}
   ${field('Colour', '<input id="ds-col" type="color" value="#ffffff">')}
+  ${field('Second (fill)', '<input id="ds-col2" type="color" value="#22d3ee">')}
+  ${field('Fill', '<select id="ds-fill"><option value="s" selected>solid</option><option value="g">gradient</option></select>')}
+  ${field('Stroke', '<input id="ds-st" type="number" min="0" max="80" step="1" value="0">')}
+  ${field('Corner', '<input id="ds-rad" type="number" min="0" max="500" step="2" value="0">')}
+  ${field('Shadow', '<input id="ds-sh" type="number" min="0" max="120" step="2" value="0">')}
   ${field('Opacity %', '<input id="ds-op" type="range" min="5" max="100" value="100">')}
-  ${field('Scale %', '<input id="ds-sc" type="range" min="10" max="500" value="100">')}
+  ${field('Scale %', '<input id="ds-sc" type="range" min="10" max="800" value="100">')}
   ${field('Rotate °', '<input id="ds-rot" type="range" min="-180" max="180" value="0">')}
-  ${field('Export', '<select id="ds-scale"><option value="1">PNG 1×</option><option value="2" selected>PNG 2×</option></select>')}
-  <button class="tl-btn primary" id="ds-dl" type="button">Download PNG</button>
+  ${field('Format', '<select id="ds-fmt"><option value="png" selected>PNG (transparent)</option><option value="jpg">JPG (smaller)</option><option value="webp">WebP</option></select>')}
+  ${field('Export', '<select id="ds-scale"><option value="1">1×</option><option value="2" selected>2×</option><option value="3">3×</option><option value="4">4×</option></select>')}
+  <button class="tl-btn primary" id="ds-dl" type="button">Download</button>
+  <button type="button" id="ds-clear">Clear canvas</button>
 </div>
-<div class="tl-res meta" id="ds-out">The canvas is the tool: click a layer to select it, drag to move, mouse wheel over the canvas to scale the selected layer. The row of controls below edits the selected layer live.</div>`,
+<div class="tl-res meta" id="ds-out">Click a layer to select it, drag its body to move, drag a corner handle to resize, drag the knob above it to rotate. Arrows nudge one grid step, Shift+arrows nudge ten steps, Ctrl+Z undoes, Ctrl+Y redoes. Everything stays inside this tab.</div>`,
   script: `
 var $=function(id){return document.getElementById(id);};
 var cv=$('ds-canvas');
 var cx=(cv&&cv.getContext)?cv.getContext('2d'):null;
-var W=1080,H=1080,layers=[],sel=-1,seq=0,dragging=false;
+var W=1080,H=1080,layers=[],sel=-1,seq=0,hist=[],future=[],acts=[],dsD=1,noGuide=false,mode='',grab=null;
 function num(v,d){v=parseFloat(v);return isNaN(v)?d:v;}
 function hex(v){return /^#[0-9a-fA-F]{6}$/.test(v)?v:'#000000';}
+function chk(id){var e=$(id);return !!(e&&e.checked);}
+function gsz(){return num($('ds-grid').value,40);}
+function snapV(v){return Math.round(v/gsz())*gsz();}
+function deg(r){return r*180/Math.PI;}
+function dist(ax,ay,bx,by){var dx=ax-bx,dy=ay-by;return Math.sqrt(dx*dx+dy*dy);}
+function norm(a){a%=360;if(a>180)a-=360;if(a<-180)a+=360;return a;}
+function fontOf(l){return (l.italic?'italic ':'')+(l.weight||700)+' '+Math.round(l.size)+'px '+l.font;}
+function push(){try{hist.push(JSON.stringify(ser()));if(hist.length>40)hist.shift();future.length=0;}catch(e){}}
+function undo(){if(!hist.length)return;try{var j=hist[hist.length-1];future.push(JSON.stringify(ser()));if(future.length>40)future.pop();loadJson(JSON.parse(j));hist.pop();}catch(e){}}
+function redo(){if(!future.length)return;try{var j=future.pop();hist.push(JSON.stringify(ser()));loadJson(JSON.parse(j));}catch(e){}}
+function ser(){return {w:W,h:H,a:$('ds-bga').value,b:$('ds-bgb').value,s:$('ds-bgs').value,
+ layers:layers.map(function(l){var o={kind:l.kind,name:l.name,x:l.x,y:l.y,rot:l.rot,op:l.op,scale:l.scale,hidden:l.hidden,
+  size:l.size,color:l.color,fill:l.fill,col2:l.col2,stroke:l.stroke,shadow:l.shadow,rad:l.rad,text:l.text,font:l.font,
+  weight:l.weight,italic:l.italic,align:l.align,lh:l.lh,ls:l.ls};
+  if(l.kind==='img'){o.src=l.src||'';o.imgW=l.imgW;o.imgH=l.imgH;}return o;})};}
+function loadJson(d){if(!d||!d.layers)return -1;
+ if(num(d.w,0)>=100&&num(d.h,0)>=100){W=d.w;H=d.h;$('ds-w').value=W;$('ds-h').value=H;$('ds-size').value='custom';}
+ if(d.a)$('ds-bga').value=d.a;if(d.b)$('ds-bgb').value=d.b;if(d.s)$('ds-bgs').value=d.s;
+ layers=[];var n=0;
+ d.layers.forEach(function(x){
+  if(x.kind==='img'){if(!x.src||typeof Image==='undefined')return;
+   var im=new Image();im.src=x.src;
+   x.img=im;x.imgW=x.imgW||x.size||200;x.imgH=x.imgH||x.size||200;x.src=x.src;
+   x.id=++seq;layers.push(x);n++;return;}
+  x.id=++seq;layers.push(x);n++;});
+ select(n?layers.length-1:-1);return n;}
+function autosave(){if($('ds-auto').value!=='1')return;
+ try{if(typeof localStorage!=='undefined')localStorage.setItem('tukuk-design-v2',JSON.stringify(ser()));}catch(e){}}
+function stash(){if(typeof setTimeout==='undefined')return;setTimeout(autosave,400);}
+var TPL={
+ hero:function(){return {s:'dgrad',layers:[
+  {kind:'ellipse',name:'corner glow',size:Math.round(W*0.5),x:Math.round(W*0.85),y:Math.round(H*0.15),op:35},
+  {kind:'text',name:'headline',text:'Big idea,\\nsmall screen',font:'Impact,Charcoal,sans-serif',size:Math.max(30,Math.round(W/9)),lh:112},
+  {kind:'line',name:'underline',size:Math.round(W*0.5),y:Math.round(H*0.72),stroke:Math.max(6,Math.round(W/120))},
+  {kind:'text',name:'kicker',text:'tukuk.org design studio',weight:400,size:Math.max(16,Math.round(W/34)),y:Math.round(H*0.84),op:85}]};},
+ quote:function(){return {a:'#0f172a',b:'#0f172a',s:'solid',layers:[
+  {kind:'text',name:'mark',text:'\\u201c',font:'Georgia,serif',size:Math.round(W*0.5),y:Math.round(H*0.24),op:22},
+  {kind:'text',name:'quote',text:'The best time to see\\nsomething new is today.',font:'Georgia,serif',weight:400,italic:true,size:Math.max(26,Math.round(W/15)),y:Math.round(H*0.55),lh:150},
+  {kind:'ring',name:'ring',size:Math.round(W*0.86),op:16,stroke:Math.max(4,Math.round(W/260))}]};},
+ badge:function(){return {layers:[
+  {kind:'rect',name:'band',size:Math.round(W*0.86),y:Math.round(H*0.45),rad:Math.round(W/26),fill:'g',op:95},
+  {kind:'text',name:'news',text:'NEW',font:'Impact,Charcoal,sans-serif',size:Math.round(W/6),y:Math.round(H*0.45)},
+  {kind:'text',name:'caption',text:'drop everything and look',weight:400,size:Math.max(18,Math.round(W/26)),y:Math.round(H*0.62),op:90},
+  {kind:'star',name:'sticker',size:Math.round(W*0.2),x:Math.round(W*0.82),y:Math.round(H*0.8),rot:15,fill:'g'}]};},
+ thumb:function(){return {a:'#111827',b:'#dc2626',s:'dgrad',layers:[
+  {kind:'rect',name:'bar',size:Math.round(W*0.92),y:Math.round(H*0.78),op:90,rad:Math.round(W/60)},
+  {kind:'text',name:'headline',text:'I BUILT THIS\\nIN ONE TAB',font:'Impact,Charcoal,sans-serif',size:Math.round(W/8),y:Math.round(H*0.38),lh:105,shadow:Math.round(W/60)},
+  {kind:'text',name:'subline',text:'no account \\u00b7 no upload \\u00b7 no watermark',weight:400,size:Math.max(18,Math.round(W/38)),y:Math.round(H*0.78)}]};},
+ minimal:function(){return {a:'#f8fafc',b:'#0f172a',s:'solid',layers:[
+  {kind:'line',name:'rule',size:Math.round(W*0.7),y:Math.round(H*0.38),color:'#0f172a',stroke:Math.max(3,Math.round(W/300))},
+  {kind:'text',name:'title',text:'Less, but better',font:'Helvetica,Arial,sans-serif',weight:400,size:Math.round(W/11),y:Math.round(H*0.5),color:'#0f172a'},
+  {kind:'text',name:'note',text:'one line says the rest',weight:400,size:Math.max(16,Math.round(W/30)),y:Math.round(H*0.62),color:'#475569'}]};},
+ thirds:function(){return {layers:[
+  {kind:'rect',name:'block one',size:Math.round(W*0.6),x:Math.round(W*0.33),y:Math.round(H*0.33),op:90},
+  {kind:'ellipse',name:'block two',size:Math.round(W*0.42),x:Math.round(W*0.68),y:Math.round(H*0.62),fill:'g'},
+  {kind:'text',name:'caption',text:'rule of thirds,\\nnot vibes',font:'Trebuchet MS,sans-serif',size:Math.max(24,Math.round(W/16)),y:Math.round(H*0.86),lh:130}]};}};
+function useTpl(){var k=$('ds-tpl').value,T=TPL[k];if(!T)return;
+ push();var t=T();
+ $('ds-bga').value=t.a||hex($('ds-bga').value);$('ds-bgb').value=t.b||hex($('ds-bgb').value);$('ds-bgs').value=t.s||$('ds-bgs').value;
+ layers=[];var B=hex($('ds-bgb').value);
+ t.layers.forEach(function(l){
+  l.color=l.color||'#ffffff';l.col2=l.col2||B;l.fill=l.fill||'s';l.stroke=l.stroke||0;l.shadow=l.shadow||0;l.rad=l.rad||0;
+  l.rot=l.rot||0;l.op=l.op==null?100:l.op;l.scale=l.scale||100;l.hidden=false;l.id=++seq;
+  l.weight=l.weight||700;l.italic=l.italic||false;l.align=l.align||'c';l.lh=l.lh||118;l.ls=l.ls||0;
+  l.font=l.font||$('ds-font').value;if(l.text===undefined)l.text='';
+  l.x=l.x||Math.round(W/2);l.y=l.y||Math.round(H/2);layers.push(l);});
+ select(layers.length-1);stash();
+ $('ds-out').textContent='Template loaded: '+k+' — every layer is editable, and Undo brings the old stack back.';}
 function draw(){
  if(!cx)return;
- var vw=(typeof window!=='undefined'&&window.innerWidth)?Math.min(window.innerWidth-70,720):720;
- var scD=Math.min(vw/W,(vw*1.35)/H);
- cv.style.width=Math.round(W*scD)+'px';cv.style.height=Math.round(H*scD)+'px';
+ var vw=(typeof window!=='undefined'&&window.innerWidth)?Math.min(window.innerWidth-70,760):760;
+ dsD=Math.min(vw/W,(vw*1.35)/H);
+ cv.style.width=Math.round(W*dsD)+'px';cv.style.height=Math.round(H*dsD)+'px';
  if(cv.width!==W)cv.width=W;if(cv.height!==H)cv.height=H;
  var A=hex($('ds-bga').value),B=hex($('ds-bgb').value),st=$('ds-bgs').value;
- cx.setTransform(1,0,0,1,0,0);cx.globalAlpha=1;cx.setLineDash([]);
+ cx.setTransform(1,0,0,1,0,0);cx.globalAlpha=1;cx.setLineDash([]);cx.shadowBlur=0;
  if(st==='solid'){cx.fillStyle=A;cx.fillRect(0,0,W,H);}
  else{var g=st==='radial'?cx.createRadialGradient(W/2,H*0.42,10,W/2,H*0.42,Math.max(W,H)*0.75)
    :cx.createLinearGradient(0,0,st==='dgrad'?W:0,st==='dgrad'?H:H);
   if(st==='radial'){g.addColorStop(0,B);g.addColorStop(1,A);}else{g.addColorStop(0,A);g.addColorStop(1,B);}
   cx.fillStyle=g;cx.fillRect(0,0,W,H);}
- for(var i=0;i<layers.length;i++)drawLayer(layers[i],i===sel);
+ for(var i=0;i<layers.length;i++)drawLayer(layers[i],i===sel&&sel>=0);
+ if(!noGuide&&chk('ds-guides'))drawGuides();
+ cx.setTransform(1,0,0,1,0,0);cx.globalAlpha=1;cx.setLineDash([]);cx.shadowBlur=0;
+}
+function drawGuides(){
+ cx.strokeStyle='rgba(148,163,184,0.4)';cx.lineWidth=1;cx.setLineDash([]);
+ var g=gsz(),x,y;
+ for(x=g;x<W;x+=g){cx.beginPath();cx.moveTo(x,0);cx.lineTo(x,H);cx.stroke();}
+ for(y=g;y<H;y+=g){cx.beginPath();cx.moveTo(0,y);cx.lineTo(W,y);cx.stroke();}
+ cx.strokeStyle='rgba(56,189,248,0.65)';cx.lineWidth=Math.max(2,W/500);
+ cx.beginPath();cx.moveTo(W/2,0);cx.lineTo(W/2,H);cx.stroke();
+ cx.beginPath();cx.moveTo(0,H/2);cx.lineTo(W,H/2);cx.stroke();
+ cx.strokeStyle='rgba(56,189,248,0.3)';cx.setLineDash([14,12]);
+ var t=[W/3,W*2/3,H/3,H*2/3];
+ cx.beginPath();cx.moveTo(t[0],0);cx.lineTo(t[0],H);cx.moveTo(t[1],0);cx.lineTo(t[1],H);cx.stroke();
+ cx.beginPath();cx.moveTo(0,t[2]);cx.lineTo(W,t[2]);cx.moveTo(0,t[3]);cx.lineTo(W,t[3]);cx.stroke();
+ cx.setLineDash([]);
 }
 function wrapText(text){
  var out=[],maxW=W*0.86;
@@ -1726,106 +1847,269 @@ function wrapText(text){
  return out;}
 function layerBox(l){var s=l.scale/100;
  if(l.kind==='img')return {w:l.imgW*s,h:l.imgH*s};
- if(l.kind==='rect')return {w:l.size*s,h:l.size*0.62*s};
- if(l.kind==='text'){var f=l.text.split('\\n'),mw=0,keep=cx.font;
-  cx.font='700 '+Math.round(l.size)+'px '+l.font;
-  for(var i=0;i<f.length;i++)mw=Math.max(mw,cx.measureText(f[i]).width);
-  cx.font=keep;return {w:mw,h:l.size*1.18*f.length};}
+ if(l.kind==='rect'||l.kind==='line')return {w:l.size*s,h:(l.kind==='line'?Math.max(4,l.stroke||8):l.size*0.62)*s};
+ if(l.kind==='text'){var f=(l.text||'').split('\\n'),mw=0,keep=cx?cx.font:'';
+  if(cx)cx.font=fontOf(l);
+  for(var i=0;i<f.length;i++)if(cx)mw=Math.max(mw,cx.measureText(f[i]).width);
+  if(cx)cx.font=keep;return {w:Math.max(mw,10),h:Math.max(l.size*l.lh/100*f.length,l.size)};}
  return {w:l.size*s,h:l.size*s};}
+function pathRR(x,w,h,r){r=Math.min(r,Math.abs(w)/2,Math.abs(h)/2);
+ x.beginPath();x.moveTo(-w/2+r,-h/2);x.lineTo(w/2-r,-h/2);x.quadraticCurveTo(w/2,-h/2,w/2,-h/2+r);
+ x.lineTo(w/2,h/2-r);x.quadraticCurveTo(w/2,h/2,w/2-r,h/2);x.lineTo(-w/2+r,h/2);
+ x.quadraticCurveTo(-w/2,h/2,-w/2,h/2-r);x.lineTo(-w/2,-h/2+r);x.quadraticCurveTo(-w/2,-h/2,-w/2+r,-h/2);x.closePath();}
+function pathStar(x,R){var r=R*0.42,i,a,p;
+ x.beginPath();
+ for(i=0;i<10;i++){a=-Math.PI/2+i*Math.PI/5;p=(i%2)?r:R;
+  if(i)x.lineTo(Math.cos(a)*p,Math.sin(a)*p);else x.moveTo(Math.cos(a)*p,Math.sin(a)*p);}
+ x.closePath();}
+function fillOf(l,w,h){
+ if(l.fill!=='g'||!cx||!cx.createLinearGradient)return l.color;
+ var g=cx.createLinearGradient(-w/2,-h/2,w/2,h/2);
+ g.addColorStop(0,l.color);g.addColorStop(1,l.col2||'#ffffff');return g;}
 function drawLayer(l,selected){
+ if(l.hidden&&!selected)return;
+ if(!cx)return;
  cx.save();cx.translate(l.x,l.y);cx.rotate(l.rot*Math.PI/180);cx.globalAlpha=l.op/100;
+ var sh=l.shadow||0;
+ if(sh){cx.shadowColor='rgba(0,0,0,0.45)';cx.shadowBlur=sh;cx.shadowOffsetY=sh*0.3;}
  var s=l.scale/100;
  if(l.kind==='text'){
-  cx.font='700 '+Math.round(l.size)+'px '+l.font;
-  cx.fillStyle=l.color;cx.textAlign='center';cx.textBaseline='middle';
-  var lines=wrapText(l.text),lh=l.size*1.18;
-  for(var i=0;i<lines.length;i++)cx.fillText(lines[i],0,(i-(lines.length-1)/2)*lh);
- }else if(l.kind==='rect'){cx.fillStyle=l.color;cx.fillRect(-l.size*s/2,-l.size*0.31*s,l.size*s,l.size*0.62*s);
- }else if(l.kind==='ellipse'){cx.fillStyle=l.color;cx.beginPath();cx.arc(0,0,l.size*s/2,0,Math.PI*2);cx.fill();
+  cx.font=fontOf(l);
+  try{cx.letterSpacing=(l.ls||0)+'px';}catch(e){}
+  var lines=wrapText(l.text||''),lh=l.size*l.lh/100,b=layerBox(l);
+  cx.textAlign=l.align==='l'?'left':(l.align==='r'?'right':'center');cx.textBaseline='middle';
+  var ox=l.align==='l'?-b.w/2:(l.align==='r'?b.w/2:0);
+  for(var i=0;i<lines.length;i++){var yy=(i-(lines.length-1)/2)*lh;
+   if(l.stroke>0){cx.strokeStyle=l.col2||'#000000';cx.lineWidth=l.stroke;cx.strokeText(lines[i],ox,yy);}
+   cx.fillStyle=fillOf(l,b.w,b.h);cx.fillText(lines[i],ox,yy);}
+ }else if(l.kind==='rect'){var rw=l.size*s,rh=l.size*0.62*s;
+  pathRR(cx,rw,rh,l.rad||0);cx.fillStyle=fillOf(l,rw,rh);cx.fill();
+  if(l.stroke>0){cx.lineWidth=l.stroke;cx.strokeStyle=l.col2||'#000000';cx.stroke();}
+ }else if(l.kind==='ellipse'){cx.fillStyle=fillOf(l,l.size*s,l.size*s);cx.beginPath();cx.arc(0,0,l.size*s/2,0,Math.PI*2);cx.fill();
+  if(l.stroke>0){cx.lineWidth=l.stroke;cx.strokeStyle=l.col2;cx.stroke();}
+ }else if(l.kind==='ring'){cx.strokeStyle=l.color;cx.lineWidth=Math.max(2,l.stroke||Math.round(l.size*s/18));
+  cx.beginPath();cx.arc(0,0,l.size*s/2,0,Math.PI*2);cx.stroke();
+ }else if(l.kind==='tri'){var R=l.size*s/2;cx.fillStyle=fillOf(l,l.size*s,l.size*s);
+  cx.beginPath();cx.moveTo(0,-R);cx.lineTo(R*0.87,R*0.5);cx.lineTo(-R*0.87,R*0.5);cx.closePath();cx.fill();
+  if(l.stroke>0){cx.lineWidth=l.stroke;cx.strokeStyle=l.col2;cx.stroke();}
+ }else if(l.kind==='line'){var lw=l.size*s;cx.strokeStyle=l.color;cx.lineWidth=Math.max(2,l.stroke||6);
+  cx.beginPath();cx.moveTo(-lw/2,0);cx.lineTo(lw/2,0);cx.stroke();
+ }else if(l.kind==='star'){pathStar(cx,l.size*s/2);cx.fillStyle=fillOf(l,l.size*s,l.size*s);cx.fill();
+  if(l.stroke>0){cx.lineWidth=l.stroke;cx.strokeStyle=l.col2;cx.stroke();}
  }else if(l.kind==='img'&&l.img&&l.img.complete&&l.img.naturalWidth){
   cx.drawImage(l.img,-l.imgW*s/2,-l.imgH*s/2,l.imgW*s,l.imgH*s);}
- if(selected){cx.globalAlpha=1;cx.strokeStyle='#38bdf8';cx.lineWidth=Math.max(3,W/360);cx.setLineDash([12,9]);
-  var b=layerBox(l);cx.strokeRect(-b.w/2-12,-b.h/2-12,b.w+24,b.h+24);}
+ cx.restore();cx.globalAlpha=1;cx.setLineDash([]);cx.shadowBlur=0;cx.shadowColor='transparent';cx.shadowOffsetY=0;
+ if(selected)drawHandles(l);
+}
+function handlePts(l){var b=layerBox(l),o=14;
+ return {cs:[[-b.w/2-o,-b.h/2-o],[b.w/2+o,-b.h/2-o],[b.w/2+o,b.h/2+o],[-b.w/2-o,b.h/2+o]],
+  knob:[0,-b.h/2-o*2.6],rad:(o+10)/dsD};}
+function drawHandles(l){
+ cx.save();cx.translate(l.x,l.y);cx.rotate(l.rot*Math.PI/180);cx.globalAlpha=1;
+ cx.strokeStyle='#38bdf8';cx.lineWidth=Math.max(3,W/360);cx.setLineDash([12,9]);
+ var b=layerBox(l),hp=handlePts(l),hs=Math.max(10,W/70),i;
+ cx.strokeRect(-b.w/2-14,-b.h/2-14,b.w+28,b.h+28);
+ cx.setLineDash([]);cx.fillStyle='#38bdf8';
+ for(i=0;i<4;i++)cx.fillRect(hp.cs[i][0]-hs/2,hp.cs[i][1]-hs/2,hs,hs);
+ cx.beginPath();cx.moveTo(0,-b.h/2-14);cx.lineTo(0,hp.knob[1]);cx.stroke();
+ cx.beginPath();cx.arc(hp.knob[0],hp.knob[1],hs*0.62,0,Math.PI*2);cx.fill();
  cx.restore();cx.globalAlpha=1;cx.setLineDash([]);
 }
-function select(i){sel=i;var l=i>=0?layers[i]:null;
- $('ds-sel').textContent=l?('layer '+(i+1)+': '+l.name):'nothing selected';
+function readCtl(){var l=sel>=0?layers[sel]:null;
  $('ds-txt').disabled=!l||l.kind!=='text';
- if(l){$('ds-txt').value=l.text!==undefined?l.text:'';
-  if(l.font)$('ds-font').value=l.font;
-  $('ds-ps').value=Math.round(l.size||0);
-  if(/^#[0-9a-fA-F]{6}$/.test(l.color||''))$('ds-col').value=l.color;
-  $('ds-op').value=l.op;$('ds-sc').value=Math.round(l.scale);$('ds-rot').value=Math.round(l.rot);}
- draw();}
-function addLayer(l){l.id=++seq;l.x=l.x||Math.round(W/2);l.y=l.y||Math.round(H/2);
- l.rot=l.rot||0;l.op=l.op==null?100:l.op;l.scale=l.scale||100;
- layers.push(l);select(layers.length-1);}
-function swapTo(i){if(i<0||i>=layers.length)return;select(i);}
-$('ds-addtext').onclick=function(){addLayer({kind:'text',name:'text',text:'Your text',font:$('ds-font').value,size:Math.max(28,Math.round(W/13)),color:hex($('ds-col').value),rot:0,op:100,scale:100});};
-$('ds-addrect').onclick=function(){addLayer({kind:'rect',name:'rectangle',size:Math.round(W/4),color:hex($('ds-bgb').value),rot:0,op:100,scale:100});};
-$('ds-addcircle').onclick=function(){addLayer({kind:'ellipse',name:'circle',size:Math.round(W/4),color:hex($('ds-bgb').value),rot:0,op:100,scale:100});};
-$('ds-del').onclick=function(){if(sel<0)return;layers.splice(sel,1);swapTo(Math.min(sel,layers.length-1));};
-$('ds-dup').onclick=function(){if(sel<0)return;var n={},L=layers[sel];for(var k in L)n[k]=L[k];
- n.id=++seq;n.x=Math.round(L.x+W*0.05);n.y=Math.round(L.y+H*0.05);n.name=L.name;
- layers.splice(sel+1,0,n);select(sel+1);};
-$('ds-back').onclick=function(){if(sel<=0)return;var L=layers[sel];layers.splice(sel,1);layers.unshift(L);select(0);};
-$('ds-fwd').onclick=function(){if(sel<0||sel>=layers.length-1)return;var L=layers[sel];layers.splice(sel,1);layers.push(L);select(layers.length-1);};
-function bindEdit(id,fn){$(id).oninput=function(){if(sel<0)return;fn(layers[sel]);draw();};}
-bindEdit('ds-txt',function(l){if(l.kind==='text'){l.text=$('ds-txt').value;l.name=l.text.slice(0,20)||'text';}});
-bindEdit('ds-font',function(l){l.font=$('ds-font').value;});
+ if(!l)return;
+ $('ds-txt').value=l.text!==undefined?l.text:'';
+ if(l.font)$('ds-font').value=l.font;
+ $('ds-wt').value=String(l.weight||700);$('ds-fst').value=l.italic?'i':'n';$('ds-tal').value=l.align||'c';
+ $('ds-ps').value=Math.round(l.size||0);$('ds-lh').value=Math.round(l.lh||118);$('ds-ls').value=Math.round(l.ls||0);
+ if(/^#[0-9a-fA-F]{6}$/.test(l.color||''))$('ds-col').value=l.color;
+ if(/^#[0-9a-fA-F]{6}$/.test(l.col2||''))$('ds-col2').value=l.col2;
+ $('ds-fill').value=l.fill||'s';$('ds-st').value=Math.round(l.stroke||0);$('ds-rad').value=Math.round(l.rad||0);
+ $('ds-sh').value=Math.round(l.shadow||0);$('ds-op').value=l.op;$('ds-sc').value=Math.round(l.scale);$('ds-rot').value=Math.round(l.rot);}
+function select(i){sel=i;var l=i>=0?layers[i]:null;
+ $('ds-sel').textContent=l?('layer '+(i+1)+' / '+layers.length+': '+l.name+(l.hidden?' (hidden)':'')):'nothing selected';
+ if(l)readCtl();else $('ds-txt').disabled=true;
+ panel();draw();}
+function addLayer(l){push();
+ l.id=++seq;l.rot=l.rot||0;l.op=l.op==null?100:l.op;l.scale=l.scale||100;l.hidden=false;
+ l.color=l.color||hex($('ds-col').value);l.col2=l.col2||hex($('ds-bgb').value);
+ l.fill=l.fill||'s';l.stroke=l.stroke||0;l.shadow=l.shadow||0;l.rad=l.rad||0;
+ l.weight=l.weight||700;l.italic=l.italic||false;l.align=l.align||'c';l.lh=l.lh||118;l.ls=l.ls||0;
+ l.font=l.font||$('ds-font').value;if(l.text===undefined)l.text='';
+ l.x=l.x||Math.round(W/2);l.y=l.y||Math.round(H/2);
+ layers.push(l);select(layers.length-1);stash();return l;}
+function panel(){var p=$('ds-layers');if(!p)return;
+ if(!layers.length){p.innerHTML='<span class="meta">no layers yet — pick a template or add text</span>';return;}
+ var h='';
+ for(var i=layers.length-1;i>=0;i--){var l=layers[i];
+  h+='<div class="ds-lay'+(i===sel?' on':'')+'" data-i="'+i+'">'
+   +'<button class="ds-eye" data-eye="'+i+'">'+(l.hidden?'\\u25ca':'\\u25cf')+'</button>'
+   +'<span class="ds-nm">'+String(l.name||l.kind).replace(/</g,'&lt;')+'</span>'
+   +'<span class="ds-kd">'+l.kind+'</span></div>';}
+ p.innerHTML=h;}
+function bindClick(id,fn){var e=$(id);if(e)e.onclick=fn;}
+function shape(k,name,extra){var l={kind:k,name:name,size:Math.round(W/4)};
+ if(extra)for(var p in extra)l[p]=extra[p];
+ return addLayer(l);}
+bindClick('ds-addtext',function(){addLayer({kind:'text',name:'text',text:'Your text',size:Math.max(28,Math.round(W/13))});});
+bindClick('ds-addrect',function(){shape('rect','rectangle');});
+bindClick('ds-addround',function(){shape('rect','rounded rect',{rad:Math.round(W/24)});});
+bindClick('ds-addcircle',function(){shape('ellipse','circle');});
+bindClick('ds-addring',function(){shape('ring','ring',{stroke:Math.max(6,Math.round(W/90))});});
+bindClick('ds-addtri',function(){shape('tri','triangle');});
+bindClick('ds-addline',function(){shape('line','line',{size:Math.round(W*0.6),stroke:Math.max(6,Math.round(W/100))});});
+bindClick('ds-addstar',function(){shape('star','star');});
+bindClick('ds-del',function(){if(sel<0)return;push();layers.splice(sel,1);select(Math.min(sel,layers.length-1));stash();});
+bindClick('ds-dup',function(){if(sel<0)return;push();var n={},L=layers[sel];for(var k in L)n[k]=L[k];
+ n.id=++seq;n.x=Math.round(L.x+W*0.05);n.y=Math.round(L.y+H*0.05);
+ layers.splice(sel+1,0,n);select(sel+1);stash();});
+bindClick('ds-back',function(){if(sel<=0)return;push();var L=layers[sel];layers.splice(sel,1);layers.unshift(L);select(0);stash();});
+bindClick('ds-fwd',function(){if(sel<0||sel>=layers.length-1)return;push();var L=layers[sel];layers.splice(sel,1);layers.push(L);select(layers.length-1);stash();});
+bindClick('ds-undo',undo);bindClick('ds-redo',redo);
+bindClick('ds-clear',function(){push();layers=[];sel=-1;panel();draw();stash();$('ds-out').textContent='Canvas cleared — Undo brings the layers back.';});
+var tplSel=$('ds-tpl');if(tplSel)tplSel.onchange=useTpl;
+var layPanel=$('ds-layers');
+if(layPanel&&layPanel.addEventListener)layPanel.addEventListener('click',function(e){
+ var t=e.target||{};if(!t.getAttribute)return;
+ var i=num(t.getAttribute('data-eye'),NaN);
+ if(isNaN(i)&&t.closest){var row=t.closest('.ds-lay');i=num(row?row.getAttribute('data-i'):'',NaN);}
+ if(isNaN(i)||!layers[i])return;
+ if(t.getAttribute('data-eye')!==null){push();layers[i].hidden=!layers[i].hidden;}
+ select(i);stash();});
+function bindEdit(id,fn){var e=$(id);if(!e)return;
+ e.oninput=function(){if(sel<0)return;fn(layers[sel]);draw();stash();};
+ e.onchange=function(){if(sel<0)return;fn(layers[sel]);draw();stash();};}
+bindEdit('ds-txt',function(l){if(l.kind==='text'){l.text=$('ds-txt').value;l.name=(l.text||'').slice(0,20)||'text';panel();}});
+bindEdit('ds-font',function(l){if(l.font!==undefined)l.font=$('ds-font').value;});
+bindEdit('ds-wt',function(l){l.weight=num($('ds-wt').value,700);});
+bindEdit('ds-fst',function(l){l.italic=$('ds-fst').value==='i';});
+bindEdit('ds-tal',function(l){l.align=$('ds-tal').value;});
 bindEdit('ds-ps',function(l){l.size=num($('ds-ps').value,l.size);});
+bindEdit('ds-lh',function(l){l.lh=Math.max(60,num($('ds-lh').value,118));});
+bindEdit('ds-ls',function(l){l.ls=num($('ds-ls').value,0);});
 bindEdit('ds-col',function(l){l.color=$('ds-col').value;});
+bindEdit('ds-col2',function(l){l.col2=$('ds-col2').value;});
+bindEdit('ds-fill',function(l){l.fill=$('ds-fill').value;});
+bindEdit('ds-st',function(l){l.stroke=Math.max(0,num($('ds-st').value,0));});
+bindEdit('ds-rad',function(l){l.rad=Math.max(0,num($('ds-rad').value,0));});
+bindEdit('ds-sh',function(l){l.shadow=Math.max(0,num($('ds-sh').value,0));});
 bindEdit('ds-op',function(l){l.op=num($('ds-op').value,100);});
-bindEdit('ds-sc',function(l){l.scale=num($('ds-sc').value,100);});
+bindEdit('ds-sc',function(l){l.scale=Math.max(10,Math.min(800,num($('ds-sc').value,100)));});
 bindEdit('ds-rot',function(l){l.rot=num($('ds-rot').value,0);});
 function canvasPos(e){var r=(cv.getBoundingClientRect&&cv.getBoundingClientRect())||{left:0,top:0,width:W,height:H};
  return {x:(e.clientX-r.left)*(W/(r.width||W)),y:(e.clientY-r.top)*(H/(r.height||H))};}
-function hit(p){for(var i=layers.length-1;i>=0;i--){var l=layers[i],b=layerBox(l);
- if(Math.abs(p.x-l.x)<b.w/2+16&&Math.abs(p.y-l.y)<b.h/2+16)return i;}return -1;}
-if(cv.addEventListener){
+function localPt(p,l){var dx=p.x-l.x,dy=p.y-l.y,a=-l.rot*Math.PI/180;
+ return {x:dx*Math.cos(a)-dy*Math.sin(a),y:dx*Math.sin(a)+dy*Math.cos(a)};}
+function hitPart(p){
+ if(sel>=0){var l=layers[sel],hp=handlePts(l),lp=localPt(p,l),i;
+  if(dist(lp.x,lp.y,hp.knob[0],hp.knob[1])<hp.rad)return {i:sel,part:'rot'};
+  for(i=0;i<4;i++)if(dist(lp.x,lp.y,hp.cs[i][0],hp.cs[i][1])<hp.rad)return {i:sel,part:'rs'};}
+ for(i=layers.length-1;i>=0;i--){var L=layers[i],b=layerBox(L),q=localPt(p,L);
+  if(Math.abs(q.x)<b.w/2+16&&Math.abs(q.y)<b.h/2+16)return {i:i,part:'move'};}
+ return null;}
+function movePt(l,p,e){
+ if(chk('ds-snap')&&!e.altKey)p={x:snapV(p.x),y:snapV(p.y)};
+ l.x=Math.max(0,Math.min(W,Math.round(p.x)));l.y=Math.max(0,Math.min(H,Math.round(p.y)));}
+if(cv&&cv.addEventListener){
  cv.addEventListener('pointerdown',function(e){if(cv.setPointerCapture)cv.setPointerCapture(e.pointerId);
-  var p=canvasPos(e),i=hit(p);
-  if(i>=0){select(i);dragging=true;}else if(layers.length)select(-1);});
- cv.addEventListener('pointermove',function(e){if(!dragging||sel<0)return;var p=canvasPos(e);
-  layers[sel].x=Math.max(0,Math.min(W,Math.round(p.x)));layers[sel].y=Math.max(0,Math.min(H,Math.round(p.y)));draw();});
- cv.addEventListener('pointerup',function(){dragging=false;});
+  var p=canvasPos(e),t=hitPart(p);
+  if(!t){if(layers.length&&e.altKey){for(var k=layers.length-2;k>=0;k--)if(!layers[k].hidden){select(k);return;}}
+   select(-1);return;}
+  var i=t.i;
+  if(e.altKey&&t.part==='move'){var below=-1;for(var b=i-1;b>=0;b--)if(!layers[b].hidden){below=b;break;}if(below>=0)i=below;}
+  select(i);var l=layers[i];if(!l)return;
+  push();mode=t.part;
+  grab={x:l.x,y:l.y,px:p.x,py:p.y,r0:dist(0,0,layerBox(l).w,layerBox(l).h)/2||1,sx:l.scale};});
+ cv.addEventListener('pointermove',function(e){if(!mode||sel<0||!grab)return;var l=layers[sel],p=canvasPos(e);
+  if(mode==='move'){movePt(l,{x:grab.x+(p.x-grab.px),y:grab.y+(p.y-grab.py)},e);}
+  else if(mode==='rs'){var q=localPt(p,l);
+   l.scale=Math.max(10,Math.min(800,Math.round(grab.sx*dist(0,0,q.x,q.y)/(grab.r0*1.35))));$('ds-sc').value=Math.round(l.scale);}
+  else if(mode==='rot'){var a=deg(Math.atan2(p.y-l.y,p.x-l.x))-90;
+   if(e.shiftKey)a=Math.round(a/15)*15;
+   l.rot=norm(Math.round(a));$('ds-rot').value=Math.round(l.rot);}
+  draw();});
+ cv.addEventListener('pointerup',function(){if(mode){stash();mode='';grab=null;}});
  cv.addEventListener('wheel',function(e){if(sel<0)return;e.preventDefault();
-  var l=layers[sel];l.scale=Math.max(10,Math.min(500,l.scale+(e.deltaY<0?6:-6)));
-  $('ds-sc').value=Math.round(l.scale);draw();},{passive:false});}
+  var l=layers[sel],d=(e.deltaMode===1?e.deltaY*16:e.deltaY)>0?-4:4;
+  l.scale=Math.max(10,Math.min(800,l.scale+d));$('ds-sc').value=Math.round(l.scale);draw();stash();},{passive:false});}
+if(typeof document!=='undefined'&&document.addEventListener)document.addEventListener('keydown',function(e){
+ var t=e.target||{},tag=(t.tagName||'').toUpperCase();
+ if(tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA'||tag==='CANVAS')return;
+ var k=(e.key||'').toLowerCase(),m=e.ctrlKey||e.metaKey;
+ if(m&&k==='z'){e.preventDefault();(e.shiftKey?redo:undo)();return;}
+ if(m&&k==='y'){e.preventDefault();redo();return;}
+ if(sel<0)return;var l=layers[sel],step=gsz()*(e.shiftKey?10:1);
+ if(m&&k==='d'){e.preventDefault();var d=$('ds-dup');if(d&&d.onclick)d.onclick();return;}
+ if(m&&k==='l'){e.preventDefault();push();l.hidden=!l.hidden;select(sel);stash();return;}
+ if(k==='delete'||k==='backspace'){e.preventDefault();var x=$('ds-del');if(x&&x.onclick)x.onclick();return;}
+ if(k==='escape'){select(-1);return;}
+ if(k==='arrowleft'){e.preventDefault();push();l.x=Math.max(0,l.x-step);}
+ else if(k==='arrowright'){e.preventDefault();push();l.x=Math.min(W,l.x+step);}
+ else if(k==='arrowup'){e.preventDefault();push();l.y=Math.max(0,l.y-step);}
+ else if(k==='arrowdown'){e.preventDefault();push();l.y=Math.min(H,l.y+step);}
+ else return;
+ select(sel);stash();});
 function applySize(){var v=$('ds-size').value;
  if(v!=='custom'){var p=v.split('x');W=parseInt(p[0],10);H=parseInt(p[1],10);
   $('ds-w').value=W;$('ds-h').value=H;}
  var cw=num($('ds-w').value,W),ch=num($('ds-h').value,H);
  if(cw>=100&&cw<=4000&&ch>=100&&ch<=4000){W=cw;H=ch;}
  draw();}
-$('ds-size').onchange=applySize;$('ds-w').oninput=applySize;$('ds-h').oninput=applySize;
-$('ds-bga').oninput=draw;$('ds-bgb').oninput=draw;$('ds-bgs').onchange=draw;
-$('ds-img').onchange=function(e){var f=e.target.files&&e.target.files[0];
+if($('ds-size'))$('ds-size').onchange=function(){push();applySize();stash();};
+if($('ds-w'))$('ds-w').oninput=applySize;
+if($('ds-h'))$('ds-h').oninput=applySize;
+if($('ds-bga'))$('ds-bga').oninput=draw;
+if($('ds-bgb'))$('ds-bgb').oninput=draw;
+if($('ds-bgs'))$('ds-bgs').onchange=function(){draw();stash();};
+if($('ds-img'))$('ds-img').onchange=function(e){var f=e.target.files&&e.target.files[0];
  if(!f||typeof FileReader==='undefined')return;
  var fr=new FileReader();
  fr.onload=function(){var im=new Image();
   im.onload=function(){var s=Math.min(W*0.8/im.naturalWidth,H*0.8/im.naturalHeight,1);
-   addLayer({kind:'img',name:(f.name||'image').slice(0,24),img:im,
+   addLayer({kind:'img',name:(f.name||'image').slice(0,24),img:im,src:String(fr.result||'').slice(0,1500000),
     imgW:Math.round(im.naturalWidth*s),imgH:Math.round(im.naturalHeight*s),
-    size:Math.round(im.naturalWidth*s),rot:0,op:100,scale:100});};
+    size:Math.round(im.naturalWidth*s),op:100});};
   im.src=fr.result;};
  fr.readAsDataURL(f);e.target.value='';};
-$('ds-dl').onclick=function(){if(!cx||typeof document==='undefined'||!document.createElement)return;
- var k=parseInt($('ds-scale').value,10)||1;
+function dlUrl(url,name){if(!url||typeof document==='undefined')return;
+ var a=document.createElement('a');a.download=name;a.href=url;if(a.click)a.click();}
+bindClick('ds-save',function(){try{dlUrl('data:application/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(ser())),'tukuk-design.json');
+ $('ds-out').textContent='Design file saved — images are embedded, so it reopens with every layer intact.';}catch(e){}});
+$('ds-open').onchange=function(e){var f=e.target.files&&e.target.files[0];
+ if(!f||typeof FileReader==='undefined')return;
+ var fr=new FileReader();
+ fr.onload=function(){try{var d=JSON.parse(String(fr.result)),n=loadJson(d);
+   if(n<0)$('ds-out').textContent='That file is not a tukuk design document.';
+   else{push();$('ds-out').textContent='Opened '+n+' layers from the design file.';autosave();}}
+  catch(err){$('ds-out').textContent='Could not read that file — it must be a design file saved from this page.';}};
+ fr.readAsText(f);e.target.value='';};
+function hasSaved(){try{return typeof localStorage!=='undefined'&&!!localStorage.getItem('tukuk-design-v2');}catch(e){return false;}}
+bindClick('ds-restore',function(){if(!hasSaved()){$('ds-out').textContent='No autosaved session in this browser yet.';return;}
+ try{var n=loadJson(JSON.parse(localStorage.getItem('tukuk-design-v2')));push();
+  $('ds-out').textContent='Restored '+n+' layers from the last autosaved session.';}catch(e){}});
+bindClick('ds-dl',function(){if(!cx||typeof document==='undefined'||!document.createElement)return;
+ var k=parseInt($('ds-scale').value,10)||1,f=$('ds-fmt').value;
+ var mime=f==='jpg'?'image/jpeg':(f==='webp'?'image/webp':'image/png');
  var oc=document.createElement('canvas');oc.width=W*k;oc.height=H*k;
- var o=oc.getContext('2d');o.scale(k,k);
- var keepSel=sel,realCx=cx;sel=-1;cx=o;draw();cx=realCx;sel=keepSel;
- var a=document.createElement('a');a.download='tukuk-design.png';a.href=oc.toDataURL('image/png');a.click();
- draw();};
+ var o=oc.getContext?oc.getContext('2d'):null;if(!o||!o.scale)return;
+ var keepSel=sel,keepD=dsD,realCx=cx;
+ sel=-1;noGuide=true;cx=o;dsD=1;
+ if(f==='jpg'){o.fillStyle='#ffffff';o.fillRect(0,0,W*k,H*k);}
+ o.scale(k,k);draw();
+ cx=realCx;dsD=keepD;noGuide=false;sel=keepSel;
+ dlUrl(oc.toDataURL(mime,0.92),'tukuk-design.'+(f==='jpg'?'jpg':(f==='webp'?'webp':'png')));
+ draw();});
 W=num($('ds-w').value,1080);H=num($('ds-h').value,1080);
-addLayer({kind:'ellipse',name:'accent circle',size:Math.round(W/2),color:hex($('ds-bgb').value),rot:0,op:35,scale:100});
+if(hasSaved()){try{var sv=JSON.parse(localStorage.getItem('tukuk-design-v2'));
+ $('ds-restore').textContent='Restore last session ('+(sv.layers||[]).length+' layers)';}catch(e){}}
+addLayer({kind:'ellipse',name:'accent circle',size:Math.round(W/2),color:hex($('ds-bgb').value),op:35});
 layers[0].x=Math.round(W*0.78);layers[0].y=Math.round(H*0.2);
-addLayer({kind:'text',name:'headline',text:'Your headline',font:'Impact,Charcoal,sans-serif',size:Math.max(30,Math.round(W/11)),color:'#ffffff',rot:0,op:100,scale:100});
+addLayer({kind:'text',name:'headline',text:'Your headline',font:'Impact,Charcoal,sans-serif',size:Math.max(30,Math.round(W/11)),color:'#ffffff'});
 layers[1].y=Math.round(H*0.5);
 select(1);`,
   seo: `<h2 class="section-title">Why a plain-canvas studio beats a template portal</h2>
-  <p>Every hosted design platform runs the same quiet business: your work markets the platform, the watermark is the upsell, and the file leaves your machine before you have really made it. This studio inverts all three — the pixels are composited by your browser\u2019s own canvas engine, the PNG is assembled locally, and closing the tab destroys the document like a whiteboard. What it deliberately lacks: template galleries, stock search, font libraries, collaborative cursors — all features of the account that owns your file. The presets, though, are real: Instagram and YouTube take exactly these dimensions because their own specs demand them.</p>
-  <p class="meta">Thumbnail makers: Impact at one-eleventh of the canvas width (about 116 px on a 1280 canvas) is the size that still reads at phone preview width — anything smaller is decoration, not headline.</p>`,
+  <p>Every hosted design platform runs the same quiet business: your work markets the platform, the watermark is the upsell, and the file leaves your machine before you have really made it. This studio inverts all three — the pixels are composited by your browser\u2019s own canvas engine, the export is assembled locally, and closing the tab destroys the document like a whiteboard. What it deliberately lacks: the million-template warehouse, stock search, licensed font libraries and collaborative cursors — every one of them a feature of the <i>account</i> that owns your file. What it does ship instead is honest: six starter templates composed from real layer maths, drag handles and a rotate knob, snapping to a grid with centre and rule-of-thirds guides, a 40-step undo history, autosave to your own browser, and a design file you can save as JSON and reopen later. The size presets are real too: Instagram and YouTube take exactly these dimensions because their own specs demand them.</p>
+  <p class="meta">Thumbnail makers: Impact at one-eleventh of the canvas width (about 116 px on a 1280 canvas) is the size that still reads at phone preview width — anything smaller is decoration, not headline. Export at 2\u00d7 and the same text is crisp on a retina screen.</p>`,
 });
 
 // ── 38. /alat/water — daily water target ─────────────────────────────────────
