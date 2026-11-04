@@ -2530,7 +2530,7 @@ app.get('/today', async function (req, res) {
     res.status(200).type('html').send(today.todayPage(b, { worldDoc, TOOLS_CSS, navHtml: worldNav('Daily briefing', [
       { href: '/weather', icon: '🌦️', name: 'Full weather', blurb: 'Forecasts, air quality and radar for your own city — not just the eight on this page.' },
       { href: '/money', icon: '💱', name: 'World Money', blurb: 'The whole ECB table, the converter, and the history behind the numbers above.' },
-      { href: '/alat', icon: '🧰', name: 'Everyday Tools', blurb: 'Seventy-eight browser-local tools: converters, calculators, a design studio, PDF, JSON and more.' },
+      { href: '/alat', icon: '🧰', name: 'Everyday Tools', blurb: 'Ninety browser-local tools: converters, calculators, a design studio, PDF, JSON and more.' },
     ]) }));
   } catch (e) {
     console.warn('[today] render failed:', e.message);
@@ -12365,7 +12365,7 @@ function toolsNav() {
 }
 
 function alatHubPage() {
-  const body = `<p><b>The honest kind of useful.</b> Seventy-eight small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your files, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
+  const body = `<p><b>The honest kind of useful.</b> Ninety small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your files, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
   <h2 class="section-title">In the toolbox</h2>
   <p><b><a href="/alat/unit">📐 Unit converter</a></b> — eight categories with exact, definition-based factors (1 inch really is 2.54 cm); every unit in the category updates at once.</p>
   <p><b><a href="/alat/date">📅 Date &amp; age calculator</a></b> — counting days between deadlines, ages to the day, working days between dates, and the reliable <i>days-until-birthday</i>.</p>
@@ -12402,7 +12402,7 @@ function alatHubPage() {
   <p class="meta">Prefer maps and time? The neighbouring <a href="/maps">Maps &amp; Navigation</a> cluster adds routing, distances, sun times and world clocks — and <a href="/today">📰 Today</a> turns weather and currency rates into a one-screen daily briefing with an <a href="/today.xml">RSS feed</a>. Everything on tukuk.org is free without an account.</p>`;
   return worldDoc({
     title: 'Everyday Tools — Converters, Calculators, PDF, JSON, Hashing & Generators | Tukuk-OS',
-    desc: 'Seventy-eight useful tools that run entirely in your browser: unit conversion, date and age maths, base and fraction converters, prime checks, statistics, salary and tip calculators, countdowns, JWT and HTML-entity decoding, Roman numerals, number-to-words, combinations, triangle solver, readability scores, calorie needs, inflation maths, ciphers, recipe and paint scalers, dice odds, a daily water target, guided breathing pacer, compound interest, GST/VAT add-and-remove, Morse and NATO phonetic, ISO week numbers, Markdown to HTML, programmer case converter, coordinate distance, printable month grid, typing speed, a canvas design studio and more — private, free, no account.',
+    desc: 'Ninety useful tools that run entirely in your browser: unit conversion, date and age maths, base and fraction converters, prime checks, statistics, salary and tip calculators, countdowns, JWT and HTML-entity decoding, Roman numerals, number-to-words, combinations, triangle solver, readability scores, calorie needs, inflation maths, ciphers, recipe and paint scalers, dice odds, a daily water target, guided breathing pacer, compound interest, GST/VAT add-and-remove, Morse and NATO phonetic, ISO week numbers, Markdown to HTML, programmer case converter, coordinate distance, printable month grid, typing speed, GPA and shoe-size converters, screen PPI comparison, a Web Audio metronome, lap stopwatch, blood-type Punnett square, DNA translator, subnet calculator, heart-rate zones, caffeine half-life, moon phase and Easter computus, a canvas design studio and more — private, free, no account.',
     selfUrl: 'https://tukuk.org/alat',
     heroTitle: '🧰 Everyday Tools', heroSub: 'Converters · calculators · checkers · generators — all computed on your device',
     css: TOOLS_CSS, body,
@@ -22833,7 +22833,7 @@ $('bd-idea').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preven
   }, worldNav('Keep going', [
     { href: '/games', icon: '🕹️', name: 'Game Arcade', blurb: 'Ready-to-play 3D and HTML5 games — the same templates the Builder publishes from.' },
     { href: '/a', icon: '🧩', name: 'Community apps', blurb: 'Everything our visitors have published through the Builder, in one index.' },
-    { href: '/alat', icon: '🧰', name: 'Everyday Tools', blurb: 'Seventy-eight browser-local tools: converters, calculators, a design studio, PDF, JSON and more.' },
+    { href: '/alat', icon: '🧰', name: 'Everyday Tools', blurb: 'Ninety browser-local tools: converters, calculators, a design studio, PDF, JSON and more.' },
   ]));
 }
 

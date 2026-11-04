@@ -2460,15 +2460,561 @@ $('ty-type').oninput=function(){var inp=$('ty-type'),want=pool[wi]?pool[wi].w:''
 $('ty-start').onclick=function(){pool=shuffle(W.slice()).slice(0,60).map(function(w){return {w:w,done:false};});
  wi=0;typed=0;correct=0;errors=0;left=parseInt($('ty-dur').value,10);started=Date.now();
  drawWords();$('ty-type').disabled=false;$('ty-type').value='';$('ty-type').focus();
- $('ty-out').innerHTML='<span class="tl-badge tl-yes">go</span> '+left+' seconds — type each word and press space.';
+ $('ty-out').innerHTML='<span class="tl-badge tl-ok">go</span> '+left+' seconds — type each word and press space.';
  if(tick)clearInterval(tick);
  tick=setInterval(function(){left--;
-  $('ty-out').innerHTML='<span class="tl-badge tl-yes">'+left+' s left</span> Keep going.';
+  $('ty-out').innerHTML='<span class="tl-badge tl-ok">'+left+' s left</span> Keep going.';
   if(left<=0)finish();},1000);};
 (function init(){pool=W.slice(0,12).map(function(w){return {w:w,done:false};});wi=-1;drawWords();
  $('ty-words').innerHTML+=' <span class="meta">preview of the word bank — Start shuffles a fresh 60.</span>';})();`,
   seo: `<h2 class="section-title">Where "words per minute" comes from</h2>
   <p>Counting words is ambiguous ("ox" vs "antidisestablishmentarianism"), so since the typewriter era speed has been measured in <b>five-character words</b> — the average length of English text as a constant. Your net score is correct keystrokes (including the spaces that complete each word) divided by five, divided by minutes; raw speed counts every keystroke you made. That single convention is what makes 60 WPM here comparable to 60 WPM anywhere else.</p>`,
+});
+
+
+// ── 50. /alat/gpa — GPA & CGPA calculator ────────────────────────────────────
+TOOLKIT.push({
+  slug: 'gpa', ic: '🎓', name: 'GPA Calculator',
+  title: 'GPA & CGPA Calculator — Credits-Weighted, With the Catch-Up Sum | Tukuk-OS',
+  desc: 'Grade-point average from any list of courses with credit hours, the per-course working shown, degree-class band, and the credits of straight-A study needed to reach a target CGPA. In your browser.',
+  hero: 'GPA Calculator', sub: 'credits × grade points · 4.00 scale · degree class · catch-up maths',
+  navBlurb: 'Drop in your courses, credits and letters — get the credits-weighted GPA with the arithmetic visible, your degree-class band, and what it takes to hit a target.',
+  hubBlurb: 'credits-weighted GPA and CGPA from a pasted course list, with the per-course working and the catch-up sum to reach a target',
+  lead: 'A GPA is a <b>weighted</b> mean: an A in a 4-credit course moves it four times as far as an A in a 1-credit lab. This page sums credit × grade-point over total credits (the 4.00 scale: A=4.0 down to F=0.0, halves worth 0.3), shows every line of the working, and then answers the question students actually ask — <b>how many credits of straight-A study</b> to reach a target CGPA.',
+  form: `<div class="tl-form">
+  ${field('Courses — one per line: name, credits, grade', '<textarea id="gp-in" rows="7" spellcheck="false">CS101, 3, A\nMATH202, 4, B+\nENG101, 3, A-\nPHY201, 4, B</textarea>')}
+  ${field('Target CGPA (optional)', '<input id="gp-goal" type="number" min="0" max="4" step="0.01" value="3.50">')}
+  <button class="tl-btn primary" id="gp-go" type="button">Calculate</button>
+</div>
+<div class="tl-res" id="gp-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var P={A:4,'A-':3.7,'B+':3.3,B:3,'B-':2.7,'C+':2.3,C:2,'C-':1.7,'D+':1.3,D:1,'D-':0.7,F:0};
+function render(){var lines=$('gp-in').value.split(/\\r?\\n/),rows=[],cr=0,qp=0,bad=[];
+ for(var i=0;i<lines.length;i++){var t=lines[i].split(/[,;\\t]+/);if(t.length<3||!/\\S/.test(t[0]))continue;
+  var c=parseFloat(t[1]),g=(t[2]||'').trim().toUpperCase();
+  if(!(c>0&&c<=12)||P[g]===undefined){bad.push(lines[i]);continue;}
+  rows.push({n:t[0].trim(),c:c,g:g,p:P[g]});cr+=c;qp+=c*P[g];}
+ if(!rows.length){$('gp-out').innerHTML='<span class="tl-badge tl-no">check input</span> One course per line as <i>name, credits, grade</i> — grades A to F with + and -.';return;}
+ var gpa=cr>0?qp/cr:0;
+ var cls=gpa>=3.7?'First class / magna cum laude':gpa>=3.3?'Second class upper / cum laude':gpa>=3.0?'Second class lower':gpa>=2.0?'Pass':'below the 2.0 pass mark';
+ var html='<div class="tl-big">'+gpa.toFixed(2)+' / 4.00</div>';
+ html+='<table class="tl-tab"><tbody><tr><td>Course</td><td>Credits</td><td>Grade</td><td>Points</td></tr>';
+ rows.forEach(function(r){html+='<tr><td>'+r.n+'</td><td>'+r.c+'</td><td>'+r.g+'</td><td>'+(r.c*r.p).toFixed(2)+'</td></tr>';});
+ html+='<tr><td><b>Totals</b></td><td><b>'+cr+'</b></td><td></td><td><b>'+qp.toFixed(2)+'</b></td></tr></tbody></table>';
+ html+='<p>Quality points ÷ credits = '+qp.toFixed(2)+' / '+cr+' = <b>'+gpa.toFixed(2)+'</b> — '+cls+'.</p>';
+ var goal=parseFloat($('gp-goal').value);
+ if(!isNaN(goal)){if(goal<=gpa){html+='<p><span class="tl-badge tl-ok">target met</span> You are already at or above '+goal.toFixed(2)+'.</p>';}
+  else{var need=(goal*cr-qp)/(4-goal);
+   html+='<p>To pull the CGPA to '+goal.toFixed(2)+', you need <b>'+Math.ceil(need)+' credits</b> graded entirely A (≈ '+Math.ceil(need/3)+' typical course'+(Math.ceil(need/3)===1?'':'s')+').</p>';}}
+ if(bad.length)html+='<p class="meta">Not understood: '+bad.join(' · ')+'</p>';
+ html+='<p class="meta">Standard 4.00 mapping (A 4.0, A- 3.7, B+ 3.3 … F 0). Universities that use 4.3 or 5.0 scales grade the same way in spirit — check your registrar\\u2019s table before celebrating.</p>';
+ $('gp-out').innerHTML=html;}
+$('gp-go').onclick=render;$('gp-in').oninput=render;$('gp-goal').oninput=render;render();`,
+  seo: `<h2 class="section-title">Why the unweighted average is the wrong answer</h2>
+  <p>Averaging letter grades as if every course counted equally treats a one-credit lab the same as a four-credit core — and that is exactly how students accidentally report a number their transcript does not contain. Credits are the weights, full stop. The catch-up line is the same arithmetic read backwards: to reach target T from current credits C and quality points Q, future straight-A credits x must satisfy (Q+4x)/(C+x)=T, so x=(T·C−Q)/(4−T). When T approaches 4.0 that denominator shrinks and the required credits explode — which is the honest way of saying a 3.94 CGPA from a 3.2 start is not a plan, it is a wish.</p>`,
+});
+
+// ── 51. /alat/shoe — shoe size converter ─────────────────────────────────────
+TOOLKIT.push({
+  slug: 'shoe', ic: '👟', name: 'Shoe Size Converter',
+  title: 'Shoe Size Converter — cm (Mondopoint), EU, UK & US | Tukuk-OS',
+  desc: 'Convert foot length in centimetres to EU, UK and US sizes (or back from any of them), using the published formulas with the half-size rounding shops actually use. Honest tolerance notes included. In your browser.',
+  hero: 'Shoe Size Converter', sub: 'cm ⇄ EU ⇄ UK ⇄ US · Brannock & Paris point · men & women',
+  navBlurb: 'Foot length in centimetres to EU, UK and US sizes and back — the real formulas (Paris point, Brannock barleycorns) instead of a table you cannot check.',
+  hubBlurb: 'centimetres to EU, UK and US shoe sizes and back, from the published formulas, with the ±half-size brand tolerance spelled out',
+  lead: 'Every shoe scale is the same length measurement in different units: EU uses the <b>Paris point</b> (1.5 × last length in cm), UK and US use <b>barleycorns</b> (⅓ inch steps, the Brannock formula for men), and cm is Mondopoint — the only one that is literally your foot. This page converts between them with the allowance built in (EU adds 1.5 cm of last, Brannock works from foot length directly) and says the quiet part out loud: <b>brand lasts vary by half a size</b>, so treat the answers as the start of a fitting, not the end.',
+  form: `<div class="tl-form">
+  ${field('Known measurement', '<select id="sh-mode"><option value="cm" selected>foot length in cm</option><option value="eu">EU size</option><option value="ukm">UK men\\u2019s</option><option value="usm">US men\\u2019s</option></select>')}
+  ${field('Value', '<input id="sh-v" type="number" min="14" max="35" step="0.1" value="25">')}
+  <button class="tl-btn primary" id="sh-go" type="button">Convert</button>
+</div>
+<div class="tl-res" id="sh-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function half(x){return Math.round(x*2)/2;}
+function cmOf(v,m){if(m==='cm')return v;if(m==='eu')return v/1.5-1.5;if(m==='ukm')return (v+23)/3*2.54;return (v+22)/3*2.54;}
+function render(){var v=parseFloat($('sh-v').value),m=$('sh-mode').value;
+ if(!(v>=14&&v<=51)){$('sh-out').innerHTML='<span class="tl-badge tl-no">check input</span> A foot length of 14-35 cm, or the matching EU/UK/US number.';return;}
+ var cm=cmOf(v,m);
+ if(cm<14||cm>35){$('sh-out').innerHTML='<span class="tl-badge tl-no">check input</span> That converts to a foot length outside 14-35 cm — double-check the scale you picked.';return;}
+ var eu=1.5*(cm+1.5),usm=3*(cm/2.54)-22,ukm=usm-1,usw=usm+1.5;
+ var html='<div class="tl-big">EU '+half(eu).toFixed(1).replace(/\\.0$/,'')+'</div>';
+ html+='<table class="tl-tab"><tbody>';
+ html+='<tr><td>Foot length (Mondopoint)</td><td>'+cm.toFixed(1)+' cm — the only number here that is a real measurement</td></tr>';
+ html+='<tr><td>EU (Paris point)</td><td>'+half(eu)+' — 1.5 × (cm + 1.5 cm last)</td></tr>';
+ html+='<tr><td>UK men</td><td>'+half(ukm)+' — barleycorns: 3 × inches − 23</td></tr>';
+ html+='<tr><td>US men</td><td>'+half(usm)+' — Brannock: 3 × inches − 22</td></tr>';
+ html+='<tr><td>US women</td><td>'+half(usw)+' — the common +1.5 brand offset</td></tr>';
+ html+='</tbody></table><p class="meta">Rounded to the half size shops sell. The honest tolerance is ±0.5 — lasts differ between brands, and width (2E vs D) shifts the feel more than any scale here. If two sizes are within half a point, size down for sneakers, up for boots.</p>';
+ $('sh-out').innerHTML=html;}
+$('sh-go').onclick=render;$('sh-v').oninput=render;$('sh-mode').onchange=render;render();`,
+  seo: `<h2 class="section-title">Three units and one foot</h2>
+  <p>The barleycorn (⅓ inch) was legally fixed in 12th-century England and never left: UK and US sizes are foot length in inches times three, offset by 23 or 22 depending on the men/women scale. Europe went metric in the 1900s — the Paris point is ⅔ cm, and a shoe\\u2019s EU size is 1.5 × the <i>last</i> (the wooden foot it is built on), which is why the formula carries a +1.5 cm allowance. Mondopoint just states the foot in millimetres, which is why it is the only scale that transfers perfectly between brands. Converting between them is algebra; converting between brands is a half-size coin toss — this page gives you the algebra and tells you where the coin toss starts.</p>`,
+});
+
+// ── 52. /alat/screen — screen size & PPI comparison ─────────────────────────
+TOOLKIT.push({
+  slug: 'screen', ic: '📱', name: 'Screen & PPI',
+  title: 'Screen Size Comparison — Inches, cm, Aspect & Pixel Density | Tukuk-OS',
+  desc: 'Diagonal and resolution to physical width, height and pixel density (PPI) for two screens side by side, with the honest area comparison the marketing diagonal hides. Pythagoras, in your browser.',
+  hero: 'Screen & PPI', sub: 'two screens · real width & height · PPI sharpness · area % truth',
+  navBlurb: 'Put any two screens side by side and get real width, height and pixel density — plus the area comparison a diagonal-inches number is designed to hide.',
+  hubBlurb: 'two screens compared on the numbers that matter — physical width and height, PPI, and the area percentage the diagonal hides',
+  lead: 'A diagonal flatters big screens twice: area grows with the <b>square</b> of the diagonal, and a "13-inch" laptop is really about 28.7 × 18 cm of glass at 16:10. This page takes diagonal + pixel resolution (which fully determine the aspect ratio) and returns true width, height, and <b>PPI = √(w²+h²)/diagonal</b> for two devices at once — then compares them the way your eye actually experiences it: dots per inch and square inches.',
+  form: `<div class="tl-form">
+  ${field('Screen A — diagonal (in)', '<input id="sc-da" type="number" min="1" max="120" step="0.1" value="15.6">')}
+  ${field('A — resolution', '<input id="sc-ra" type="text" value="1920x1080" size="12">')}
+  ${field('Screen B — diagonal (in)', '<input id="sc-db" type="number" min="1" max="120" step="0.1" value="11">')}
+  ${field('B — resolution', '<input id="sc-rb" type="text" value="2560x1600" size="12">')}
+  <button class="tl-btn primary" id="sc-go" type="button">Compare</button>
+</div>
+<div class="tl-res" id="sc-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function parseRes(s){var m=/^\\s*(\\d{2,5})\\s*[x×*,\\/]\\s*(\\d{2,5})\\s*$/i.exec(s);return m?{w:+m[1],h:+m[2]}:null;}
+function calc(d,res){var px=Math.sqrt(res.w*res.w+res.h*res.h);
+ return{w:d*res.w/px,h:d*res.h/px,ppi:px/d,area:d*d*res.w*res.h/(px*px),ratio:res.w/res.h};}
+function gcd(a,b){while(b){var t=a%b;a=b;b=t;}return a;}
+function ratioLabel(w,h){var r=w/h,
+ named=[[16/9,'16:9'],[16/10,'16:10'],[4/3,'4:3'],[3/2,'3:2'],[21/9,'21:9'],[5/4,'5:4'],[32/9,'32:9']];
+ for(var i=0;i<named.length;i++)if(Math.abs(r-named[i][0])<0.01)return named[i][1];
+ var g=gcd(w,h);return (w/g)+':'+(h/g);}
+function render(){var da=parseFloat($('sc-da').value),db=parseFloat($('sc-db').value);
+ var ra=parseRes($('sc-ra').value),rb=parseRes($('sc-rb').value);
+ if(!(da>=1&&da<=120)||!ra||!(db>=1&&db<=120)||!rb){$('sc-out').innerHTML='<span class="tl-badge tl-no">check input</span> Diagonals 1-120 in, resolutions like 1920x1080.';return;}
+ var A=calc(da,ra),B=calc(db,rb);
+ var html='<div class="tl-big">'+A.ppi.toFixed(0)+' vs '+B.ppi.toFixed(0)+' ppi</div>';
+ html+='<table class="tl-tab"><tbody><tr><td></td><td>Screen A</td><td>Screen B</td></tr>';
+ html+='<tr><td>Diagonal</td><td>'+da+' in</td><td>'+db+' in</td></tr>';
+ html+='<tr><td>Aspect</td><td>'+ratioLabel(ra.w,ra.h)+' ('+(ra.w/ra.h).toFixed(3)+')</td><td>'+ratioLabel(rb.w,rb.h)+' ('+(rb.w/rb.h).toFixed(3)+')</td></tr>';
+ html+='<tr><td>Real width × height</td><td>'+A.w.toFixed(1)+' × '+A.h.toFixed(1)+' in ('+Math.round(A.w*2.54)+' × '+Math.round(A.h*2.54)+' cm)</td><td>'+B.w.toFixed(1)+' × '+B.h.toFixed(1)+' in ('+Math.round(B.w*2.54)+' × '+Math.round(B.h*2.54)+' cm)</td></tr>';
+ html+='<tr><td>Glass area</td><td>'+A.area.toFixed(1)+' in²</td><td>'+B.area.toFixed(1)+' in²</td></tr>';
+ html+='<tr><td>Pixel density</td><td>'+A.ppi.toFixed(0)+' ppi</td><td>'+B.ppi.toFixed(0)+' ppi</td></tr>';
+ html+='<tr><td>Resolution</td><td>'+(ra.w*ra.h/1e6).toFixed(1)+' MP</td><td>'+(rb.w*rb.h/1e6).toFixed(1)+' MP</td></tr>';
+ html+='</tbody></table>';
+ var more=A.area>=B.area?['A','B',A.area/B.area]:['B','A',B.area/A.area];
+ var denser=A.ppi>=B.ppi?['A','B',A.ppi/B.ppi]:['B','A',B.ppi/A.ppi];
+ html+='<p><b>'+more[0]+'</b> shows <b>'+Math.round((more[2]-1)*100)+'% more picture</b> than '+more[1]+', and '+denser[0]+' is the denser panel — '+(denser[2]>=1.15?denser[0]+'\u2019s text is '+Math.round(denser[2]*100)/100+'\u00d7 as sharp':denser[2]>=0.87?'the two are about equally sharp':denser[0]+' is only marginally sharper')+'.</p>';
+ html+='<p class="meta">"Retina" territory starts around 300 ppi for phones (held at ~25 cm) and ~220 ppi for laptops (at ~50 cm) — viewing distance decides, not the number alone.</p>';
+ $('sc-out').innerHTML=html;}
+$('sc-go').onclick=render;['sc-da','sc-db','sc-ra','sc-rb'].forEach(function(id){$(id).oninput=render;});render();`,
+  seo: `<h2 class="section-title">Why diagonals lie about size</h2>
+  <p>Two screens with the same diagonal can differ by 30% in area if their aspect ratios differ — a 16:10 panel and a 16:9 panel of the same diagonal are not the same purchase, because area is w × h and the diagonal only fixes the hypotenuse. The square-of-diagonal rule hurts marketing the other way too: going from a 6.1" to a 6.5" phone is a 13% area gain, not 7%, and that is the number your thumb feels. PPI has a similar trap: it measures dots, not legibility — at a metre away, 110 ppi looks fine, which is why desktop monitors got big before they got dense. The honest comparison is all three lines on this page together.</p>`,
+});
+
+// ── 53. /alat/metronome — web audio metronome ───────────────────────────────
+TOOLKIT.push({
+  slug: 'metronome', ic: '🎵', name: 'Metronome',
+  title: 'Metronome — 40 to 208 BPM With Tempo Names | Tukuk-OS',
+  desc: 'A Web Audio metronome: any tempo from 40 to 208 BPM, accented downbeats, 2/3/4/6 beats per bar, and the classical tempo names with their metronome ranges. Synthesised clicks, zero downloads.',
+  hero: 'Metronome', sub: '40–208 BPM · accent on 1 · bar counter · the tempo names, defined',
+  navBlurb: 'A precise click track from the browser\\u2019s own audio clock — 40 to 208 BPM, accented first beat, 2/3/4/6 per bar, and the Andante-to-Presto names the sheet music promises.',
+  hubBlurb: 'a Web Audio click track from 40 to 208 BPM with accented downbeats and the classical tempo ranges beside every number',
+  lead: 'The click is synthesised on demand — a short sine blip, 1200 Hz on the downbeat and 800 Hz inside the bar, the way a mechanical metronome goes <i>ping</i>-po-po. Scheduling uses a look-ahead loop rather than one timer per beat, so browser timer jitter never accumulates into a drifting pulse. Every tempo number below comes from the standard Maelzel/metronome mapping the sheet-music words promise.',
+  form: `<div class="tl-form">
+  ${field('Tempo (BPM)', '<input id="mt-bpm" type="number" min="40" max="208" step="1" value="100">')}
+  ${field('Beats per bar', '<select id="mt-beats"><option value="2">2</option><option value="3">3</option><option value="4" selected>4</option><option value="6">6</option></select>')}
+  <button class="tl-btn primary" id="mt-go" type="button">▶ Start</button>
+  <button class="tl-btn" id="mt-tap" type="button">Tap tempo</button>
+</div>
+<div class="tl-res" id="mt-out">—</div>`,
+  css: `
+.mt-pulse{display:inline-block;width:14px;height:14px;border-radius:50%;background:#e3e6ec;margin:0 5px;vertical-align:middle;opacity:.35}
+.mt-pulse.mt-on{opacity:1;background:#6366f1}
+.mt-pulse.mt-accent{background:#f59e0b}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var NAMES=[[40,60,'Largo','broad and slow'],[60,76,'Adagio','slow and stately'],[76,108,'Andante','walking pace'],[108,120,'Moderato','at a moderate pace'],[120,156,'Allegro','fast and bright'],[156,176,'Vivace','lively and fast'],[176,209,'Presto','very fast']];
+var ctx=null,timer=null,nextAt=0,beat=0,bar=0,playing=false,taps=[];
+function name(bpm){for(var i=0;i<NAMES.length;i++)if(bpm>=NAMES[i][0]&&bpm<NAMES[i][1])return NAMES[i];return null;}
+function dots(){var n=parseInt($('mt-beats').value,10),h='';for(var i=0;i<n;i++)h+='<span class="mt-pulse" data-b="'+i+'"></span>';return h;}
+function idle(){var n=name(parseFloat($('mt-bpm').value)||100);
+ $('mt-out').innerHTML='<div class="tl-big">'+($('mt-bpm').value||'—')+' BPM</div><p>'+(n?'<b>'+n[2]+'</b> — '+n[3]+' ('+n[0]+'\\u2013'+(n[1]-1)+' BPM).':'Out of the named range.')+' Beats per bar: '+$('mt-beats').value+'. Press \\u25b6 Start — the downbeat is accented and higher-pitched.</p><p>'+dots()+'</p><h3 class="section-title">The tempo vocabulary</h3><table class="tl-tab"><tbody><tr><td>Name</td><td>Range</td><td>Meaning</td></tr>'+NAMES.map(function(x){return '<tr><td>'+x[2]+'</td><td>'+x[0]+'\\u2013'+(x[1]-1)+'</td><td>'+x[3]+'</td></tr>';}).join('')+'</tbody></table>';}
+function click(at,accent){var o=ctx.createOscillator(),g=ctx.createGain();
+ o.frequency.value=accent?1200:800;o.type='sine';
+ g.gain.setValueAtTime(0.0001,at);g.gain.exponentialRampToValueAtTime(accent?0.9:0.5,at+0.005);
+ g.gain.exponentialRampToValueAtTime(0.0001,at+0.06);
+ o.connect(g);g.connect(ctx.destination);o.start(at);o.stop(at+0.07);}
+function stop(){playing=false;if(timer)clearInterval(timer);timer=null;$('mt-go').textContent='\\u25b6 Start';idle();}
+function start(){if(playing){stop();return;}
+ var AC=window.AudioContext||window.webkitAudioContext;if(!AC){$('mt-out').innerHTML='<span class="tl-badge tl-no">no audio</span> This browser has no Web Audio context.';return;}
+ if(!ctx)ctx=new AC();if(ctx.state==='suspended')ctx.resume();
+ var bpm=parseFloat($('mt-bpm').value),per=60/bpm;
+ if(!(bpm>=40&&bpm<=208)){$('mt-out').innerHTML='<span class="tl-badge tl-no">check input</span> 40 to 208 BPM.';return;}
+ beat=0;bar=0;playing=true;$('mt-go').textContent='\\u25a0 Stop';
+ $('mt-out').innerHTML='<div class="tl-big">'+bpm+' BPM</div><p>Bar <b id="mt-bar">1</b> \\u00b7 '+(name(bpm)?name(bpm)[2]:'unnamed tempo')+'</p><p>'+dots()+'</p><p class="meta">Look-ahead scheduling keeps the click on the audio clock even when the page timer stutters.</p>';
+ var sched=function(){while(nextAt<ctx.currentTime+0.12){var accent=beat%parseInt($('mt-beats').value,10)===0;
+   click(nextAt,accent);
+   (function(b){setTimeout(function(){var els=document.querySelectorAll('.mt-pulse');
+     for(var i=0;i<els.length;i++)els[i].className='mt-pulse';
+     var t=b%parseInt($('mt-beats').value,10);if(els[t])els[t].className='mt-pulse mt-on'+(t===0?' mt-accent':'');},Math.max(0,(b-nextAt)*1000));})(nextAt);
+   beat++;if(beat%parseInt($('mt-beats').value,10)===0){bar++;var bb=document.getElementById('mt-bar');if(bb)bb.textContent=String(bar+1);}
+   nextAt+=per;}};
+ nextAt=ctx.currentTime+0.06;timer=setInterval(sched,40);sched();}
+$('mt-tap').onclick=function(){var now=Date.now();taps.push(now);if(taps.length>5)taps=taps.slice(-5);
+ if(taps.length>=2){var span=taps[taps.length-1]-taps[0],avg=span/(taps.length-1);
+  var bpm=Math.round(60000/avg);if(bpm>=40&&bpm<=208){$('mt-bpm').value=bpm;idle();}}};
+$('mt-go').onclick=start;$('mt-bpm').oninput=idle;$('mt-beats').onchange=idle;idle();`,
+  seo: `<h2 class="section-title">Why "Andante" needs a metronome mark anyway</h2>
+  <p>Tempo words are not fixed speeds: Beethoven\\u2019s own table bolted Maelzel\\u2019s new metronome numbers onto the words in 1817, and scholars still fight about the edges — Andante meant walking pace, but people walk at 76 and at 108. The ranges printed above are the conventional modern reading, and they are guidelines: the metronome exists to keep <i>your</i> chosen tempo, which is the only number that survives a rehearsal. The accent pattern matters as much as the speed — a click track without a downbeat makes practice slower than playing, because you cannot count bars, only beats.</p>`,
+});
+// ── 54. /alat/stopwatch — stopwatch with laps ───────────────────────────────
+TOOLKIT.push({
+  slug: 'stopwatch', ic: '⏱️', name: 'Stopwatch & Laps',
+  title: 'Stopwatch With Laps — Split Times, Best & Worst | Tukuk-OS',
+  desc: 'A centisecond stopwatch with lap splits, fastest/slowest lap detection and total time — the clock comes from Date.now(), so tab throttling cannot drift it. No download, no account.',
+  hero: 'Stopwatch & Laps', sub: 'centiseconds · laps with splits · best & worst · Date.now clock',
+  navBlurb: 'A lap-split stopwatch whose time comes from the system clock, not a ticking counter — background-tab throttling cannot make it drift a single millisecond.',
+  hubBlurb: 'a centisecond stopwatch with lap splits and fastest/slowest detection, clocked from Date.now so throttling cannot drift it',
+  lead: 'The usual way to write a stopwatch — add 10 ms every 10 ms — drifts with every timer the browser decides to delay, and a backgrounded tab can lose seconds. This one stores <b>start timestamps from the system clock</b> and does subtraction, so even if the display skips, the numbers never do. Laps are differences of the same clock, which makes the split table exact.',
+  form: `<div class="tl-form">
+  <div class="tl-big" id="sw-time" style="text-align:center;font-size:2.6rem">00:00.00</div>
+  <button class="tl-btn primary" id="sw-go" type="button">Start</button>
+  <button class="tl-btn" id="sw-lap" type="button" disabled>Lap</button>
+  <button class="tl-btn" id="sw-rs" type="button" disabled>Reset</button>
+</div>
+<div class="tl-res" id="sw-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var base=0,startedAt=0,tick=null,laps=[],running=false;
+function fmt(ms){if(ms<0)ms=0;var cs=Math.floor(ms/10)%100,s=Math.floor(ms/1000)%60,m=Math.floor(ms/60000)%60,h=Math.floor(ms/3600000);
+ return (h>0?(h<10?'0':'')+h+':':'')+(m<10?'0':'')+m+':'+(s<10?'0':'')+s+'.'+(cs<10?'0':'')+cs;}
+function elapsed(){return running?Date.now()-startedAt+base:base;}
+function paint(){$('sw-time').textContent=fmt(elapsed());}
+function lapTable(){if(!laps.length){$('sw-out').innerHTML='<p class="meta">Press Lap while running to record splits.</p>';return;}
+ var best=Infinity,worst=-Infinity;
+ laps.forEach(function(l){if(l.split<best)best=l.split;if(l.split>worst)worst=l.split;});
+ var html='<table class="tl-tab"><tbody><tr><td>Lap</td><td>Split</td><td>Total</td></tr>';
+ laps.forEach(function(l,i){html+='<tr><td>'+(i+1)+'</td><td>'+fmt(l.split)+(l.split<=best?' <span class="tl-badge tl-ok">best</span>':(l.split>=worst&&worst!==best?' <span class="tl-badge tl-no">worst</span>':''))+'</td><td>'+fmt(l.total)+'</td></tr>';});
+ var sum=laps.reduce(function(a,l){return a+l.split;},0);
+ html+='</tbody></table><p>'+laps.length+' laps \\u00b7 average split '+fmt(sum/laps.length)+' \\u00b7 spread '+fmt(worst-best)+'</p>';
+ $('sw-out').innerHTML=html;}
+function stopTick(){if(tick){clearInterval(tick);tick=null;}}
+$('sw-go').onclick=function(){if(running){running=false;base=elapsed();stopTick();$('sw-go').textContent='Resume';$('sw-rs').disabled=false;$('sw-lap').disabled=true;}
+ else{running=true;startedAt=Date.now();$('sw-go').textContent='Pause';$('sw-lap').disabled=false;stopTick();tick=setInterval(paint,50);}};
+$('sw-lap').onclick=function(){if(!running)return;var t=elapsed(),prev=laps.length?laps[laps.length-1].total:0;
+ laps.push({total:t,split:t-prev});paint();lapTable();};
+$('sw-rs').onclick=function(){running=false;base=0;laps=[];stopTick();$('sw-time').textContent='00:00.00';$('sw-go').textContent='Start';$('sw-lap').disabled=true;$('sw-rs').disabled=true;lapTable();};
+$('sw-lap').disabled=true;
+paint();lapTable();`,
+  seo: `<h2 class="section-title">Why a stopwatch is a subtraction, not a counter</h2>
+  <p>Browsers deliberately delay timers in hidden tabs — a <code>setInterval</code> asked for every 50 ms may only wake once a second there, and a stopwatch built by adding ticks would then report a 100 m sprint as 20 seconds. The fix is to never accumulate: store the start moment from the system clock, subtract on every paint, and treat the display timer as decoration. The same discipline powers the lap list — a split is two elapsed readings taken at different moments, so throttling between them changes nothing. If you\\u2019ve ever seen a phone stopwatch "catch up" after you switch back to it, that\\u2019s this design working; one that quietly loses the time instead is the broken kind.</p>`,
+});
+
+// ── 55. /alat/blood-type — blood group inheritance ──────────────────────────
+TOOLKIT.push({
+  slug: 'blood-type', ic: '🩸', name: 'Blood Type Punnett',
+  title: 'Blood Type Calculator — Punnett Square for ABO Inheritance | Tukuk-OS',
+  desc: 'Pick both parental ABO genotypes and get the children\\u2019s phenotype odds from a real 2×2 Punnett square — A, B, AB, O with the allele combinations shown. Mendel, in your browser.',
+  hero: 'Blood Type Punnett', sub: 'ABO genotypes · 2×2 cross · phenotype % · the classic surprises',
+  navBlurb: 'The ABO cross done honestly as a Punnett square — pick both parents\\u2019 genotypes and see why two group-A parents can have an O child, with every odds percentage.',
+  hubBlurb: 'a 2×2 Punnett square of ABO genotypes returning children\\u2019s phenotype odds and the classic inheritance surprises',
+  lead: 'ABO blood is three alleles with two dominances: <b>A and B are codominant</b>, both <b>dominant over O</b>. Phenotype hides genotype — group A is AA or AO — so this page takes the <i>genotypes</i> and lays out the actual 2×2 square. The famous punchlines fall out of it: two A parents can have an O child, and an A × B couple can have <i>any</i> of the four groups.',
+  form: `<div class="tl-form">
+  ${field('Parent 1 genotype', '<select id="bd-p1"><option value="AA">AA (group A)</option><option value="AO" selected>AO (group A, carrier)</option><option value="BB">BB (group B)</option><option value="BO">BO (group B, carrier)</option><option value="AB">AB (group AB)</option><option value="OO">OO (group O)</option></select>')}
+  ${field('Parent 2 genotype', '<select id="bd-p2"><option value="AA">AA (group A)</option><option value="AO" selected>AO (group A, carrier)</option><option value="BB">BB (group B)</option><option value="BO">BO (group B, carrier)</option><option value="AB">AB (group AB)</option><option value="OO">OO (group O)</option></select>')}
+</div>
+<div class="tl-res" id="bd-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function pheno(g){if(g==='AA'||g==='AO')return 'A';if(g==='BB'||g==='BO')return 'B';if(g==='AB')return 'AB';return 'O';}
+function combo(x,y){var s=[x,y].sort();
+ if(s[0]==='A'&&s[1]==='B')return 'AB';if(s[0]==='A'&&s[1]==='O')return 'AO';
+ if(s[0]==='B'&&s[1]==='O')return 'BO';return s[0]+s[1];}
+function render(){var p1=$('bd-p1').value,p2=$('bd-p2').value;
+ var a1=[p1[0],p1[1]],a2=[p2[0],p2[1]];
+ var cells=[],ph={};
+ a1.forEach(function(x){a2.forEach(function(y){var g=combo(x,y);cells.push([x,y,g]);ph[pheno(g)]=(ph[pheno(g)]||0)+1;});});
+ var order=['A','B','AB','O'],html='';
+ html+='<div class="tl-big">'+order.filter(function(p){return ph[p];}).map(function(p){return p+' '+ph[p]*25+'%';}).join(' \\u00b7 ')+'</div>';
+ html+='<table class="tl-tab"><tbody><tr><td></td><td>'+a2[0]+'</td><td>'+a2[1]+'</td></tr>';
+ html+='<tr><td>'+a1[0]+'</td><td>'+cells[0][2]+'</td><td>'+cells[1][2]+'</td></tr>';
+ html+='<tr><td>'+a1[1]+'</td><td>'+cells[2][2]+'</td><td>'+cells[3][2]+'</td></tr>';
+ html+='</tbody></table><table class="tl-tab"><tbody><tr><td>Child genotype</td><td>Phenotype</td><td>Odds</td></tr>';
+ cells.forEach(function(c){html+='<tr><td>'+c[2]+'</td><td>'+pheno(c[2])+'</td><td>25%</td></tr>';});
+ html+='</tbody></table>';
+ var surp='';
+ if(ph['O']&&p1!=='OO'&&p2!=='OO')surp='<p><span class="tl-badge tl-ok">the classic surprise</span> Neither parent is group O, yet an O child is possible — both were carriers.</p>';
+ if(ph['A']&&ph['B']&&ph['AB']&&ph['O'])surp+='<p>All four groups are possible from this pair — the textbook A × B with both carrying O.</p>';
+ html+=surp+'<p class="meta">Rh+/\\u2212 (the D antigen) is a separate gene and not modelled here. Rare mutations (Bombay phenotype etc.) can break these odds; this is classroom genetics, not paternity science.</p>';
+ $('bd-out').innerHTML=html;}
+$('bd-p1').onchange=render;$('bd-p2').onchange=render;render();`,
+  seo: `<h2 class="section-title">Codominance, dominance, and the carrier trick</h2>
+  <p>Mendel\\u2019s pea colours showed dominance; ABO adds codominance on top. An AO person types as A because the A allele builds an A antigen on every red cell and the O allele builds nothing — dominance is a statement about what the <i>surface displays</i>, not what the DNA carries. An AB person displays both antigens side by side, which is why A and B are called codominant: neither hides the other. The carrier mechanic is why two group-A parents can have an O child (AO × AO gives 25% OO) and why group O appears suddenly in family trees — the genotype was invisible for a generation, not absent. The 2×2 square above is exactly the tool Reginald Punnett invented in 1905 for this arithmetic.</p>`,
+});
+
+// ── 56. /alat/dna — DNA complement & protein translation ────────────────────
+TOOLKIT.push({
+  slug: 'dna', ic: '🧬', name: 'DNA Translator',
+  title: 'DNA Complement & Protein Translator — Codon Table, In Your Browser | Tukuk-OS',
+  desc: 'Paste a DNA sequence and get the complement strand, the reverse complement (the lab answer), the mRNA transcript and the protein translated through the standard genetic code, with GC content. Local only.',
+  hero: 'DNA Translator', sub: 'complement · reverse complement · mRNA · protein · GC% · codon table',
+  navBlurb: 'Complement, reverse complement, mRNA and the actual protein from the standard codon table — the four readings every genetics course asks for, computed on your device.',
+  hubBlurb: 'DNA to complement, reverse complement, mRNA and protein via the standard genetic code, with GC content',
+  lead: 'The genetic code is a lookup table, so this is pure translation work: <b>A pairs with T, C with G</b>; the complement is read <b>3′→5′</b> which is why labs quote the <b>reverse complement</b>; mRNA is the coding strand with U for T; and every three-base codon maps to an amino acid through the <b>NCBI standard table</b> (translation stops at the first stop codon). Sequence never leaves the page — a real genome pasted here stays yours.',
+  form: `<div class="tl-form">
+  ${field('DNA sequence 5′→3′ (A/C/G/T, spaces ignored)', '<textarea id="dn-in" rows="4" spellcheck="false">ATGGCATCGGTCTAA</textarea>')}
+  <button class="tl-btn primary" id="dn-go" type="button">Translate</button>
+</div>
+<div class="tl-res" id="dn-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var BT='FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG';
+var IDX={'T':0,'C':1,'A':2,'G':3};
+var AA={F:'Phe',L:'Leu',S:'Ser',Y:'Tyr','*':'Stop',C:'Cys',W:'Trp',P:'Pro',H:'His',Q:'Gln',R:'Arg',I:'Ile',M:'Met',T:'Thr',N:'Asn',K:'Lys',V:'Val',A:'Ala',D:'Asp',E:'Glu',G:'Gly'};
+var CMP={A:'T',T:'A',C:'G',G:'C'};
+function render(){var raw=$('dn-in').value.toUpperCase().replace(/\\s+/g,'');
+ if(!raw){$('dn-out').innerHTML='<span class="tl-badge tl-no">check input</span> Paste a sequence of A, C, G and T.';return;}
+ if(/[^ACGT]/.test(raw)){$('dn-out').innerHTML='<span class="tl-badge tl-no">check input</span> RNA letters (U) or ambiguity codes are not accepted — only ACGT, after stripping spaces.';return;}
+ var comp=raw.split('').map(function(b){return CMP[b];}).join('');
+ var rc=comp.split('').reverse().join('');
+ var mrna=raw.split('').map(function(b){return b==='T'?'U':b;}).join('');
+ var prot='',codons=[],i;
+ for(i=0;i+3<=raw.length;i+=3){var c=raw.substr(i,3),a=BT[16*IDX[c[0]]+4*IDX[c[1]]+IDX[c[2]]];
+  codons.push(c+'\\u2192'+a);prot+=a;if(a==='*')break;}
+ var stops=prot.indexOf('*');var shown=stops>=0?prot.substring(0,stops):prot;
+ var gc=(raw.split('').filter(function(b){return b==='G'||b==='C';}).length/raw.length*100);
+ var spaced=shown.split('').map(function(a){return AA[a];}).join('-');
+ var html='<div class="tl-big">'+(shown?shown+' ('+spaced+')':'no coding start')+'</div>';
+ html+='<table class="tl-tab"><tbody>';
+ html+='<tr><td>Length</td><td>'+raw.length+' bases'+(raw.length%3?' — not a whole codon count; '+(raw.length%3)+' trailing base(s) ignored':' \\u00d7 3 = '+Math.floor(raw.length/3)+' codons')+'</td></tr>';
+ html+='<tr><td>Complement (3\\u2032\\u21925\\u2032)</td><td style="word-break:break-all">'+comp+'</td></tr>';
+ html+='<tr><td>Reverse complement</td><td style="word-break:break-all">'+rc+'</td></tr>';
+ html+='<tr><td>mRNA (5\\u2032\\u21923\\u2032)</td><td style="word-break:break-all">'+mrna+'</td></tr>';
+ html+='<tr><td>Stop codon</td><td>'+(stops>=0?codons[stops]+' at position '+(stops*3+1)+' — translation ends there':'none in this stretch')+'</td></tr>';
+ html+='<tr><td>GC content</td><td>'+gc.toFixed(1)+'% — PCR primer pairs aim for 40\\u201360%</td></tr>';
+ html+='</tbody></table><p class="meta">Standard NCBI code table 1. Real genes also need a start codon context, intron splicing and frames — this translates the literal string, which is the right answer for homework, primers and the codon table itself.</p>';
+ $('dn-out').innerHTML=html;}
+$('dn-go').onclick=render;$('dn-in').oninput=render;render();`,
+  seo: `<h2 class="section-title">Reverse complement: the strand biologists quote</h2>
+  <p>DNA\\u2019s two strands run antiparallel — one 5\\u2032\\u21923\\u2032, the other 3\\u2032\\u21925\\u2032 — and polymerases only read 3\\u2032\\u21925\\u2032 while building 5\\u2032\\u21923\\u2032. So the matching strand of ATGCCC, written the conventional 5\\u2032\\u21923\\u2032 way, is <i>reversed</i> after complementing: GGGCAT. Sequence databases, primer design and BLAST hits are all quoted on this convention, which is why "just swap the letters" is the classic first mistake. The genetic code\\u2019s redundancy is the other half of the lesson: 64 codons for 20 amino acids means many third-position mutations are silent — leucine has six codons and the stop signal has three — a built-in error tolerance evolution kept when it stopped there.</p>`,
+});
+
+// ── 57. /alat/subnet — IPv4 subnet calculator ────────────────────────────────
+TOOLKIT.push({
+  slug: 'subnet', ic: '🕸️', name: 'Subnet Calculator',
+  title: 'IPv4 Subnet Calculator — CIDR, Mask, Range & Hosts | Tukuk-OS',
+  desc: 'Type any CIDR like 192.168.1.130/26 and get network address, broadcast, usable host range, mask and wildcard, block size and the next subnet — all from the prefix length, in your browser.',
+  hero: 'Subnet Calculator', sub: 'CIDR · mask · wildcard · host range · block size · next subnet',
+  navBlurb: 'The full IPv4 breakdown of any CIDR — network, broadcast, first and last usable address, mask and wildcard, and the next block in the allocation, by pure arithmetic.',
+  hubBlurb: 'a CIDR breakdown — network, mask, wildcard, broadcast and usable host range of any IPv4 block, computed exactly',
+  lead: 'A prefix length is just log arithmetic: <b>/26</b> means 26 mask bits, 6 host bits, a block of <b>2\\u2076 = 64 addresses</b>, of which the first is the network and the last the broadcast — <b>62 usable</b>. Everything below comes from those numbers with integer division; no lookup tables, no "class" folklore, and nothing is sent anywhere.',
+  form: `<div class="tl-form">
+  ${field('Address / prefix', '<input id="su-in" type="text" value="192.168.1.130/26" spellcheck="false" autocomplete="off">')}
+  <button class="tl-btn primary" id="su-go" type="button">Calculate</button>
+</div>
+<div class="tl-res" id="su-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function d(u){return [Math.floor(u/16777216),Math.floor(u/65536)%256,Math.floor(u/256)%256,u%256].join('.');}
+function render(){var m=/^\\s*(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\s*\\/\\s*(\\d{1,2})\\s*$/.exec($('su-in').value);
+ if(!m||[m[1],m[2],m[3],m[4]].some(function(o){return +o>255;})){ $('su-out').innerHTML='<span class="tl-badge tl-no">check input</span> Dotted IPv4 with a CIDR prefix, like 10.5.0.1/16.';return;}
+ var p=+m[5];if(p<0||p>32){$('su-out').innerHTML='<span class="tl-badge tl-no">check input</span> Prefix must be /0 to /32.';return;}
+ var ip=((+m[1]*256+ +m[2])*256+ +m[3])*256+ +m[4];
+ var hb=32-p,size=Math.pow(2,hb);
+ var net=ip-(ip%size);
+ var bcast=net+size-1,mask=4294967296-size,wild=size-1;
+ var html,first,last,hostsN;
+ if(p===32){first=last=ip;hostsN=1;}
+ else if(p===31){first=net;last=bcast;hostsN=2;}
+ else{first=net+1;last=bcast-1;hostsN=size-2;}
+ html='<div class="tl-big">'+d(net)+' /'+p+'</div>';
+ html+='<table class="tl-tab"><tbody>';
+ html+='<tr><td>Address (as given)</td><td>'+d(ip)+'</td></tr>';
+ html+='<tr><td>Network</td><td>'+d(net)+' — the block\\u2019s first address</td></tr>';
+ html+='<tr><td>Subnet mask</td><td>'+d(mask)+' (/'+p+')</td></tr>';
+ html+='<tr><td>Wildcard</td><td>'+d(wild)+' — the inverse, how ACLs state it</td></tr>';
+ if(p<32)html+='<tr><td>Broadcast</td><td>'+d(bcast)+'</td></tr>';
+ html+='<tr><td>Usable hosts</td><td>'+hostsN.toLocaleString('en-US')+(p<31?' (block of '+size.toLocaleString('en-US')+' minus network'+(p<32?' and broadcast':'')+')':'')+'</td></tr>';
+ html+='<tr><td>First / last usable</td><td>'+d(first)+' \\u2026 '+d(last)+'</td></tr>';
+ html+='<tr><td>Next subnet</td><td>'+(size<4294967296?d(net+size)+' /'+p:'—')+'</td></tr>';
+ html+='<tr><td>Big block fact</td><td>'+ (p<=24?(size/256).toFixed(size%256?1:0)+' class-C-sized blocks in this range':'fits inside one /24')+'</td></tr>';
+ html+='</tbody></table>';
+ var notNet=(ip%size!==0);
+ if(notNet)html+='<p><span class="tl-badge tl-ok">note</span> Your host part is non-zero: '+d(ip)+' lives <i>inside</i> '+d(net)+'/'+p+' rather than being the network address itself — routers and configs want the CIDR block stated as '+d(net)+'/'+p+'.</p>';
+ html+='<p class="meta">/31 point-to-point links keep both addresses usable (RFC 3021); /32 is a single host. Everything here is integer maths on 32-bit values — no bitwise sign traps, no network calls.</p>';
+ $('su-out').innerHTML=html;}
+$('su-go').onclick=render;$('su-in').oninput=render;render();`,
+  seo: `<h2 class="section-title">Why /24 is not "254" anymore — and /26 is 62</h2>
+  <p>Classful networking (the A/B/C folklore still haunting the word "class-C") died in 1993 with CIDR; what survived is the arithmetic: a prefix of p leaves 32\\u2212p host bits, and usable hosts are 2^(32\\u2212p) \\u2212 2 because the all-zero host address names the <i>network itself</i> and the all-ones one is the broadcast. A /26 block is 64 addresses, 62 usable — the number that decides whether a VLAN fits its DHCP scope. The second trap this page surfaces: people paste a host address and expect a network back; 192.168.1.130/26 is not a network at all — the containing block is .128/26, and the page says so rather than pretending the input was canonical.</p>`,
+});
+// ── 58. /alat/heartrate — training zones ─────────────────────────────────────
+TOOLKIT.push({
+  slug: 'heartrate', ic: '💓', name: 'HR Zones',
+  title: 'Heart-Rate Zones — Karvonen Training Bands | Tukuk-OS',
+  desc: 'Five training zones from age and resting heart rate using the Karvonen heart-rate-reserve method, with the Gellish max-HR formula and the 220−age myth shown side by side. In your browser.',
+  hero: 'HR Zones', sub: 'Karvonen HRR · 5 zones · Gellish 207−0.7·age · real resting HR',
+  navBlurb: 'Training zones computed the way exercise science does — heart-rate reserve from your <i>resting</i> rate, not raw percentages of a mythic 220-minus-age max.',
+  hubBlurb: 'five Karvonen training zones from age and resting heart rate, with the better max-HR formulas beside the 220−age rule',
+  lead: 'The famous %HRmax method is the rough one: two people with the same max but different fitness share zones it calls equal. <b>Karvonen</b> fixes this with heart-rate <i>reserve</i> — target = resting + intensity × (max − resting) — so zones scale with cardiovascular fitness. Max HR uses the meta-analysed <b>Gellish formula (207 \\u2212 0.7 × age)</b>; the textbook 220 \\u2212 age is shown for comparison because its ±10\\u201312 bpm error is why percentages-of-max drift. Zone boundaries are the standard five-band convention (50\\u201360 \\u2026 90\\u2013100% HRR).',
+  form: `<div class="tl-form">
+  ${field('Age (years)', '<input id="hz-age" type="number" min="10" max="100" step="1" value="30">')}
+  ${field('Resting HR (bpm, first thing in the morning)', '<input id="hz-rest" type="number" min="30" max="110" step="1" value="60">')}
+</div>
+<div class="tl-res" id="hz-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function render(){var a=parseFloat($('hz-age').value),r=parseFloat($('hz-rest').value);
+ if(!(a>=10&&a<=100)||!(r>=30&&r<=110)){$('hz-out').innerHTML='<span class="tl-badge tl-no">check input</span> Age 10-100, resting HR 30-110.';return;}
+ var mhr=Math.round(207-0.7*a),hrr=mhr-r,fox=220-a,tnk=Math.round(208-0.7*a);
+ var Z=[[50,60,'Z1','Recovery','very light \\u2014 warm-up, cool-down, fat oxidation'],
+        [60,70,'Z2','Aerobic base','conversational pace \\u2014 where endurance is built'],
+        [70,80,'Z3','Tempo','comfortably hard \\u2014 the grey zone most runners over-use'],
+        [80,90,'Z4','Threshold','burning \\u2014 lactate threshold territory, interval work'],
+        [90,100,'Z5','VO2 max','maximal \\u2014 short intervals only, if trained']];
+ var html='<div class="tl-big">'+mhr+' bpm estimated max</div>';
+ html+='<table class="tl-tab"><tbody><tr><td>Zone</td><td>% of HRR</td><td>From</td><td>To</td><td>Feels like</td></tr>';
+ Z.forEach(function(z){var lo=Math.round(r+z[0]/100*hrr),hi=Math.round(r+z[1]/100*hrr);
+  html+='<tr><td><b>'+z[2]+' '+z[3]+'</b></td><td>'+z[0]+'\\u2013'+z[1]+'</td><td>'+lo+'</td><td>'+hi+'</td><td>'+z[4]+'</td></tr>';});
+ html+='</tbody></table><table class="tl-tab"><tbody>';
+ html+='<tr><td>Heart-rate reserve</td><td>'+mhr+' \\u2212 '+r+' = '+hrr+' bpm \\u2014 the range your training actually uses</td></tr>';
+ html+='<tr><td>Max-HR estimates</td><td>Gellish '+mhr+' \\u00b7 Tanaka '+tnk+' \\u00b7 220\\u2212age '+fox+' (the famous one, \\u00b110\\u201312 bpm error)</td></tr>';
+ html+='<tr><td>Why resting matters</td><td>two 30-year-olds at rest 50 vs 70 differ by ~12 bpm in every Z2 boundary</td></tr>';
+ html+='</tbody></table><p class="meta">Formulas estimate populations, not persons: measured max from a supervised test beats every line here. Medication (beta-blockers) flattens the whole scale \\u2014 ignore this page and ask your clinician.</p>';
+ $('hz-out').innerHTML=html;}
+$('hz-age').oninput=render;$('hz-rest').oninput=render;render();`,
+  seo: `<h2 class="section-title">The 220-minus-age problem</h2>
+  <p>The famous 220 \\u2212 age rule was never really derived \\u2014 it looks like a rough 1970s sketch with no published methodology behind it, and the meta-analysis that did have data (Gellish et al., 2007) landed on 207 \\u2212 0.7·age, with a ±10 bpm individual scatter that no formula removes. Percentages-of-max then compound the error: a 12 bpm wrong max shifts your "70% zone" by 8 bpm. Karvonen\\u2019s reserve method, formalised in 1957, anchors the bottom of the scale to your measured resting rate instead \\u2014 the number that <i>is</i> personal and improves with training, which is why athletes watch resting HR like a dashboard light.</p>`,
+});
+
+// ── 59. /alat/caffeine — caffeine decay tracker ──────────────────────────────
+TOOLKIT.push({
+  slug: 'caffeine', ic: '☕', name: 'Caffeine Half-Life',
+  title: 'Caffeine Tracker — Half-Life Decay & Sleep Cut-Off | Tukuk-OS',
+  desc: 'How much caffeine is still in your body at any hour after the last cup: exponential half-life decay with an hourly table, the time it drops below 100 mg, and a bedtime check. In your browser.',
+  hero: 'Caffeine Decay', sub: 't\\u00bd \\u2248 5 h \\u00b7 exponential \\u00b7 hourly levels \\u00b7 below-100 mg time \\u00b7 sleep check',
+  navBlurb: 'Track the exponential decay of your last coffee hour by hour — when the body load drops below 100 mg, and how much is still circulating when you plan to sleep.',
+  hubBlurb: 'the half-life curve of caffeine after any dose, with the hour it drops below sleepy thresholds and a bedtime check',
+  lead: 'Caffeine clears by <b>first-order kinetics</b>: a fixed proportion per hour, not a fixed amount — the same law as radioactivity and the compound-interest pages on this site. The average adult half-life is about <b>5 hours</b> (smokers metabolise roughly twice as fast, pregnancy slows it toward 8\\u201311, and individual CYP1A2 genetics spread it 1.5\\u20139.5 h). A 200 mg dose (\\u2248 two espressos or one large filter) therefore halves to 100 mg at +5 h, 50 mg at +10 h — which is why the 14:00 flat white is genuinely still 66 mg at 23:00.',
+  form: `<div class="tl-form">
+  ${field('Dose (mg)', '<input id="cf-mg" type="number" min="0" max="800" step="10" value="200">')}
+  ${field('Taken at (clock time)', '<input id="cf-at" type="time" value="15:00">')}
+  ${field('Your half-life', '<select id="cf-hl"><option value="3">~3 h \\u2014 fast metaboliser / smoker</option><option value="5" selected>~5 h \\u2014 average adult</option><option value="8">~8 h \\u2014 slow (pregnancy, some medications)</option></select>')}
+  <button class="tl-btn primary" id="cf-go" type="button">Decay it</button>
+</div>
+<div class="tl-res" id="cf-out">—</div>`,
+  css: `
+.tl-badge.tl-warn{background:#b45309;color:#fff}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var dose=200,hl=5;
+function mg(t){return dose*Math.pow(2,-t/hl);}
+function clock(at,add){var p=at.split(':'),m=(+p[0])*60+(+p[1]||0)+Math.round(add*60);m=((m%1440)+1440)%1440;
+ return ('0'+Math.floor(m/60)).slice(-2)+':'+('0'+(m%60)).slice(-2);}
+function render(){dose=parseFloat($('cf-mg').value)||0;hl=parseFloat($('cf-hl').value)||5;
+ var at=$('cf-at').value||'15:00';
+ if(dose<1){$('cf-out').innerHTML='<span class="tl-badge tl-no">check input</span> A dose of at least 1 mg — an espresso is ~60, filter mug ~120, cold brew can reach 200.';return;}
+ var html='<div class="tl-big">'+Math.round(dose)+' mg at '+at+'</div>';
+ html+='<table class="tl-tab"><tbody><tr><td>Time</td><td>Body load</td><td>Share left</td></tr>';
+ for(var t=0;t<=12;t+=2){html+='<tr><td>'+clock(at,t)+' (+'+t+' h)</td><td>'+ (t===0?Math.round(dose):mg(t).toFixed(0)) +' mg</td><td>'+Math.round(Math.pow(2,-t/hl)*100)+'%</td></tr>';}
+ html+='</tbody></table>';
+ var below100=dose>100?hl*Math.log(dose/100)/Math.LN2:0;
+ html+='<table class="tl-tab"><tbody>';
+ html+='<tr><td>First half-life</td><td>'+clock(at,hl)+' — '+Math.round(dose/2)+' mg still aboard</td></tr>';
+ if(dose>100)html+='<tr><td>Drops below 100 mg</td><td>at '+clock(at,below100)+' ('+below100.toFixed(1)+' h) — the often-quoted sleep threshold</td></tr>';
+ if(dose>=20){var sleepT=hl*Math.log(dose/20)/Math.LN2;
+ html+='<tr><td>Down to a 20 mg trace</td><td>'+clock(at,sleepT)+' ('+sleepT.toFixed(1)+' h)</td></tr>';}
+ var b8=mg(8);
+ html+='<tr><td>Bedtime check (+8 h)</td><td>'+b8.toFixed(0)+' mg — '+(b8>100?'<span class="tl-badge tl-no">still a full half-dose</span>':(b8>40?'<span class="tl-badge tl-warn">noticeable</span>':'<span class="tl-badge tl-ok">mostly cleared</span>'))+'</td></tr>';
+ html+='</tbody></table><p class="meta">Body load, not effect: adenosine receptors feel the tail long after the curve bottoms out, and sleep researchers (Drake et al., 2013) found caffeine 6 h before bed still cut sleep time. Half-lives are averages — your genetics, liver and pregnancy status are the real input.</p>';
+ $('cf-out').innerHTML=html;}
+$('cf-go').onclick=render;['cf-mg','cf-at','cf-hl'].forEach(function(id){$(id).oninput=render;$(id).onchange=render;});render();`,
+  seo: `<h2 class="section-title">The half-life rule behind every line</h2>
+  <p>Level(t) = dose × 2\\u2212(t/half-life) — one exponential, the same one the inflation and doubling-time pages on this site use, just with the arrow pointing down. The counter-intuitive consequence of first-order kinetics: the <i>second</i> 100 mg you take late in the day lands on top of whatever the first is still decaying into, so the afternoon coffee stack reaches bedtime larger than any single cup suggests. And because each half-life takes the same time regardless of how much is left, "a little more won\\u2019t hurt" is exactly how chronic intake accumulates — the curve is memoryless about your excuses.</p>`,
+});
+
+// ── 60. /alat/moon — moon phase calculator ───────────────────────────────────
+TOOLKIT.push({
+  slug: 'moon', ic: '🌙', name: 'Moon Phase',
+  title: 'Moon Phase Calculator — Age, Illumination & Next New | Tukuk-OS',
+  desc: 'The Moon\\u2019s age in days, the phase name, illuminated percentage and days to the next new moon for any date, from the mean synodic cycle (29.5306 d). Simple, honest maths in your browser.',
+  hero: 'Moon Phase', sub: 'synodic age · illumination % · phase name · next new moon · ±1 day',
+  navBlurb: 'The Moon\\u2019s age, phase name and lit fraction for any date from the mean synodic month — with the ±1 day accuracy honestly stated.',
+  hubBlurb: 'the mean synodic cycle gives the Moon\\u2019s age, illumination and phase name for any calendar date',
+  lead: 'The Moon is a three-body problem, but the <b>mean synodic month — 29.530588853 days</b> between new moons — answers "what phase is it roughly" to within a day. Anchor the cycle to a known new moon (6 January 2000, 18:14 UTC), take the day difference modulo the cycle length, and age, illumination (a cosine) and phase name all fall out. For garden planting, tides of mood and curiosity this is the right tool; for a launch window, take the ephemeris.',
+  form: `<div class="tl-form">
+  ${field('Date', '<input id="mn-d" type="date" value="2026-11-03">')}
+  <button class="tl-btn primary" id="mn-go" type="button">Look up</button>
+</div>
+<div class="tl-res" id="mn-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var SYN=29.530588853,EPOCH=Date.UTC(2000,0,6,18,14);
+var MO=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var PH=[[1.85,'\\ud83c\\udf11','New Moon'],[5.54,'\\ud83c\\udf12','Waxing Crescent'],[9.23,'\\ud83c\\udf13','First Quarter'],
+ [12.92,'\\ud83c\\udf14','Waxing Gibbous'],[16.61,'\\ud83c\\udf15','Full Moon'],[20.30,'\\ud83c\\udf16','Waning Gibbous'],
+ [23.99,'\\ud83c\\udf17','Last Quarter'],[27.68,'\\ud83c\\udf18','Waning Crescent'],[29.54,'\\ud83c\\udf11','New Moon']];
+function dstr(dt){return dt.getUTCDate()+' '+MO[dt.getUTCMonth()]+' '+dt.getUTCFullYear();}
+function render(){var v=$('mn-d').value;if(!v){$('mn-out').innerHTML='<span class="tl-badge tl-no">check input</span> Pick a date.';return;}
+ var p=v.split('-');var at=Date.UTC(+p[0],+p[1]-1,+p[2],12);
+ var days=(at-EPOCH)/864e5,age=((days%SYN)+SYN)%SYN;
+ var ph=PH[PH.length-1];for(var i=0;i<PH.length;i++)if(age<PH[i][0]){ph=PH[i];break;}
+ var il=(1-Math.cos(2*Math.PI*age/SYN))/2*100;
+ var waxing=age<SYN/2;
+ var html='<div class="tl-big">'+ph[1]+' '+ph[2]+'</div>';
+ html+='<table class="tl-tab"><tbody>';
+ html+='<tr><td>Lunar age</td><td>'+age.toFixed(1)+' days since the last new moon</td></tr>';
+ html+='<tr><td>Illuminated</td><td>'+il.toFixed(0)+'% of the disk — '+(waxing?'growing, lit on the right':'shrinking, lit on the left')+'</td></tr>';
+ var nn=new Date(at+(SYN-age)*864e5);
+ html+='<tr><td>Next new moon</td><td>in about '+(SYN-age).toFixed(1)+' days — around '+dstr(nn)+'</td></tr>';
+ var toFull=age<SYN/2?SYN/2-age:SYN-age+SYN/2,sinceFull=age>=SYN/2?age-SYN/2:-1;
+ html+='<tr><td>Full moon</td><td>'+(sinceFull>=0?'was about '+sinceFull.toFixed(1)+' days ago; the next is in '+toFull.toFixed(1)+' days':'rising — full in about '+toFull.toFixed(1)+' days')+'</td></tr>';
+ html+='</tbody></table><p class="meta">Mean-cycle maths: the Moon\\u2019s eccentric orbit makes real new moons arrive up to ~14 h early or late versus this estimate, and illumination is a first-order value. ±1 day is the honest precision.</p>';
+ $('mn-out').innerHTML=html;}
+$('mn-go').onclick=render;$('mn-d').oninput=render;render();`,
+  seo: `<h2 class="section-title">Why "full moon tonight" is a fuzzy fact</h2>
+  <p>The disk stays above 99% illuminated for roughly half a day around opposition, so two consecutive evenings both look full — astronomers speak of an <i>instant</i> of fullness, cultures of a <i>day</i>. The mean synodic month handles this cleanly because it averages the orbit\\u2019s eccentricity: the Moon swings faster near perigee, so true new moons drift up to ±14 hours from the mean, and that drift is why ancestor calendars that trusted only the mean eventually accumulated errors (the reform-era Easter tables needed real corrections for exactly this reason). For tide timing, fishing lore and garden calendars the mean cycle is more than sharp enough — and it is the only version arithmetic can reproduce.</p>`,
+});
+
+// ── 61. /alat/easter — Easter computus ───────────────────────────────────────
+TOOLKIT.push({
+  slug: 'easter', ic: '✝️', name: 'Easter Date',
+  title: 'Easter Date Calculator — Western & Orthodox Computus | Tukuk-OS',
+  desc: 'The exact Easter Sunday for any year, Western (Gregorian, Anonymous computus) and Orthodox (Julian + calendar offset), with golden number and epact shown. Pure calendar arithmetic, in your browser.',
+  hero: 'Easter Date', sub: 'computus · golden number · epact · Western & Orthodox · 1583-4099',
+  navBlurb: 'Easter Sunday for any year from the 6th-century algorithm the Church still uses — Western and Orthodox dates side by side, with the intermediate golden number and epact.',
+  hubBlurb: 'Western and Orthodox Easter from the classical computus — golden number, epact and the full-moon-to-Sunday rule, for any year 1583-4099',
+  lead: 'Easter is the first Sunday after the <b>ecclesiastical full moon</b> that falls on or after 21 March — a rule that needs no telescope, only arithmetic the Church formalised by the 8th century. The Gregorian implementation below is the <b>Anonymous computus</b> (the Oudin form used in every almanac), and the Orthodox date comes from the same rule kept on the Julian calendar, which now sits 13 days behind. The <b>golden number</b> (position in the 19-year Metonic cycle) and the <b>epact</b> (the moon\\u2019s age on 1 January) are shown because they are the actual intermediates.',
+  form: `<div class="tl-form">
+  ${field('Year (1583\\u20134099)', '<input id="ep-y" type="number" min="1583" max="4099" step="1" value="2026">')}
+  <button class="tl-btn primary" id="ep-go" type="button">Compute</button>
+</div>
+<div class="tl-res" id="ep-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var WD=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+var MO=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function F(x){return Math.floor(x);}
+function western(y){var g=y%19,c=F(y/100),
+ h=(c-F(c/4)-F((8*c+13)/25)+19*g+15)%30,
+ i=h-F(h/28)*(1-F(h/28)*F(29/(h+1))*F((21-g)/11)),
+ j=(y+F(y/4)+i+2-c+F(c/4))%7,p=i-j;
+ return {m:3+F((p+26)/30),d:1+(p+27+F((p+6)/40))%31,gold:g+1,epact:h};}
+function orthodox(y){var g=y%19,
+ i=(19*g+15)%30,j=(y+F(y/4)+i)%7,
+ e=10;if(y>1600)e=e+F(y/100)-16-F((F(y/100)-16)/4);
+ var p=i-j+e;
+ return {m:3+F((p+26)/30),d:1+(p+27+F((p+6)/40))%31,off:e};}
+function render(){var y=parseFloat($('ep-y').value);
+ if(!(y>=1583&&y<=4099)){$('ep-out').innerHTML='<span class="tl-badge tl-no">check input</span> Years 1583 to 4099 (the Gregorian calendar\\u2019s range here).';return;}
+ y=Math.floor(y);
+ var W=western(y),O=orthodox(y);
+ var dow=WD[(new Date(Date.UTC(y,W.m-1,W.d)).getUTCDay())];
+ var same=(W.m===O.m&&W.d===O.d);
+ var gap=Math.round((Date.UTC(y,O.m-1,O.d)-Date.UTC(y,W.m-1,W.d))/864e5);
+ var html='<div class="tl-big">'+W.d+' '+MO[W.m-1]+' '+y+'</div>';
+ html+='<p>Western Easter is a <b>'+dow+'</b>. Golden number <b>'+W.gold+'</b> (year '+W.gold+' of the 19-year Metonic cycle), paschal term <b>'+W.epact+'</b>.</p>';
+ html+='<table class="tl-tab"><tbody>';
+ html+='<tr><td>Orthodox Easter</td><td>'+O.d+' '+MO[O.m-1]+' '+y+' (same rule on the Julian calendar, +'+O.off+'-day conversion to the civil date)</td></tr>';
+ html+='<tr><td>Gap this year</td><td>'+(same?'identical — it happens (2025 did, next 2028 and 2031)':gap+' days apart')+'</td></tr>';
+ html+='<tr><td>Golden number</td><td>'+W.gold+' — metonic cycles realign the lunar calendar every 19 years (2026 \\u2194 2007 \\u2194 1988 pattern)</td></tr>';
+ html+='<tr><td>Paschal term</td><td>'+W.epact+' — the epact-derived offset locating the ecclesiastical full moon</td></tr>';
+ html+='</tbody></table><p class="meta">The computus defines an <i>ecclesiastical</i> full moon, not an astronomical one — which is why Easter can disagree with a real telescope by a day or two. The 1900s\\u20132000s Julian/Gregorian gap is 13 days; it grows to 14 in 2100.</p>';
+ $('ep-out').innerHTML=html;}
+$('ep-go').onclick=render;$('ep-y').oninput=render;render();`,
+  seo: `<h2 class="section-title">A 1,300-year-old algorithm still shipping</h2>
+  <p>The Council of Nicaea (325) delegated the date to the Church of Alexandria\\u2019s tables, and the arithmetic settled into the "Anonymous" computus by the 7th century — golden number from the 19-year Metonic cycle, an epact to shift the lunar age for solar-year drift, then "next Sunday after the paschal full moon". When the Gregorian reform rewrote the calendar in 1582 it fixed the solar year but kept the ecclesiastical moon, which is exactly why Western and Orthodox Easter now disagree: same rule, two calendars, a 13-day gap and different epact corrections. They do coincide (both calendars answered 20 April in 2025, and the next shared dates are 2028 and 2031) — but mostly the two Easters sit a week to over a month apart. The algorithm above is the same one the Book of Common Prayer\\u2019s margin directed parish priests to compute by hand.</p>`,
 });
 
 module.exports = { TOOLKIT, toolkitPage, navItems, hubLines, sitemapPaths };

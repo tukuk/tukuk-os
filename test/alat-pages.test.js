@@ -88,7 +88,20 @@ const PAGES = [
   { path: '/alat/case', marker: 'Case Converter', ids: ['cs-in', 'cs-go', 'cs-out'] },
   { path: '/alat/coords', marker: 'Coordinate Distance', ids: ['hv-a1', 'hv-o1', 'hv-a2', 'hv-o2', 'hv-go', 'hv-swap', 'hv-out'] },
   { path: '/alat/month-grid', marker: 'Calendar Grid', ids: ['ca-m', 'ca-y', 'ca-s', 'ca-go', 'ca-print', 'ca-out'] },
-  { path: '/alat/typing', marker: 'Typing Speed Test', ids: ['ty-words', 'ty-type', 'ty-dur', 'ty-start', 'ty-out'] }
+  { path: '/alat/typing', marker: 'Typing Speed Test', ids: ['ty-words', 'ty-type', 'ty-dur', 'ty-start', 'ty-out'] },
+  // ── sixth wave (Nov 2026 batch 5) ──
+  { path: '/alat/gpa', marker: 'GPA Calculator', ids: ['gp-in', 'gp-goal', 'gp-go', 'gp-out'] },
+  { path: '/alat/shoe', marker: 'Shoe Size Converter', ids: ['sh-mode', 'sh-v', 'sh-go', 'sh-out'] },
+  { path: '/alat/screen', marker: 'Screen & PPI', ids: ['sc-da', 'sc-ra', 'sc-db', 'sc-rb', 'sc-go', 'sc-out'] },
+  { path: '/alat/metronome', marker: 'Metronome', ids: ['mt-bpm', 'mt-beats', 'mt-go', 'mt-tap', 'mt-out'] },
+  { path: '/alat/stopwatch', marker: 'Stopwatch & Laps', ids: ['sw-time', 'sw-go', 'sw-lap', 'sw-rs', 'sw-out'] },
+  { path: '/alat/blood-type', marker: 'Blood Type Punnett', ids: ['bd-p1', 'bd-p2', 'bd-out'] },
+  { path: '/alat/dna', marker: 'DNA Translator', ids: ['dn-in', 'dn-go', 'dn-out'] },
+  { path: '/alat/subnet', marker: 'Subnet Calculator', ids: ['su-in', 'su-go', 'su-out'] },
+  { path: '/alat/heartrate', marker: 'HR Zones', ids: ['hz-age', 'hz-rest', 'hz-out'] },
+  { path: '/alat/caffeine', marker: 'Caffeine Decay', ids: ['cf-mg', 'cf-at', 'cf-hl', 'cf-go', 'cf-out'] },
+  { path: '/alat/moon', marker: 'Moon Phase', ids: ['mn-d', 'mn-go', 'mn-out'] },
+  { path: '/alat/easter', marker: 'Easter Date', ids: ['ep-y', 'ep-go', 'ep-out'] }
 ];
 
 for (const page of PAGES) {

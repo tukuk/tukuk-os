@@ -547,6 +547,139 @@ test('typing: preview on load, then a correct word turns green', () => {
   assert.ok(dom.get('ty-words')._html.includes('ty-done'), 'correct word marked done');
 });
 
+// ═══ Batch 5 (Nov 2026): the same hand-checked discipline, tool by tool ═══
+
+test('gpa: 3.45 from the default four courses, 2 straight-A credits to reach 3.50', () => {
+  // hand math: 14 credits, 48.3 quality points → 3.45; catch-up x=(3.5·14−48.3)/0.5=1.9→⌈2⌉
+  const { dom } = runTool(bySlug('gpa'));
+  const out = dom.get('gp-out')._html;
+  assert.ok(out.includes('3.45 / 4.00'), out.slice(0, 120));
+  assert.ok(out.includes('<b>14</b>'), 'credit total');
+  assert.ok(out.includes('48.30'), 'quality points');
+  assert.ok(out.includes('Second class upper / cum laude'), 'class band for 3.44');
+  assert.ok(out.includes('<b>2 credits</b>'), 'catch-up credits');
+  assert.ok(out.includes('1 typical course)'), 'singular course wording when ceil is 1');
+});
+
+test('shoe: 25 cm is EU 40, UK 6.5, US 7.5 — and the answer is written on load', () => {
+  // EU = 1.5×(25+1.5) = 39.75 → 40; US = 3×(25/2.54)−22 = 7.48 → 7.5; UK = US−1
+  const { dom } = runTool(bySlug('shoe'));
+  const out = dom.get('sh-out')._html;
+  assert.ok(out.length > 50, 'shoe must render an answer on load, not an empty box');
+  assert.ok(out.includes('EU 40'), out.slice(0, 120));
+  assert.ok(out.includes('25.0 cm'), 'Mondopoint line');
+  assert.ok(out.includes('6.5 —'), 'UK men half size');
+  assert.ok(out.includes('7.5 —'), 'US men Brannock');
+  assert.ok(out.includes('>9 —'), 'US women +1.5');
+});
+
+test('screen: 15.6" 1920×1080 vs 11" 2560×1600 — area and density verdicts', () => {
+  // ppi = √(1920²+1080²)/15.6 = 141.2; √(2560²+1600²)/11 = 274.0; ratio labels are float-matched
+  const { dom } = runTool(bySlug('screen'));
+  const out = dom.get('sc-out')._html;
+  assert.ok(out.includes('141 vs 274 ppi'), out.slice(0, 120));
+  assert.ok(out.includes('16:9 (1.778)'), 'aspect A');
+  assert.ok(out.includes('16:10 (1.600)'), 'aspect B survives gcd reduction to 8:5');
+  assert.ok(out.includes('91% more picture'), 'B(11²) vs A(15.6²): A shows 91% more picture');
+  assert.ok(out.includes('B is the denser panel — B\u2019s text is 1.94\u00d7 as sharp'), 'area winner and density winner named separately, not conflated');
+});
+
+test('metronome: 100 BPM is Andante, table prints every named range', () => {
+  const { dom } = runTool(bySlug('metronome'));
+  const out = dom.get('mt-out')._html;
+  assert.ok(out.includes('100 BPM'), 'headline');
+  assert.ok(out.includes('Andante'), 'tempo name');
+  assert.ok(out.includes('76\u2013107'), 'Andante band 76 to 108−1');
+  assert.equal((out.match(/<tr><td>/g) || []).length, 8, '7 names + header row');
+});
+
+test('stopwatch: start → lap → pause produces a best-badged split table', () => {
+  const { dom } = runTool(bySlug('stopwatch'));
+  assert.ok(dom.get('sw-out')._html.includes('Press Lap'), 'idle hint on load');
+  assert.equal(dom.get('sw-time').textContent, '00:00.00', 'clock reads zero on load (mm:ss.cs, no hours until needed)');
+  dom.get('sw-go').click();
+  dom.get('sw-lap').click();
+  dom.get('sw-lap').click();
+  dom.get('sw-go').click(); // pause
+  const out = dom.get('sw-out')._html;
+  assert.ok(out.includes('<td>1</td>'), 'lap 1 row');
+  assert.ok(out.includes('<td>2</td>'), 'lap 2 row');
+  assert.ok(out.includes('tl-badge tl-ok">best'), 'first lap is the best (second ≥ it)');
+  assert.equal(dom.get('sw-go').textContent, 'Resume', 'button flips to Resume after pause');
+});
+
+test('blood-type: AO × AO gives A 75% · O 25% with the Punnett cells', () => {
+  const { dom } = runTool(bySlug('blood-type'));
+  const out = dom.get('bd-out')._html;
+  assert.ok(out.includes('A 75%'), out.slice(0, 160));
+  assert.ok(out.includes('O 25%'), 'the classic surprise: two A parents, an O child');
+  assert.ok(out.includes('AA'), 'cell genotype');
+  assert.equal((out.match(/AO/g) || []).length >= 2, true, 'two AO cells');
+});
+
+test('dna: ATGGCATCGGTCTAA translates to MASV with a stop at codon 5', () => {
+  // frames of 3: ATG GCA TCG GTC TAA → M A S V stop; GC = 7 of 15 bases
+  const { dom } = runTool(bySlug('dna'));
+  const out = dom.get('dn-out')._html;
+  assert.ok(out.includes('Met-Ala-Ser-Val'), out.slice(0, 200));
+  assert.ok(out.includes('46.7%'), 'GC content 7/15');
+  assert.ok(/TAA/.test(out) && /\*/.test(out), 'stop codon surfaced');
+});
+
+test('subnet: 192.168.1.130/26 is the .128 block with 62 usable hosts', () => {
+  // size = 2^(32−26) = 64 → network 128, broadcast 191, usable .129–.190, next /26 at .192
+  const { dom } = runTool(bySlug('subnet'));
+  const out = dom.get('su-out')._html;
+  assert.ok(out.includes('192.168.1.128'), 'network address');
+  assert.ok(out.includes('255.255.255.192'), 'mask');
+  assert.ok(out.includes('0.0.0.63'), 'wildcard');
+  assert.ok(out.includes('192.168.1.191'), 'broadcast');
+  assert.ok(out.includes('62 ('), 'usable count with parenthetical');
+  assert.ok(out.includes('192.168.1.192'), 'next subnet');
+});
+
+test('heartrate: age 30 rest 60 → Gellish 186, Z2 starts at 123 bpm', () => {
+  // Gellish 207−0.7·30 = 186; HRR = 126; Z2 lower = 60 + 0.6·126 = 135.6 → 136, upper = 60+0.7·126 = 148.2 → 148
+  const { dom } = runTool(bySlug('heartrate'));
+  const out = dom.get('hz-out')._html;
+  assert.ok(out.includes('186 bpm'), 'max estimate');
+  assert.ok(out.includes('126 bpm'), 'heart-rate reserve');
+  assert.ok(out.includes('136'), 'Z2 floor');
+  assert.ok(out.includes('148'), 'Z2 ceiling');
+});
+
+test('caffeine: 200 mg at 15:00 halves at 20:00, 66 mg aboard at bedtime', () => {
+  // 5 h half-life: 200·2^(−t/5); at +8 h = 65.6 → 66 mg; 100 mg crossed at exactly 5 h
+  const { dom } = runTool(bySlug('caffeine'));
+  const out = dom.get('cf-out')._html;
+  assert.ok(out.includes('200 mg at 15:00'), 'headline');
+  assert.ok(out.includes('20:00'), 'half-life clock time');
+  assert.ok(out.includes('66 mg'), 'bedtime load');
+  assert.ok(out.includes('Drake'), 'the 6-hours-before-bed sleep study citation');
+});
+
+test('moon: 2026-11-03 (lunar age ≈ 23.2) is a waning Last Quarter', () => {
+  // reference new moon 2026-10-10/11; synodic 29.530588 — age = (date − ref) mod cycle
+  const { dom } = runTool(bySlug('moon'));
+  const out = dom.get('mn-out')._html;
+  assert.ok(out.includes('Last Quarter'), out.slice(0, 160));
+  assert.ok(out.includes('shrinking, lit on the left'), 'waning phrasing (the precedence bug this batch fixed)');
+  assert.ok(/2[23]\.\d days/.test(out), 'lunar age in the 22–23 day band');
+  assert.ok(/9 November 2026/.test(out), 'next new moon ≈ 2026-11-09/10');
+});
+
+test('easter: 2026 → Western 5 April, Orthodox 12 April; 2025 coincides on 20 April', () => {
+  // verified against python dateutil (Tondering/Oudin computus) — the draft formula was wrong
+  const { dom } = runTool(bySlug('easter'));
+  const out = dom.get('ep-out')._html;
+  assert.ok(out.includes('5 April 2026'), out.slice(0, 120));
+  assert.ok(out.includes('12 April 2026'), 'Orthodox on the Julian + 13-day conversion');
+  assert.ok(out.includes('7 days apart'), 'gap');
+  const again = runTool(bySlug('easter'), { 'ep-y': '2025' });
+  const o2 = again.dom.get('ep-out')._html;
+  assert.ok(o2.includes('20 April 2025'), 'both churches agree in 2025');
+});
+
 function bySlug(slug) {
   const t = TOOLKIT.find((x) => x.slug === slug);
   assert.ok(t, 'tool ' + slug + ' vanished from the registry');
