@@ -45,6 +45,10 @@ save() {
 echo "[mirror-export] $BASE → $OUT"
 save '/'                 'index.html'
 save '/alat'             'alat.html'
+# The site's RSS under its conventional name: a reader pointed at
+# www.tukuk.org/feed.xml keeps pulling (yesterday's) items even while the main
+# server is offline, instead of going red exactly when people check the site.
+save '/blog/rss.xml'     'feed.xml'
 
 # Every tool page, taken from the sitemap so the list can never drift from the app.
 SITEMAP="$(mktemp)"

@@ -20738,7 +20738,14 @@ app.get('/life/:slug', async (req, res) => {
   } catch { res.status(503).type('html').send(hidupDown(`The iNaturalist API is briefly unreachable for ${t.name}.`)); }
 });
 
-app.get('/blog/rss.xml', (req, res) => {
+// The blog's RSS 2.0 builder, mounted on BOTH conventional names below. Readers that
+// type a URL by hand arrive at /feed.xml (the near-universal convention — and the one
+// subscribed to from the outside since 31 Oct), while every <link rel="alternate">
+// in the HTML points at /blog/rss.xml. One builder, two names: an aggregator that
+// guesses either never meets the JSON 404 that made the reader show "Ralat" with no
+// title. The atom:link self reference follows the requested path, so each name
+// describes itself.
+function blogRss(req, res) {
   const host = req.get('host') || 'tukuk.org';
   const base = host.includes('tukuk.org') ? `https://${host}` : `${req.protocol}://${host}`;
   const x = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -20766,7 +20773,7 @@ ${cats ? cats + '\n' : ''}    <pubDate>${new Date(date).toUTCString()}</pubDate>
     `<channel>\n` +
     `  <title>Tukuk-OS \u2014 Blog &amp; Knowledge Archive</title>\n` +
     `  <link>${base}/blog</link>\n` +
-    `  <atom:link href="${base}/blog/rss.xml" rel="self" type="application/rss+xml"/>\n` +
+    `  <atom:link href="${base}${req.path === '/feed.xml' ? '/feed.xml' : '/blog/rss.xml'}" rel="self" type="application/rss+xml"/>\n` +
     `  <description>Articles, tutorials and analysis about search technology, web privacy, AI and Tukuk-OS apps.</description>\n` +
     `  <language>en</language>\n` +
     `  <generator>Tukuk-OS CMS (tukuk.org)</generator>\n` +
@@ -20775,7 +20782,9 @@ ${cats ? cats + '\n' : ''}    <pubDate>${new Date(date).toUTCString()}</pubDate>
     `  <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>\n` +
     items + `\n</channel>\n</rss>\n`
   );
-});
+}
+app.get('/blog/rss.xml', blogRss);
+app.get('/feed.xml', blogRss);
 
 // Plain-anchor share strip: works with JS off, sends nothing anywhere until
 // the reader taps one — the link itself is the only payload, title + URL.
