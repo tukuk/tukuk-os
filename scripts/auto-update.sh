@@ -53,6 +53,24 @@ fi
 BRANCH="$(grep -E '^GIT_BRANCH=' .env 2>/dev/null | head -1 | cut -d= -f2- || true)"
 BRANCH="${BRANCH:-main}"
 
+# The second server (www.tukuk.org on Cloudflare Pages): refresh the static
+# mirror at most once an hour, on EVERY cycle — "no new commits" is exactly when
+# the mirror still wants the freshest cached pages. Soft by design: no token,
+# no python3, a flaky page — the mirror keeps serving its previous snapshot and
+# the update itself must never fail because of it.
+mirror_refresh() {
+  [[ -f scripts/mirror-export.sh && -f scripts/mirror-deploy.sh ]] || return 0
+  if [[ -f /tmp/tukuk-mirror.stamp && -n "$(find /tmp/tukuk-mirror.stamp -mmin -60 2>/dev/null)" ]]; then
+    return 0   # refreshed within the hour — every other cycle can skip
+  fi
+  ( set -a; . ./.env 2>/dev/null; set +a
+    [[ -n "${MIRROR_API_TOKEN:-}" && -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]] || exit 0
+    bash scripts/mirror-export.sh && bash scripts/mirror-deploy.sh ) \
+    >/tmp/mirror.log 2>&1 \
+    && date -Is >/tmp/tukuk-mirror.stamp \
+    || echo "[auto-update] mirror refresh skipped/failed this cycle (see /tmp/mirror.log)"
+}
+
 # Our own AI model (Tukuk-Brain Mini): retrain from the latest
 # production logs. SOFT failure — taskrouter stays regex-only if there is no file.
 # Once a day is enough: the timer now fires every 30 minutes, and 48 retrains a day
@@ -108,6 +126,7 @@ if [[ "$OLD" == "$NEW" ]]; then
   echo "[auto-update] no new update (at $OLD) — skip npm & restart."
   # Still TRAIN the brain model — production logs (ask/search) grow more today.
   train_brain
+  mirror_refresh
   write_status 1 no-change "$OLD" "$NEW"
   exit 0
 fi
@@ -165,4 +184,6 @@ if [[ "$RESTART_RC" -ne 0 ]]; then
 fi
 
 write_status 1 done "$OLD" "$NEW"
+# Fresh code is live — the mirror should show it, not last week's markup.
+mirror_refresh
 echo "[auto-update] $(date -Is) — done in ${SECONDS}s. Tukuk-OS is now on commit: $(git rev-parse --short HEAD)"

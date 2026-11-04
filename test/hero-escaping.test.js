@@ -27,7 +27,11 @@ const ROOT = path.join(__dirname, '..');
 const SERVER = fs.readFileSync(path.join(ROOT, 'src/server.js'), 'utf8');
 const { escapeHtml } = require('../src/util');
 
-const SHELL = /<h1>\$\{o\.heroHtml \|\| escapeHtml\(o\.heroTitle \|\| o\.title\)\}<\/h1><p class="tagline">\$\{escapeHtml\(o\.heroSub \|\| ''\)\}<\/p>/g;
+// worldDoc gained one extra shape since (tool pages render focus mode: the tagline slot
+// prints nothing on /alat/<tool>), so the escapeHtml(...) core is now optionally wrapped
+// in `toolFocus ? '' : …`. The rule is unchanged either way: heroSub reaches the page
+// ONLY through escapeHtml, which is what the second assertion below re-proves per line.
+const SHELL = /<h1>\$\{o\.heroHtml \|\| escapeHtml\(o\.heroTitle \|\| o\.title\)\}<\/h1><p class="tagline">\$\{(?:toolFocus \? '' : )?escapeHtml\(o\.heroSub \|\| ''\)\}<\/p>/g;
 
 test('every doc shell is the single escaping authority for the hero line', () => {
   const shells = SERVER.match(SHELL) || [];

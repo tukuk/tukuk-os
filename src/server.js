@@ -994,6 +994,10 @@ app.use((req, res, next) => {
 // in production — it is not a fallback any more. (A Worker route on the apex used to rewrite
 // Host before the tunnel; that same-zone fetch doubled the request count and tripped a
 // zone-wide 429 "error code: 1027", so the Worker was removed. See worker/wrangler.toml.)
+// UPDATE 4 Nov 2026: www.tukuk.org no longer resolves here at all — its DNS record now
+// fronts the Cloudflare Pages mirror (scripts/mirror-*.sh), the second server that keeps
+// /alat alive when this box is down. The redirect below stays as the safety net for any
+// request that still arrives with the www Host (stale tunnel config, hosts file, rollback).
 app.use((req, res, next) => {
   if (req.hostname === 'www.tukuk.org') {
     return res.redirect(301, `https://tukuk.org${req.originalUrl}`);
@@ -10463,8 +10467,24 @@ function autoBreadcrumb(o, ldStr) {
   } catch { return ldStr; }
 }
 
+// ── tool-page focus mode (owner instruction, Nov 2026) ──────────────────────────
+// When a visitor opens /alat/<tool>, the page IS the tool: no tagline under the
+// title, no wall of intro prose above the form, no 100-card feed at the bottom.
+// The lead paragraph stays in the DOM for crawlers but starts collapsed behind a
+// one-line summary; the bottom nav becomes quiet chips (toolsNav()). Detected here
+// by selfUrl shape so every wave's tool pages get it without touching their bodies.
+function collapseLeadProse(body) {
+  const s = String(body || '');
+  const m = s.match(/^(\s*<p>[\s\S]*?<\/p>)/);
+  if (!m) return s;
+  return '<details class="tl-more"><summary>ℹ️ What this tool does &amp; how it works</summary>'
+    + m[1] + '</details>' + s.slice(m[1].length);
+}
+
 function worldDoc(o, navHtml) {
   const robots = o.robots || 'index,follow';
+  const toolFocus = /^https:\/\/tukuk\.org\/alat\/[^/]+$/.test(String(o.selfUrl || ''));
+  const focusBody = toolFocus ? collapseLeadProse(o.body) : o.body;
   const ld = autoBreadcrumb(o, o.ld || JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,
     description: o.desc, url: o.selfUrl,
@@ -10520,9 +10540,9 @@ ${pageAdScript()}${clarityScript()}${googleTagHead()}
 <body>
 ${siteHeader('learn')}
 <div class="wrap">
-  <main><header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${escapeHtml(o.heroSub || '')}</p></header>
+  <main><header><h1>${o.heroHtml || escapeHtml(o.heroTitle || o.title)}</h1><p class="tagline">${toolFocus ? '' : escapeHtml(o.heroSub || '')}</p></header>
     ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
-    ${o.body}
+    ${focusBody}
     ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
     ${navHtml}
     ${adUnitGuarded(config.adsense.slotBottom, 'bottom')}${msAdUnit('bottom')}
@@ -12326,10 +12346,19 @@ table.tl-tab{width:100%;border-collapse:collapse;font-size:.92rem;margin:10px 0}
 .z-tab .z-ok{background:rgba(176,132,20,.20)}
 .z-off{color:var(--muted,#9aa3b2);font-size:.8rem;font-weight:400}
 .u-out{font:13px/1.7 ui-monospace,Consolas,monospace}
-@media(max-width:640px){.tl-big{font-size:1.2rem}}`;
+@media(max-width:640px){.tl-big{font-size:1.2rem}}
+.tl-more{margin:14px 0}
+.tl-more summary{cursor:pointer;color:var(--muted,#9aa3b2);font-size:.9rem;border:1px solid var(--line);border-radius:10px;padding:8px 14px;background:var(--panel,#171a21);list-style:none}
+.tl-more summary:hover{border-color:var(--accent,#4c8dff)}
+.tl-nav{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0}
+.tl-chip{border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:.85rem;text-decoration:none;color:var(--text,#e6e9ef);background:var(--panel,#171a21);white-space:nowrap}
+.tl-chip:hover{border-color:var(--accent,#4c8dff)}`;
 
+// Focus mode (Nov 2026): tool pages end with one quiet row of chips, not a
+// 100-card wall of blurbs. Same links, same crawl graph — just no prose between
+// the tool and the footer. The hub keeps its full descriptions in its own body.
 function toolsNav() {
-  return worldNav('Everyday Tools — tukuk.org/alat', [
+  const items = [
     { href: '/alat', icon: '🧰', name: 'Everyday Tools', blurb: 'The whole toolbox at a glance — converters, calculators, colour checkers and generators that run entirely in your browser.' },
     { href: '/alat/unit', icon: '📐', name: 'Unit Converter', blurb: 'Length, weight, volume, area, speed, temperature, time and digital storage — exact factors, every unit at once, nothing uploaded.' },
     { href: '/alat/date', icon: '📅', name: 'Date & Age Calculator', blurb: 'Days between any two dates, add or subtract days, exact age in years-months-days, working days and days to your next birthday.' },
@@ -12361,7 +12390,10 @@ function toolsNav() {
     { href: '/alat/convert', icon: '🔄', name: 'Image Converter', blurb: 'Convert between PNG, JPEG, WebP, BMP and ICO, and rasterise an SVG — resize, pick a quality, keep or replace transparency, download. The file never leaves your browser.' },
     { href: '/alat/image-to-pdf', icon: '🖼️', name: 'Images to PDF', blurb: 'Put photos, scans or screenshots into one PDF — A4, US Letter or a page sized to each image — without uploading. JPEG and PNG files are embedded byte-for-byte, untouched.' },
     ...toolbox.navItems(),
-  ]);
+  ];
+  return `<nav aria-label="Everyday Tools — tukuk.org/alat" class="tl-nav">`
+    + items.map((s) => `<a class="tl-chip" href="${s.href}">${s.icon} ${escapeHtml(s.name)}</a>`).join('')
+    + `</nav>`;
 }
 
 function alatHubPage() {

@@ -1,0 +1,44 @@
+name: Mirror refresh (www.tukuk.org)
+
+# www.tukuk.org is the second server: a static Cloudflare Pages snapshot of the
+# client-side tools, serving real traffic even when the VPS, the tunnel or Node
+# is dead. A backup nobody refreshes is just a museum, so this workflow — like
+# the canary, deliberately NOT on the box it protects — re-snapshots and
+# re-deploys hourly. If tukuk.org is down, the export finds no pages, the deploy
+# refuses to run on an empty folder, and the PREVIOUS snapshot keeps serving:
+# staleness costs freshness, never availability. (The server's own
+# auto-update.sh carries the same refresh as a second lane for when its .env
+# holds the tokens; concurrency below keeps the two from stampeding.)
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mirror-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: snapshot tukuk.org → Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Snapshot the public tool pages
+        env:
+          MIRROR_BASE: https://tukuk.org
+          MIRROR_OUT: ${{ runner.temp }}/tukuk-mirror
+        run: bash scripts/mirror-export.sh
+
+      - name: Deploy to Cloudflare Pages (tukuk-mirror)
+        env:
+          MIRROR_API_TOKEN: ${{ secrets.MIRROR_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MIRROR_OUT: ${{ runner.temp }}/tukuk-mirror
+        run: bash scripts/mirror-deploy.sh

@@ -28,11 +28,13 @@ function field(label, inner) {
 function toolkitPage(t, ctx) {
   const { worldDoc, TOOLS_CSS, toolsNav } = ctx;
   const script = t.script ? `<script>(function(){${t.script}})();</script>` : '';
-  const body = `<p>${t.lead}</p>
-  <div data-ra="skip">${t.form}</div>
+  // Focus mode (Nov 2026, owner instruction): the tool comes first — form right
+  // under the title, and every word of prose (lead, method notes, hub line) folds
+  // into one collapsed strip below the result. Still in the DOM for crawlers.
+  const body = `<div data-ra="skip">${t.form}</div>
   <noscript><p>JavaScript is required — this tool does its whole work in your browser, which is also why nothing you type ever leaves your device.</p></noscript>
-  ${t.seo || ''}
-  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Like everything on tukuk.org: free, no account, no tracking.</p>${script}`;
+  <details class="tl-more"><summary>ℹ️ What this tool does &amp; how it works</summary><p>${t.lead}</p>${t.seo || ''}
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a>. Like everything on tukuk.org: free, no account, no tracking.</p></details>${script}`;
   return worldDoc({
     title: t.title,
     desc: t.desc,
