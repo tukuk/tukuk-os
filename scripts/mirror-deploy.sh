@@ -66,8 +66,14 @@ rm -f "$LOG"
 echo "[mirror-deploy] deployed: $URL"
 
 # Prove it actually serves before declaring victory — a green CLI and a broken
-# site look identical from here.
+# site look identical from here. Since the _worker.js failover landed, the
+# deployment URL proxies the live apex: verify arrives as this curl, and the
+# apex's bot rule answers a generic curl UA from a datacenter IP with a 403 —
+# honest traffic gets through, so prove with a browser UA like mirror-export
+# already does.
 sleep 5
-CODE="$(curl -s -o /dev/null -w '%{http_code}' -m 30 -L "$URL/alat")"
+CODE="$(curl -s -o /dev/null -w '%{http_code}' -m 30 -L \
+  -A 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36' \
+  "$URL/alat")"
 echo "[mirror-deploy] verify /alat on the new deployment: HTTP $CODE"
 [ "$CODE" = "200" ] || exit 1
