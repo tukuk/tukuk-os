@@ -458,6 +458,42 @@ test('design: templates, undo and the layer controls work without a canvas', () 
   assert.ok(/Design file saved/.test(dom.get('ds-out').textContent), dom.get('ds-out').textContent);
 });
 
+test('design v3: sale/cover templates, sticker, align, lock, flip and Copy PNG hold up in the shim', () => {
+  const { dom } = runTool(bySlug('design'));
+  // The two new templates join the picker with four real layers each.
+  dom.get('ds-tpl').value = 'sale';
+  dom.get('ds-tpl').onchange();
+  assert.ok(/Template loaded: sale/.test(dom.get('ds-out').textContent), dom.get('ds-out').textContent);
+  assert.ok(dom.get('ds-sel').textContent.includes('layer 4 / 4'), 'sale burst has four layers: ' + dom.get('ds-sel').textContent);
+  dom.get('ds-tpl').value = 'cover';
+  dom.get('ds-tpl').onchange();
+  assert.ok(/Template loaded: cover/.test(dom.get('ds-out').textContent), 'cover template verdict');
+  assert.ok(dom.get('ds-sel').textContent.includes('layer 4 / 4'), 'podcast cover has four layers');
+  // Emoji sticker: one click adds a named text layer on top and selects it.
+  dom.get('ds-addsticker').click();
+  assert.ok(dom.get('ds-sel').textContent.includes('layer 5 / 5: sticker'), dom.get('ds-sel').textContent);
+  // Alignment needs no canvas: layerBox falls back to a 10px text width when
+  // nothing can measure, and the move still lands in the undo history.
+  dom.get('ds-al-c').click();
+  dom.get('ds-al-b').click();
+  dom.get('ds-undo').click();
+  // Lock must quiet every other control for the selected layer.
+  dom.get('ds-lock').click();
+  assert.ok(/locked: it cannot be dragged/.test(dom.get('ds-out').textContent), 'lock announcement');
+  assert.ok(dom.get('ds-layers')._html.includes('locked'), 'locked badge in the layer list');
+  dom.get('ds-del').click();
+  assert.ok(/press Lock again to unlock/.test(dom.get('ds-out').textContent), 'delete must refuse a locked layer');
+  dom.get('ds-al-c').click();
+  assert.ok(/unlock it before aligning/.test(dom.get('ds-out').textContent), 'align must refuse a locked layer');
+  dom.get('ds-lock').click();
+  assert.ok(/unlocked/.test(dom.get('ds-out').textContent), 'unlock announcement');
+  dom.get('ds-fliph').click();
+  assert.ok(dom.get('ds-out').textContent.includes('Layer flipped left-right.'), dom.get('ds-out').textContent);
+  // Copy PNG has no context to paint with in this shim — it must stay silent
+  // and harmless rather than throw on the missing canvas or clipboard.
+  dom.get('ds-clip').click();
+});
+
 // ── batch 4 (Nov 2026) — hand-derived numbers again, swap-verified ──
 test('water: 65 kg + 150 min/week answers 2.45 L and shows every term', () => {
   const { dom } = runTool(bySlug('water'));

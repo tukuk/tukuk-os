@@ -1648,11 +1648,11 @@ $('pc-go').onclick=render;['pc-dist','pc-h','pc-m','pc-s'].forEach(function(i){$
 TOOLKIT.push({
   slug: 'design', ic: '\ud83c\udfa8', name: 'Design Studio',
   title: 'Free Online Design Studio — Poster & Social Image Maker, No Account | Tukuk-OS',
-  desc: 'A Canva-style studio that runs entirely in your browser: templates, undo, drag handles, snap guides, five shapes, styled text, image layers, a layer list, autosave and PNG, JPG or WebP export up to 4×. No sign-up, nothing uploaded.',
-  hero: 'Design Studio', sub: 'templates · layers · undo · snap · rotate handles · PNG/JPG/WebP · zero uploads',
-  navBlurb: 'The poster maker without the login wall: starter templates, real layer editing with drag handles and rotation, snapping guides, undo history, autosave and PNG/JPG/WebP export up to 4×.',
-  hubBlurb: 'make the social image yourself: templates, layered text/shapes/photos, drag-handle-rotate-snap, undo, autosave, PNG-JPG-WebP export — and your file never leaves the tab',
-  lead: 'A design tool should be a canvas, a layer stack and an export button — and this page has all three, plus the things that make them usable: <b>six starter templates</b> built from real layer maths, <b>drag handles</b> to resize and a knob to rotate, <b>snap-to-grid</b> with centre and rule-of-thirds guides, <b>undo and redo</b> (40 steps, or Ctrl+Z), a <b>layer list</b> you can pick, hide and reorder, <b>autosave</b> to your browser so a refresh does not eat the work, and export as <b>PNG (transparent), JPG or WebP at up to 4×</b>. Keyboard: arrows nudge, Shift+arrows ×10, Ctrl+D duplicates, Ctrl+Z/Y undo/redo, Alt+click cycles layers. Everything is composited by your own browser — there is <b>no account, no watermark, no upload</b>; close the tab and the document is gone for good.',
+  desc: 'A Canva-style studio that runs entirely in your browser: eight templates, align, lock, flip, emoji stickers, undo, drag handles, snap guides, styled text, image layers, autosave and PNG, JPG or WebP export up to 4×. No sign-up, nothing uploaded.',
+  hero: 'Design Studio', sub: 'templates · align · lock · flip · stickers · undo · snap · PNG/JPG/WebP · zero uploads',
+  navBlurb: 'The poster maker without the login wall: eight starter templates, real layer editing with drag handles, rotation, snapping, one-click alignment, lock and flip, undo history, autosave and PNG/JPG/WebP export up to 4×.',
+  hubBlurb: 'make the social image yourself: templates, layered text/shapes/photos, align-lock-flip-stickers, undo, autosave, PNG-JPG-WebP export — and your file never leaves the tab',
+  lead: 'A design tool should be a canvas, a layer stack and an export button — and this page has all three, plus the things that make them usable: <b>eight starter templates</b> built from real layer maths, <b>drag handles</b> to resize and a knob to rotate, <b>snap-to-grid</b> with centre and rule-of-thirds guides, one-click <b>alignment</b> to every edge and centre, <b>layer lock and image flip</b> so a finished corner stops moving, <b>emoji stickers</b> that export as drawn, <b>undo and redo</b> (40 steps, or Ctrl+Z), a <b>layer list</b> you can pick, hide and reorder, <b>autosave</b> to your browser so a refresh does not eat the work, and export as <b>PNG (transparent), JPG or WebP at up to 4×</b> — with a one-click <b>Copy PNG</b> for pasting straight into a chat. Keyboard: arrows nudge, Shift+arrows ×10, Ctrl+D duplicates, Ctrl+Z/Y undo/redo, Ctrl+S downloads, Alt+click cycles layers. Everything is composited by your own browser — there is <b>no account, no watermark, no upload</b>; close the tab and the document is gone for good.',
   css: `
 .ds-bar,.ds-tools,.ds-edit{display:flex;flex-wrap:wrap;gap:.6rem;align-items:flex-end;margin:.7rem 0}
 .ds-bar label,.ds-edit label{display:flex;flex-direction:column;font-size:.78rem;gap:.2rem}
@@ -1670,6 +1670,9 @@ TOOLKIT.push({
 .ds-lay .ds-eye{background:none;border:none;padding:0 .2rem;cursor:pointer;font-size:.9rem;color:#94a3b8}
 .ds-lay .ds-nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ds-lay .ds-kd{color:#64748b;font-size:.72rem}
+.ds-tools select{padding:.4rem .5rem;border-radius:.4rem;background:#1e293b;color:#e2e8f0;border:1px solid #334155;font-size:.85rem}
+#ds-align{display:inline-flex;gap:.25rem;align-items:center;margin-left:.4rem}
+#ds-align button{padding:.4rem .5rem;min-width:2rem}
 `,
   form: `<div class="ds-bar">
   ${field('Canvas', '<select id="ds-size"><option value="1080x1080" selected>Instagram post · 1080×1080</option><option value="1080x1920">Story / Reel · 1080×1920</option><option value="1080x1350">Portrait post · 1080×1350</option><option value="1280x720">YouTube thumbnail · 1280×720</option><option value="1200x630">Share card (OG) · 1200×630</option><option value="1240x1754">A4 portrait · 1240×1754</option><option value="custom">Custom…</option></select>')}
@@ -1678,7 +1681,7 @@ TOOLKIT.push({
   ${field('BG colour', '<input id="ds-bga" type="color" value="#0f172a">')}
   ${field('BG accent', '<input id="ds-bgb" type="color" value="#7c3aed">')}
   ${field('Background', '<select id="ds-bgs"><option value="solid">solid</option><option value="vgrad" selected>vertical gradient</option><option value="dgrad">diagonal gradient</option><option value="radial">radial glow</option></select>')}
-  ${field('Template', '<select id="ds-tpl"><option value="">choose a starter…</option><option value="hero">Bold hero</option><option value="quote">Quote card</option><option value="badge">Announcement + sticker</option><option value="thumb">Thumbnail headline</option><option value="minimal">Minimal bar</option><option value="thirds">Grid thirds</option></select>')}
+  ${field('Template', '<select id="ds-tpl"><option value="">choose a starter…</option><option value="hero">Bold hero</option><option value="quote">Quote card</option><option value="badge">Announcement + sticker</option><option value="thumb">Thumbnail headline</option><option value="minimal">Minimal bar</option><option value="thirds">Grid thirds</option><option value="sale">Sale burst</option><option value="cover">Podcast cover</option></select>')}
   <button type="button" id="ds-undo" title="Ctrl+Z">Undo</button>
   <button type="button" id="ds-redo" title="Ctrl+Y">Redo</button>
 </div>
@@ -1692,11 +1695,24 @@ TOOLKIT.push({
   <button type="button" id="ds-addtri">+ Triangle</button>
   <button type="button" id="ds-addline">+ Line</button>
   <button type="button" id="ds-addstar">+ Star</button>
+  <select id="ds-emo" title="sticker picker"><option value="🎉" selected>🎉</option><option value="❤️">❤️</option><option value="🔥">🔥</option><option value="✨">✨</option><option value="😂">😂</option><option value="👍">👍</option><option value="🙏">🙏</option><option value="💯">💯</option><option value="🎯">🎯</option><option value="🚀">🚀</option><option value="⭐">⭐</option><option value="🎈">🎈</option><option value="🏆">🏆</option><option value="💡">💡</option><option value="✅">✅</option><option value="❌">❌</option><option value="👀">👀</option><option value="🎧">🎧</option></select>
+  <button type="button" id="ds-addsticker">+ Sticker</button>
   <label class="ds-imgbtn">+ Image<input type="file" id="ds-img" accept="image/*"></label>
   <button type="button" id="ds-dup">Duplicate</button>
   <button type="button" id="ds-back">Send back</button>
   <button type="button" id="ds-fwd">Bring forward</button>
   <button type="button" id="ds-del">Delete</button>
+  <button type="button" id="ds-lock" title="lock the selected layer against moves and deletes">Lock</button>
+  <button type="button" id="ds-fliph" title="flip horizontally">Flip H</button>
+  <button type="button" id="ds-flipv" title="flip vertically">Flip V</button>
+  <span id="ds-align" title="align the selected layer on the canvas">
+    <button type="button" id="ds-al-l" title="align left">L</button>
+    <button type="button" id="ds-al-c" title="centre horizontally">CX</button>
+    <button type="button" id="ds-al-r" title="align right">R</button>
+    <button type="button" id="ds-al-t" title="align top">T</button>
+    <button type="button" id="ds-al-m" title="centre vertically">CY</button>
+    <button type="button" id="ds-al-b" title="align bottom">B</button>
+  </span>
   <span id="ds-sel" class="meta">nothing selected</span>
 </div>
 <div id="ds-layers"></div>
@@ -1711,7 +1727,7 @@ TOOLKIT.push({
 </div>
 <div class="ds-edit">
   ${field('Text', '<input id="ds-txt" type="text" value="" disabled>')}
-  ${field('Font', '<select id="ds-font"><option value="Impact,Charcoal,sans-serif">Impact</option><option value="Georgia,serif" selected>Georgia</option><option value="Helvetica,Arial,sans-serif">Helvetica</option><option value="Trebuchet MS,sans-serif">Trebuchet</option><option value="Courier New,monospace">Courier</option></select>')}
+  ${field('Font', '<select id="ds-font"><option value="Impact,Charcoal,sans-serif">Impact</option><option value="Georgia,serif" selected>Georgia</option><option value="Helvetica,Arial,sans-serif">Helvetica</option><option value="Trebuchet MS,sans-serif">Trebuchet</option><option value="Courier New,monospace">Courier</option><option value="Arial Black,Arial,sans-serif">Arial Black</option><option value="Verdana,Geneva,sans-serif">Verdana</option></select>')}
   ${field('Weight', '<select id="ds-wt"><option value="400">regular</option><option value="700" selected>bold</option></select>')}
   ${field('Style', '<select id="ds-fst"><option value="n" selected>normal</option><option value="i">italic</option></select>')}
   ${field('Align', '<select id="ds-tal"><option value="c" selected>centre</option><option value="l">left</option><option value="r">right</option></select>')}
@@ -1730,6 +1746,7 @@ TOOLKIT.push({
   ${field('Format', '<select id="ds-fmt"><option value="png" selected>PNG (transparent)</option><option value="jpg">JPG (smaller)</option><option value="webp">WebP</option></select>')}
   ${field('Export', '<select id="ds-scale"><option value="1">1×</option><option value="2" selected>2×</option><option value="3">3×</option><option value="4">4×</option></select>')}
   <button class="tl-btn primary" id="ds-dl" type="button">Download</button>
+  <button type="button" id="ds-clip" title="copy the design as PNG to your clipboard">Copy PNG</button>
   <button type="button" id="ds-clear">Clear canvas</button>
 </div>
 <div class="tl-res meta" id="ds-out">Click a layer to select it, drag its body to move, drag a corner handle to resize, drag the knob above it to rotate. Arrows nudge one grid step, Shift+arrows nudge ten steps, Ctrl+Z undoes, Ctrl+Y redoes. Everything stays inside this tab.</div>`,
@@ -1753,7 +1770,7 @@ function redo(){if(!future.length)return;try{var j=future.pop();hist.push(JSON.s
 function ser(){return {w:W,h:H,a:$('ds-bga').value,b:$('ds-bgb').value,s:$('ds-bgs').value,
  layers:layers.map(function(l){var o={kind:l.kind,name:l.name,x:l.x,y:l.y,rot:l.rot,op:l.op,scale:l.scale,hidden:l.hidden,
   size:l.size,color:l.color,fill:l.fill,col2:l.col2,stroke:l.stroke,shadow:l.shadow,rad:l.rad,text:l.text,font:l.font,
-  weight:l.weight,italic:l.italic,align:l.align,lh:l.lh,ls:l.ls};
+  weight:l.weight,italic:l.italic,align:l.align,lh:l.lh,ls:l.ls,lock:!!l.lock,fliph:!!l.fliph,flipv:!!l.flipv};
   if(l.kind==='img'){o.src=l.src||'';o.imgW=l.imgW;o.imgH=l.imgH;}return o;})};}
 function loadJson(d){if(!d||!d.layers)return -1;
  if(num(d.w,0)>=100&&num(d.h,0)>=100){W=d.w;H=d.h;$('ds-w').value=W;$('ds-h').value=H;$('ds-size').value='custom';}
@@ -1795,7 +1812,17 @@ var TPL={
  thirds:function(){return {layers:[
   {kind:'rect',name:'block one',size:Math.round(W*0.6),x:Math.round(W*0.33),y:Math.round(H*0.33),op:90},
   {kind:'ellipse',name:'block two',size:Math.round(W*0.42),x:Math.round(W*0.68),y:Math.round(H*0.62),fill:'g'},
-  {kind:'text',name:'caption',text:'rule of thirds,\\nnot vibes',font:'Trebuchet MS,sans-serif',size:Math.max(24,Math.round(W/16)),y:Math.round(H*0.86),lh:130}]};}};
+  {kind:'text',name:'caption',text:'rule of thirds,\\nnot vibes',font:'Trebuchet MS,sans-serif',size:Math.max(24,Math.round(W/16)),y:Math.round(H*0.86),lh:130}]};},
+ sale:function(){return {a:'#fff7ed',b:'#dc2626',s:'vgrad',layers:[
+  {kind:'text',name:'sale word',text:'MEGA\\nSALE',font:'Impact,Charcoal,sans-serif',size:Math.round(W/5),color:'#dc2626',lh:95,shadow:Math.round(W/90)},
+  {kind:'star',name:'burst',size:Math.round(W*0.34),x:Math.round(W*0.78),y:Math.round(H*0.18),rot:-12,color:'#ffffff',col2:'#facc15',fill:'g'},
+  {kind:'text',name:'offer',text:'up to 50% off everything',weight:400,size:Math.max(22,Math.round(W/14)),y:Math.round(H*0.74),color:'#7c2d12'},
+  {kind:'line',name:'base rule',size:Math.round(W*0.8),y:Math.round(H*0.86),color:'#7c2d12',stroke:Math.max(5,Math.round(W/150))}]};},
+ cover:function(){return {a:'#0b1220',b:'#22d3ee',s:'radial',layers:[
+  {kind:'ring',name:'halo',size:Math.round(W*0.9),op:25,stroke:Math.max(6,Math.round(W/120))},
+  {kind:'ellipse',name:'orb',size:Math.round(W*0.42),y:Math.round(H*0.3),op:90},
+  {kind:'text',name:'show',text:'The Deep\\nSignal',font:'Georgia,serif',size:Math.max(30,Math.round(W/10)),y:Math.round(H*0.66),lh:110},
+  {kind:'text',name:'episode',text:'new episode · every friday',weight:400,size:Math.max(16,Math.round(W/28)),y:Math.round(H*0.85),op:80}]};}};
 function useTpl(){var k=$('ds-tpl').value,T=TPL[k];if(!T)return;
  push();var t=T();
  $('ds-bga').value=t.a||hex($('ds-bga').value);$('ds-bgb').value=t.b||hex($('ds-bgb').value);$('ds-bgs').value=t.s||$('ds-bgs').value;
@@ -1900,7 +1927,11 @@ function drawLayer(l,selected){
  }else if(l.kind==='star'){pathStar(cx,l.size*s/2);cx.fillStyle=fillOf(l,l.size*s,l.size*s);cx.fill();
   if(l.stroke>0){cx.lineWidth=l.stroke;cx.strokeStyle=l.col2;cx.stroke();}
  }else if(l.kind==='img'&&l.img&&l.img.complete&&l.img.naturalWidth){
-  cx.drawImage(l.img,-l.imgW*s/2,-l.imgH*s/2,l.imgW*s,l.imgH*s);}
+  var iw=l.imgW*s,ih=l.imgH*s,ir=Math.max(0,Math.min(l.rad||0,Math.min(iw,ih)/2));
+  if(l.fliph||l.flipv)cx.scale(l.fliph?-1:1,l.flipv?-1:1);
+  if(ir>0){pathRR(cx,iw,ih,ir);cx.save();cx.clip();cx.drawImage(l.img,-iw/2,-ih/2,iw,ih);cx.restore();}
+  else cx.drawImage(l.img,-iw/2,-ih/2,iw,ih);
+  if(l.stroke>0&&ir>=0){pathRR(cx,iw,ih,ir);cx.lineWidth=l.stroke;cx.strokeStyle=l.col2||'#ffffff';cx.stroke();}}
  cx.restore();cx.globalAlpha=1;cx.setLineDash([]);cx.shadowBlur=0;cx.shadowColor='transparent';cx.shadowOffsetY=0;
  if(selected)drawHandles(l);
 }
@@ -1948,7 +1979,7 @@ function panel(){var p=$('ds-layers');if(!p)return;
   h+='<div class="ds-lay'+(i===sel?' on':'')+'" data-i="'+i+'">'
    +'<button class="ds-eye" data-eye="'+i+'">'+(l.hidden?'\\u25ca':'\\u25cf')+'</button>'
    +'<span class="ds-nm">'+String(l.name||l.kind).replace(/</g,'&lt;')+'</span>'
-   +'<span class="ds-kd">'+l.kind+'</span></div>';}
+   +'<span class="ds-kd">'+l.kind+(l.lock?' \u00b7 locked':'')+'</span></div>';}
  p.innerHTML=h;}
 function bindClick(id,fn){var e=$(id);if(e)e.onclick=fn;}
 function shape(k,name,extra){var l={kind:k,name:name,size:Math.round(W/4)};
@@ -1962,7 +1993,21 @@ bindClick('ds-addring',function(){shape('ring','ring',{stroke:Math.max(6,Math.ro
 bindClick('ds-addtri',function(){shape('tri','triangle');});
 bindClick('ds-addline',function(){shape('line','line',{size:Math.round(W*0.6),stroke:Math.max(6,Math.round(W/100))});});
 bindClick('ds-addstar',function(){shape('star','star');});
-bindClick('ds-del',function(){if(sel<0)return;push();layers.splice(sel,1);select(Math.min(sel,layers.length-1));stash();});
+var EMOFONT='"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+bindClick('ds-addsticker',function(){addLayer({kind:'text',name:'sticker',text:$('ds-emo').value||'🎉',size:Math.round(W/3),font:EMOFONT,lh:100});});
+function alignTo(k){if(sel<0)return;var l=layers[sel];if(l.lock){$('ds-out').textContent='Layer is locked — unlock it before aligning.';return;}
+ push();var b=layerBox(l);
+ if(k==='l')l.x=Math.round(b.w/2);else if(k==='c')l.x=Math.round(W/2);else if(k==='r')l.x=Math.round(W-b.w/2);
+ else if(k==='t')l.y=Math.round(b.h/2);else if(k==='m')l.y=Math.round(H/2);else if(k==='b')l.y=Math.round(H-b.h/2);
+ select(sel);stash();}
+['l','c','r','t','m','b'].forEach(function(a){bindClick('ds-al-'+a,function(){alignTo(a);});});
+bindClick('ds-lock',function(){if(sel<0)return;var l=layers[sel];push();l.lock=!l.lock;select(sel);stash();
+ $('ds-out').textContent=l.lock?('Layer "'+l.name+'" locked: it cannot be dragged, aligned, flipped or deleted until you unlock it.'):('Layer "'+l.name+'" unlocked.');});
+bindClick('ds-fliph',function(){if(sel<0)return;var l=layers[sel];if(l.lock)return;push();l.fliph=!l.fliph;draw();stash();
+ $('ds-out').textContent=l.fliph?'Layer flipped left-right.':'Flip left-right off.';});
+bindClick('ds-flipv',function(){if(sel<0)return;var l=layers[sel];if(l.lock)return;push();l.flipv=!l.flipv;draw();stash();
+ $('ds-out').textContent=l.flipv?'Layer flipped top-bottom.':'Flip top-bottom off.';});
+bindClick('ds-del',function(){if(sel<0)return;if(layers[sel]&&layers[sel].lock){$('ds-out').textContent='That layer is locked — press Lock again to unlock it first.';return;}push();layers.splice(sel,1);select(Math.min(sel,layers.length-1));stash();});
 bindClick('ds-dup',function(){if(sel<0)return;push();var n={},L=layers[sel];for(var k in L)n[k]=L[k];
  n.id=++seq;n.x=Math.round(L.x+W*0.05);n.y=Math.round(L.y+H*0.05);
  layers.splice(sel+1,0,n);select(sel+1);stash();});
@@ -2021,6 +2066,7 @@ if(cv&&cv.addEventListener){
   var i=t.i;
   if(e.altKey&&t.part==='move'){var below=-1;for(var b=i-1;b>=0;b--)if(!layers[b].hidden){below=b;break;}if(below>=0)i=below;}
   select(i);var l=layers[i];if(!l)return;
+  if(l.lock){mode='';grab=null;return;}
   push();mode=t.part;
   grab={x:l.x,y:l.y,px:p.x,py:p.y,r0:dist(0,0,layerBox(l).w,layerBox(l).h)/2||1,sx:l.scale};});
  cv.addEventListener('pointermove',function(e){if(!mode||sel<0||!grab)return;var l=layers[sel],p=canvasPos(e);
@@ -2034,14 +2080,17 @@ if(cv&&cv.addEventListener){
  cv.addEventListener('pointerup',function(){if(mode){stash();mode='';grab=null;}});
  cv.addEventListener('wheel',function(e){if(sel<0)return;e.preventDefault();
   var l=layers[sel],d=(e.deltaMode===1?e.deltaY*16:e.deltaY)>0?-4:4;
-  l.scale=Math.max(10,Math.min(800,l.scale+d));$('ds-sc').value=Math.round(l.scale);draw();stash();},{passive:false});}
+  l.scale=Math.max(10,Math.min(800,l.scale+d));$('ds-sc').value=Math.round(l.scale);draw();stash();},{passive:false});
+ cv.addEventListener('dblclick',function(){if(sel>=0&&layers[sel]&&layers[sel].kind==='text'&&layers[sel].font!==EMOFONT){var ti=$('ds-txt');if(ti&&ti.focus){ti.focus();if(ti.select)ti.select();$('ds-out').textContent='Typing mode: the text box above is focused — edit and watch the layer rename itself.';}}});}
 if(typeof document!=='undefined'&&document.addEventListener)document.addEventListener('keydown',function(e){
  var t=e.target||{},tag=(t.tagName||'').toUpperCase();
  if(tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA'||tag==='CANVAS')return;
  var k=(e.key||'').toLowerCase(),m=e.ctrlKey||e.metaKey;
  if(m&&k==='z'){e.preventDefault();(e.shiftKey?redo:undo)();return;}
  if(m&&k==='y'){e.preventDefault();redo();return;}
+ if(m&&k==='s'){e.preventDefault();var sd=$('ds-dl');if(sd&&sd.onclick)sd.onclick();return;}
  if(sel<0)return;var l=layers[sel],step=gsz()*(e.shiftKey?10:1);
+ if(l.lock&&(k==='delete'||k==='backspace'||k==='arrowleft'||k==='arrowright'||k==='arrowup'||k==='arrowdown'||(m&&k==='d'))){e.preventDefault();return;}
  if(m&&k==='d'){e.preventDefault();var d=$('ds-dup');if(d&&d.onclick)d.onclick();return;}
  if(m&&k==='l'){e.preventDefault();push();l.hidden=!l.hidden;select(sel);stash();return;}
  if(k==='delete'||k==='backspace'){e.preventDefault();var x=$('ds-del');if(x&&x.onclick)x.onclick();return;}
@@ -2102,6 +2151,19 @@ bindClick('ds-dl',function(){if(!cx||typeof document==='undefined'||!document.cr
  cx=realCx;noGuide=false;expMode=false;expK=1;sel=keepSel;
  dlUrl(oc.toDataURL(mime,0.92),'tukuk-design.'+(f==='jpg'?'jpg':(f==='webp'?'webp':'png')));
  draw();});
+bindClick('ds-clip',function(){if(!cx||typeof document==='undefined')return;
+ if(typeof ClipboardItem==='undefined'||!navigator||!navigator.clipboard||!navigator.clipboard.write){$('ds-out').textContent='This browser cannot copy images to the clipboard — Download still works.';return;}
+ var k=parseInt($('ds-scale').value,10)||1;
+ var oc2=document.createElement('canvas');oc2.width=W*k;oc2.height=H*k;
+ var o2=oc2.getContext?oc2.getContext('2d'):null;if(!o2||!o2.scale)return;
+ var keep2=sel,real2=cx;
+ sel=-1;noGuide=true;cx=o2;expMode=true;expK=k;
+ draw();
+ cx=real2;noGuide=false;expMode=false;expK=1;sel=keep2;draw();
+ try{oc2.toBlob(function(bl){if(!bl){$('ds-out').textContent='Could not encode the PNG — try Download.';return;}
+   try{navigator.clipboard.write([new ClipboardItem({'image/png':bl})]).then(function(){$('ds-out').textContent='PNG copied to the clipboard at '+k+'\u00d7 — paste it anywhere.';},function(){$('ds-out').textContent='The browser refused clipboard access — Download still works.';});}
+   catch(err){$('ds-out').textContent='Clipboard unavailable in this browser — use Download.';}}
+  ,'image/png');}catch(e2){$('ds-out').textContent='Clipboard unavailable — use Download instead.';}});
 W=num($('ds-w').value,1080);H=num($('ds-h').value,1080);
 if(hasSaved()){try{var sv=JSON.parse(localStorage.getItem('tukuk-design-v2'));
  $('ds-restore').textContent='Restore last session ('+(sv.layers||[]).length+' layers)';}catch(e){}}
@@ -2111,7 +2173,7 @@ addLayer({kind:'text',name:'headline',text:'Your headline',font:'Impact,Charcoal
 layers[1].y=Math.round(H*0.5);
 select(1);`,
   seo: `<h2 class="section-title">Why a plain-canvas studio beats a template portal</h2>
-  <p>Every hosted design platform runs the same quiet business: your work markets the platform, the watermark is the upsell, and the file leaves your machine before you have really made it. This studio inverts all three — the pixels are composited by your browser\u2019s own canvas engine, the export is assembled locally, and closing the tab destroys the document like a whiteboard. What it deliberately lacks: the million-template warehouse, stock search, licensed font libraries and collaborative cursors — every one of them a feature of the <i>account</i> that owns your file. What it does ship instead is honest: six starter templates composed from real layer maths, drag handles and a rotate knob, snapping to a grid with centre and rule-of-thirds guides, a 40-step undo history, autosave to your own browser, and a design file you can save as JSON and reopen later. The size presets are real too: Instagram and YouTube take exactly these dimensions because their own specs demand them.</p>
+  <p>Every hosted design platform runs the same quiet business: your work markets the platform, the watermark is the upsell, and the file leaves your machine before you have really made it. This studio inverts all three — the pixels are composited by your browser\u2019s own canvas engine, the export is assembled locally, and closing the tab destroys the document like a whiteboard. What it deliberately lacks: the million-template warehouse, stock search, licensed font libraries and collaborative cursors — every one of them a feature of the <i>account</i> that owns your file. What it does ship instead is honest: eight starter templates composed from real layer maths, one-click alignment to every edge and centre, layer locking, image flips and emoji stickers that export as drawn, drag handles and a rotate knob, snapping to a grid with centre and rule-of-thirds guides, a 40-step undo history, autosave to your own browser, and a design file you can save as JSON and reopen later. The size presets are real too: Instagram and YouTube take exactly these dimensions because their own specs demand them.</p>
   <p class="meta">Thumbnail makers: Impact at one-eleventh of the canvas width (about 116 px on a 1280 canvas) is the size that still reads at phone preview width — anything smaller is decoration, not headline. Export at 2\u00d7 and the same text is crisp on a retina screen.</p>`,
 });
 
