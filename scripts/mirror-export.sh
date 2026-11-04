@@ -22,6 +22,11 @@
 set -uo pipefail
 BASE="${MIRROR_BASE:-http://127.0.0.1:3000}"
 OUT="${MIRROR_OUT:-/var/tmp/tukuk-mirror}"
+# A real browser UA, not curl's default: the GitHub Actions lane of this export
+# runs from datacenter IPs, where Cloudflare's bot score files plain `curl/8.x`
+# requests out (every save 403s in ~0.3s). Home IPs pass even as curl; the
+# runner IP only passes looking like a browser. Harmless on the localhost lane.
+UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
 mkdir -p "$OUT"
 FAILED=0
@@ -30,7 +35,7 @@ FAILED=0
 save() {
   local p="$1" dest="$OUT/$2"
   mkdir -p "$(dirname "$dest")"
-  if curl -sf -m 60 --retry 2 -o "$dest" "$BASE$p"; then
+  if curl -sf -m 60 --retry 2 -A "$UA" -o "$dest" "$BASE$p"; then
     return 0
   fi
   echo "[mirror-export] FAILED: $p" >&2
@@ -43,7 +48,7 @@ save '/alat'             'alat.html'
 
 # Every tool page, taken from the sitemap so the list can never drift from the app.
 SITEMAP="$(mktemp)"
-if curl -sf -m 30 -o "$SITEMAP" "$BASE/sitemap.xml"; then
+if curl -sf -m 30 -A "$UA" -o "$SITEMAP" "$BASE/sitemap.xml"; then
   while read -r p; do
     [ -n "$p" ] || continue
     rel="${p#/alat/}"                       # /alat/unit → unit.html (Pages pretty URL)
@@ -59,13 +64,32 @@ rm -f "$SITEMAP"
 # Pages serves 404.html for any path the mirror never captured (live-data pages
 # like /weather stay on the main server by design — without this file a visitor
 # on www would meet Cloudflare's bare error instead of our own "go to the real
-# site" page). The app's 404 renderer does the wording; we just store its body.
-# NOT via save(): -f treats the 404 status as a failure and drops the body.
-if curl -s -m 60 --retry 2 -o "$OUT/404.html" "$BASE/no-such-page-404-probe"; then
-  echo '[mirror-export] 404.html captured'
-else
-  echo '[mirror-export] warning: could not capture 404.html' >&2
-fi
+# site" page). Written, not scraped: the app's own 404 answer is a JSON blob
+# ({"error":"Route not found"}), useless as a human page.
+cat > "$OUT/404.html" <<'EOF'
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Not on this mirror — tukuk.org</title>
+<link rel="stylesheet" href="/theme.css">
+</head>
+<body>
+<main style="max-width:640px;margin:12vh auto;padding:0 20px;text-align:center">
+<h1>Not on this mirror</h1>
+<p class="tagline">www.tukuk.org serves the Everyday Tools while the main server rests.
+This page lives on the full site instead.</p>
+<p style="margin-top:24px">
+<a href="https://tukuk.org" rel="canonical">Go to tukuk.org</a> &nbsp;·&nbsp;
+<a href="/alat">Everyday Tools (offline-safe)</a>
+</p>
+</main>
+<script src="/theme.js"></script>
+</body>
+</html>
+EOF
 
 # The static things those pages load. pdf-lib/fflate turn /alat/pdf and friends
 # from dead forms into working tools on the mirror.
