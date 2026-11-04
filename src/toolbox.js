@@ -3017,4 +3017,528 @@ $('ep-go').onclick=render;$('ep-y').oninput=render;render();`,
   <p>The Council of Nicaea (325) delegated the date to the Church of Alexandria\\u2019s tables, and the arithmetic settled into the "Anonymous" computus by the 7th century — golden number from the 19-year Metonic cycle, an epact to shift the lunar age for solar-year drift, then "next Sunday after the paschal full moon". When the Gregorian reform rewrote the calendar in 1582 it fixed the solar year but kept the ecclesiastical moon, which is exactly why Western and Orthodox Easter now disagree: same rule, two calendars, a 13-day gap and different epact corrections. They do coincide (both calendars answered 20 April in 2025, and the next shared dates are 2028 and 2031) — but mostly the two Easters sit a week to over a month apart. The algorithm above is the same one the Book of Common Prayer\\u2019s margin directed parish priests to compute by hand.</p>`,
 });
 
+// ── 62. /alat/weekday — any date's weekday & date arithmetic ─────────────────
+TOOLKIT.push({
+  slug: 'weekday', ic: '📅', name: 'Weekday Finder',
+  title: 'Weekday Finder — What Day Is Any Date, Plus Date Arithmetic | Tukuk-OS',
+  desc: 'Name the weekday of any date from 1900 to 2200, see all the years a given month-day falls on a chosen weekday, and add or subtract days with the weekday carried along. In your browser.',
+  hero: 'Weekday Finder', sub: 'any date → weekday · weekday-of-month years · +/- N days',
+  navBlurb: 'What weekday is 14 March 2027? A calendar-correct answer for any date, plus every year your birthday lands on a Saturday.',
+  hubBlurb: 'the weekday of any date, the years a date falls on a chosen weekday, and day-offset arithmetic that keeps the weekday',
+  lead: 'One call to <b>Date.UTC</b> (which never touches your local timezone) gives the real weekday for any civil date. From there this page does the two party tricks: scanning years to find when a fixed date lands on a chosen weekday, and counting N days forward or backward while carrying the answer in both date and weekday form.',
+  form: `<div class="tl-form">
+  ${field('Date', '<input id="wd-d" type="date" value="2026-11-03">')}
+  ${field('Offset (days, may be negative)', '<input id="wd-n" type="number" min="-36500" max="36500" step="1" value="100">')}
+  ${field('Weekday to hunt for', '<select id="wd-hunt"><option value="0">Sunday</option><option value="1">Monday</option><option value="2" selected>Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option></select>')}
+  <button class="tl-btn primary" id="wd-go" type="button">Find</button>
+</div>
+<div class="tl-res" id="wd-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var WD=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function leap(y){return (y%4===0&&y%100!==0)||y%400===0;}
+function dim(y,m){return [31,leap(y)?29:28,31,30,31,30,31,31,30,31,30,31][m];}
+function pd(s){var p=s.split('-');if(p.length!==3)return null;var y=+p[0],m=+p[1],d=+p[2];
+ if(!(y>=1900&&y<=2200)||!(m>=1&&m<=12)||!(d>=1&&d<=dim(y,m-1)))return null;return{y:y,m:m,d:d};}
+function mk(y,m,d){var m2=m-1;while(d>dim(y,m2)){d-=dim(y,m2);m2++;if(m2>11){m2=0;y++;}}
+ while(d<1){m2--;if(m2<0){m2=11;y--;}d+=dim(y,m2);}return{y:y,m:m2+1,d:d};}
+function dow(dt){return new Date(Date.UTC(dt.y,dt.m-1,dt.d)).getUTCDay();}
+function f(dt){return dt.d+' '+MON[dt.m-1]+' '+dt.y;}
+function render(){var dt=pd($('wd-d').value);
+ if(!dt){$('wd-out').innerHTML='<span class="tl-badge tl-no">check input</span> A real date between 1900 and 2200.';return;}
+ var n=parseInt($('wd-n').value,10);if(isNaN(n))n=0;
+ var html='<div class="tl-big">'+WD[dow(dt)]+'</div>';
+ html+='<p><b>'+f(dt)+'</b> \\u00b7 day '+((Date.UTC(dt.y,dt.m-1,dt.d)-Date.UTC(dt.y,0,1))/86400000+1)+' of '+dt.y+' \\u00b7 ISO week '+wk(dt)+'</p>';
+ var off=Math.abs(n),dir=n<0?-1:1,rd=mk(dt.y,dt.m,dt.d+dir*off),sign=n<0?'\\u2212':'+';
+ html+='<table class="tl-tab"><tbody>';
+ html+='<tr><td>'+sign+off+' day'+(off===1?'':'s')+'</td><td><b>'+f(rd)+'</b> \\u2014 '+WD[dow(rd)]+' \\u2014 that is '+Math.round(off/7)+' week'+(Math.round(off/7)===1?'':'s')+' and '+(off%7)+' day'+(off%7===1?'':'s')+'</td></tr>';
+ html+='</tbody></table>';
+ var hunt=parseInt($('wd-hunt').value,10),found=[],yy=dt.y;
+ while(found.length<5&&yy<=2200){if(dim(yy,dt.m-1)>=dt.d&&dow({y:yy,m:dt.m,d:dt.d})===hunt)found.push(yy);yy++;}
+ html+='<p>Searching forward from '+dt.y+': <b>'+f(dt).replace(/\\d{4}$/,'')+'</b> next falls on a <b>'+WD[hunt]+'</b> in '+(found.length?found.slice(0,5).join(', '):'never within range')+'.</p>';
+ html+='<p class="meta">Weekdays repeat on a 400-year Gregorian cycle (146,097 days is exactly 20,871 weeks), so a month-day can land on every weekday \\u2014 but not evenly: the 13th falls on a Friday more often than any other weekday (the famous Friday-the-13th skew, born from the 400-year pattern having 688 Fridays against 687 of the rest). Date.UTC is used deliberately: a local-time Date can shift a day across daylight saving.</p>';
+ $('wd-out').innerHTML=html;}
+function wk(dt){var t=Date.UTC(dt.y,dt.m-1,dt.d),day=(dow(dt)+6)%7;
+ var thu=t+(4-day)*86400000,first=Date.UTC(new Date(thu).getUTCFullYear(),0,4);
+ return Math.round((thu-first)/604800000)+1;}
+$('wd-go').onclick=render;$('wd-d').oninput=render;$('wd-n').oninput=render;$('wd-hunt').onchange=render;render();`,
+  seo: `<h2 class="section-title">How a weekday is computed at all</h2>
+  <p>Under the surface this is Zeller's congruence: take the day, add the month and year offsets from a table, add the leap corrections, reduce modulo 7. The browser's <code>Date.UTC(...).getUTCDay()</code> is that arithmetic wearing a nicer hat, and using the UTC constructor matters — the local-time version can silently shift a date by a day across daylight-saving boundaries, which is exactly the bug that makes "what day is my birthday" apps wrong for some users. The ISO week number follows the Thursday rule: the week containing January 4 is always week 1.</p>`,
+});
+
+// ── 63. /alat/time-diff — days between dates, business days ──────────────────
+TOOLKIT.push({
+  slug: 'time-diff', ic: '⏳', name: 'Days Between Dates',
+  title: 'Days Between Two Dates — Business Days, Weeks & Deadlines | Tukuk-OS',
+  desc: 'Count days, weeks and months between any two dates, with and without weekends, in either counting convention — for deadlines, baby due dates, project windows and trip lengths.',
+  hero: 'Days Between', sub: 'plain & business days · weeks+days · months+y-m-d · either convention',
+  navBlurb: 'How many days until the deadline — plain, or weekends excluded, with the ISO week span and the y-m-d breakdown.',
+  hubBlurb: 'days and business days between any two dates, in either counting convention, with weeks, months and the y-m-d form',
+  lead: 'Deadline maths has one trap and four answers. The trap is <b>whether you count the start day</b> — project people say a task from Monday to Friday is 5 days, calendars say it is 4 nights away. This page prints both conventions, the exact difference (<i>n weeks, d days</i> and <i>y years, m months, d days</i>), and the weekday-free count with weekends removed by whole-week arithmetic rather than a loop.',
+  form: `<div class="tl-form">
+  ${field('From', '<input id="tf-a" type="date" value="2026-09-01">')}
+  ${field('To', '<input id="tf-b" type="date" value="2026-11-03">')}
+  ${field('Counting convention', '<select id="tf-conv"><option value="excl" selected>exclude the start day (4 nights)</option><option value="incl">include the start day (5 days)</option></select>')}
+  <button class="tl-btn primary" id="tf-go" type="button">Count</button>
+</div>
+<div class="tl-res" id="tf-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var WD=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function leap(y){return (y%4===0&&y%100!==0)||y%400===0;}
+function dim(y,m){return [31,leap(y)?29:28,31,30,31,30,31,31,30,31,30,31][m];}
+function pd(s){var p=s.split('-');if(p.length!==3)return null;var y=+p[0],m=+p[1],d=+p[2];
+ if(!(y>=1900&&y<=2200)||!(m>=1&&m<=12)||!(d>=1&&d<=dim(y,m-1)))return null;return{y:y,m:m,d:d};}
+ function f(dt){return dt.d+' '+MON[dt.m-1]+' '+dt.y;}
+function ms(dt){return Date.UTC(dt.y,dt.m-1,dt.d);}
+function ymd(a,b){var y=b.y-a.y,m=b.m-a.m,d=b.d-a.d;
+ if(d<0){m--;d+=dim(b.y,b.m-2);if(m<0){m=11;y--;}}
+ return{y:y,m:m,d:d};}
+function dow(dt){return new Date(ms(dt)).getUTCDay();}
+function wd(a,b){var n=Math.round((ms(b)-ms(a))/86400000),s=0,k=0,day=dow(a);
+ for(k=1;k<=n;k++){day=(day+1)%7;if(day===0||day===6)s++;}return s;}
+function render(){var a=pd($('tf-a').value),b=pd($('tf-b').value);
+ if(!a||!b){$('tf-out').innerHTML='<span class="tl-badge tl-no">check input</span> Two real dates (YYYY-MM-DD).';return;}
+ var neg=ms(b)<ms(a);var lo=neg?b:a,hi=neg?a:b;
+ var n=Math.round((ms(hi)-ms(lo))/86400000);
+ var conv=$('tf-conv').value,cn=n+(conv==='incl'?1:0);
+ var y=ymd(lo,hi),week=Math.floor(n/7),rd=n%7;
+ var wknd=wd(lo,hi),bus=n-wknd;
+ var html='<div class="tl-big">'+cn+' day'+(cn===1?'':'s')+(neg?' back':'')+'</div>';
+ html+='<table class="tl-tab"><tbody>';
+ html+='<tr><td>From</td><td>'+f(lo)+' \\u2014 '+WD[dow(lo)]+'</td></tr>';
+ html+='<tr><td>To</td><td>'+f(hi)+' \\u2014 '+WD[dow(hi)]+'</td></tr>';
+ html+='<tr><td>Exact difference</td><td>'+y.y+' years, '+y.m+' months, '+y.d+' days</td></tr>';
+ html+='<tr><td>Weeks form</td><td>'+week+' week'+(week===1?'':'s')+' and '+rd+' day'+(rd===1?'':'s')+' \\u00b7 '+(n/7).toFixed(1).replace(/\\.0$/,'')+' weeks total</td></tr>';
+ html+='<tr><td>Weekdays only</td><td><b>'+bus+' business days</b> ('+wknd+' weekend days skipped; public holidays not modelled)</td></tr>';
+ html+='<tr><td>Other convention</td><td>'+(conv==='incl'?n+' days if you do not count the start day':n+1+' days if you count the start day')+'</td></tr>';
+ html+='</tbody></table>';
+ if(n===0)html+='<p><span class="tl-badge tl-ok">same day</span> Both dates are identical.</p>';
+ else if(n<=14)html+='<p><span class="tl-badge tl-ok">close</span> '+(neg?'It passed ':'It is coming ')+n+' day'+(n===1?'':'s')+(neg?' ago':' away')+', on a '+WD[dow(hi)]+'.</p>';
+ html+='<p class="meta">The y-m-d row uses calendar borrow (a negative day count borrows the previous month\\u2019s length); the weekday count walks real weekdays, so a range starting on a Saturday still gets its five working days. Business-day counts assume Sat/Sun off \\u2014 Malaysia\\u2019s official weekend varies by state (Johor, Kedah, Kelantan, Terengganu run Fri\\u2013Sat), and this page does not guess your holidays.</p>';
+ $('tf-out').innerHTML=html;}
+$('tf-go').onclick=render;$('tf-a').oninput=render;$('tf-b').oninput=render;$('tf-conv').onchange=render;render();`,
+  seo: `<h2 class="section-title">Two conventions, one honest page</h2>
+  <p>"Days between" means different things to different people: hotels count nights (arrive Monday, depart Friday = 4), project managers count working days on the calendar (Mon–Fri = 5), and legal deadlines usually count neither — they add N days to the trigger date and take the weekday that lands. The difference is exactly one at every boundary, which is why this page prints the excluded-start number as the headline and the included one beside it. The month breakdown exists because "63 days" is not how you tell someone their leave ends; "2 months and 2 days" is.</p>`,
+});
+
+// ── 64. /alat/unit-prefix — KB vs KiB, exact bytes ────────────────────────────
+TOOLKIT.push({
+  slug: 'unit-prefix', ic: '🗄️', name: 'KB vs KiB',
+  title: 'KB vs KiB Converter — Exact Bytes for Every Storage Unit | Tukuk-OS',
+  desc: 'Enter a size in KB, MB, GB, TB or their binary KiB/MiB/GiB/TiB twins and get the exact byte count (BigInt, no float rounding), both readings side by side, and the download time at a real bitrate.',
+  hero: 'KB vs KiB', sub: 'exact bytes · decimal & binary rows · the 7% gap · Mbps honesty',
+  navBlurb: 'The same file in decimal and binary units with the exact byte count — why 500 MB is 476.8 MiB, and why 100 Mbps is 12.5 MB/s.',
+  hubBlurb: 'any storage size in exact bytes with both the decimal and binary readings — the KB/KiB gap, and megabits versus megabytes',
+  lead: 'Two families of prefixes describe the same bytes: the <b>SI</b> one (kilo = 1,000) that drive makers and network meters use, and the <b>IEC binary</b> one (kibi = 1,024) that operating systems traditionally used. The gap compounds by roughly 7% per step — 1 GB versus 1 GiB is already 7% — which is the entire reason a "2 TB" drive shows as 1.81 TiB. This page computes in <b>BigInt</b> so a petabyte lands exact, prints both readings, and ends with the bitrate trap: networking is measured in <i>bits</i>, storage in <i>bytes</i>, and the factor of 8 is where "my 100 Mbps download only writes 12 MB/s" goes to die.',
+  form: `<div class="tl-form">
+  ${field('Value', '<input id="up-v" type="number" min="0" step="0.001" value="500">')}
+  ${field('Unit', '<select id="up-u"><option value="B">bytes</option><option value="KB">KB (1,000)</option><option value="MB">MB (1,000²)</option><option value="GB">GB (1,000³)</option><option value="TB">TB (1,000⁴)</option><option value="PB">PB (1,000⁵)</option><option value="KiB">KiB (1,024)</option><option value="MiB">MiB (1,024²)</option><option value="GiB" selected>GiB (1,024³)</option><option value="TiB">TiB (1,024⁴)</option><option value="PiB">PiB (1,024⁵)</option></select>')}
+  ${field('Download speed (Mbps, optional)', '<input id="up-mbps" type="number" min="0" max="100000" step="1" value="100">')}
+  <button class="tl-btn primary" id="up-go" type="button">Convert</button>
+</div>
+<div class="tl-res" id="up-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var DEC=[['B',0n],['KB',1n],['MB',2n],['GB',3n],['TB',4n],['PB',5n]];
+var BIN=[['B',0n],['KiB',1n],['MiB',2n],['GiB',3n],['TiB',4n],['PiB',5n]];
+function pow10(k){var r=1n;for(var i=0n;i<k;i++)r*=10n;return r;}
+function pow1024(k){var r=1n;for(var i=0n;i<k;i++)r*=1024n;return r;}
+function scaled(v,bin,k){var parts=String(v).split('.');var dec=parts[1]||'';
+ var num=BigInt((parts[0]+dec)||'0');var scale=10n**BigInt(dec.length);
+ return {n:num*(bin?pow1024(k):pow10(k)),d:scale};}
+function show(n,d){var whole=n/d,rem=n%d;if(rem===0n)return whole.toLocaleString('en-GB');
+ var r=String(rem*10000n/d);while(r.length<4)r='0'+r;r=r.replace(/0+$/,'');
+ return whole.toLocaleString('en-GB')+'.'+r;}
+function render(){var v=$('up-v').value,u=$('up-u').value;
+ if(!/^\\d*\\.?\\d+$/.test(v)){$('up-out').innerHTML='<span class="tl-badge tl-no">check input</span> A plain number.';return;}
+ var bin=false,k=0,i;
+ for(i=0;i<BIN.length;i++)if(BIN[i][0]===u){bin=true;k=i;}
+ for(i=0;i<DEC.length;i++)if(DEC[i][0]===u){bin=false;k=i;}
+ var sc=scaled(v,bin,BigInt(k));var bytes=sc.n,d=sc.d;
+ if(bytes===0n){$('up-out').innerHTML='<span class="tl-badge tl-no">check input</span> Zero bytes has no interesting unit.';return;}
+ var html='<div class="tl-big">'+show(bytes,d)+' bytes</div>';
+ html+='<table class="tl-tab"><tbody><tr><td>Decimal (SI, per 1,000)</td><td>Binary (IEC, per 1,024)</td></tr>';
+ for(i=0;i<5;i++){
+  html+='<tr><td>'+show(bytes,pow10(BigInt(i)))+' '+(i===0?'B':DEC[i][0])+'</td><td>'+show(bytes,pow1024(BigInt(i)))+' '+(i===0?'B':BIN[i][0])+'</td></tr>';}
+ html+='</tbody></table>';
+ var mbps=parseFloat($('up-mbps').value);
+ if(mbps>0){var secs=Number(bytes)/Number(d)/(mbps*1e6/8);
+  var h2=Math.floor(secs/3600),m2=Math.floor(secs%3600/60),s3=Math.round(secs%60);
+  html+='<p>At '+mbps+' Mbps ('+(mbps/8).toLocaleString('en-GB',{maximumFractionDigits:1})+' MB/s of true byte throughput) this file takes about '+(h2?h2+' h ':'')+(m2?m2+' min ':'')+s3+' s.</p>';}
+ html+='<p class="meta">The two columns are the same bytes wearing two unit systems; the divergence compounds about 7% per step \u2014 GiB/GB \u2248 1.074, TiB/TB \u2248 1.10. Wi-Fi\u2019s real throughput is ~50-60% of the headline rate, so the transfer time above is a floor, not a promise. Byte maths here is BigInt end to end: a PiB is 2\u2075\u2070 = 1,125,899,906,842,624 bytes and not one float digit of it is rounded.</p>';
+ $('up-out').innerHTML=html;}
+$('up-go').onclick=render;$('up-v').oninput=render;$('up-u').onchange=render;$('up-mbps').oninput=render;render();`,
+  seo: `<h2 class="section-title">Who uses which family, and when it bites</h2>
+  <p>Drives, SSDs, USB sticks and data plans sell in powers of 1,000; Windows reports in powers of 1,024 (and calls them KB/MB anyway — the pre-1998 habit), macOS switched to SI in 10.6, and every firmware or RAM spec still lives in binary. The mismatch is why a "500 GB" disk shows as 465 GiB in Windows — nobody cheated you, the units changed under the number. Memory channels, page sizes and filesystem block counts are binary because address lines come two at a time (2¹⁰ = 1,024 ≈ 1,000 was the original approximation). The IEC names — kibi, mebi, gibi — were ratified in 1998 precisely to end the ambiguity, and lost the culture war except in standards documents like this page.</p>`,
+});
+
+// ── 65. /alat/pwstrength — password entropy, not a score ─────────────────────
+TOOLKIT.push({
+  slug: 'pwstrength', ic: '🔐', name: 'Password Strength',
+  title: 'Password Strength Checker — Entropy Bits & Crack Time | Tukuk-OS',
+  desc: 'Estimate a password\'s real strength: character-class entropy, penalty for common passwords and keyboard runs, and crack time against an offline attacker at 10 billion guesses per second. Nothing is sent anywhere.',
+  hero: 'Password Entropy', sub: 'bits of entropy · class pool · run/repeat penalty · 10¹⁰ guesses/s',
+  navBlurb: 'Entropy bits instead of a coloured bar: the character pool, the dictionary and-pattern penalties, and what a GPU cracking rig needs.',
+  hubBlurb: 'a password\'s entropy in bits with the common-password and keyboard-run penalties, and an honest offline-crack time',
+  lead: 'A strength <b>bar</b> is theatre; entropy in <b>bits</b> is arithmetic. The pool is the number of characters your set allows (26 lower, 62 mixed case, 95 printable, plus emoji if you like), the raw entropy is length × log₂(pool), and the discounts are what attackers actually exploit: a dictionary word contributes almost nothing, a keyboard run ("qwerty") almost nothing, a doubled word almost nothing. Crack time assumes an <b>offline</b> attacker with a rig doing 10¹⁰ guesses/second (the ballpark for bcrypt-fast GPU farms on an unsalted hash) — half the entropy-space on average, so divide by two.',
+  form: `<div class="tl-form">
+  ${field('Password to test (typed nowhere but this page)', '<input id="ps-in" type="text" value="Corr3ct-Horse!2026" autocomplete="off" spellcheck="false">')}
+  <button class="tl-btn primary" id="ps-go" type="button">Measure</button>
+</div>
+<div class="tl-res" id="ps-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var COMMON=['password','123456','123456789','qwerty','abc123','letmein','monkey','dragon','sunshine','princess','football','iloveyou','admin','welcome','login','passw0rd','shadow','1234567','12345678','trustno1','starwars','pass','test','guest','zaq12wsx','michael','jennifer','jordan','harley','ranger','buster','soccer','hockey','killer','cheese','banana','purple','asdfgh','asdf1234','111111','000000','password1','passw0rd1','hunter2'];
+var SEQW='abcdefghijklmnopqrstuvwxyz';var SEQN='0123456789';var KBD=['qwertyuiop','asdfghjkl','zxcvbnm','1234567890','qazwsx','edcrfv'];
+function pool(s){var p=0;if(/[a-z]/.test(s))p+=26;if(/[A-Z]/.test(s))p+=26;if(/[0-9]/.test(s))p+=10;if(/[^a-zA-Z0-9]/.test(s))p+=33;return p;}
+function hasRun(s){var l=s.toLowerCase(),i,j;
+ for(i=0;i<=l.length-4;i++){var t=l.substr(i,4),ok=false;
+  for(j=0;j<KBD.length;j++)if(KBD[j].indexOf(t)!==-1||t.split('').reverse().join('')&&KBD[j].indexOf(t.split('').reverse().join(''))!==-1)ok=true;
+  for(j=0;j<SEQW.length-3;j++)if(SEQW.substr(j,4)===t)ok=true;
+  for(j=0;j<SEQN.length-3;j++)if(SEQN.substr(j,4)===t)ok=true;
+  if(ok)return t;}
+ return null;}
+function human(bits){var g=Math.pow(2,bits)/2;var secs=g/1e10;
+ var u=[['seconds',1],['minutes',60],['hours',3600],['days',86400],['years',31557600],['centuries',3155760000]];
+ for(var i=u.length-1;i>=1;i--)if(secs>=u[i][1])return (secs/u[i][1]).toFixed(secs/u[i][1]>=100?0:2)+' '+u[i][0];
+ return secs.toFixed(secs<1?3:1)+' seconds';}
+function render(){var s=$('ps-in').value;
+ if(!s){$('ps-out').innerHTML='<span class="tl-badge tl-no">check input</span> Type a password to measure. It never leaves the page \\u2014 there is no network call to make.';return;}
+ var low=s.toLowerCase(),bits,note='';
+ var inCommon=COMMON.indexOf(low)!==-1;
+ var p=pool(s),raw=s.length*Math.log(p||1)/Math.LN2;
+ if(inCommon){bits=Math.log(445e3)/Math.LN2;note='<span class="tl-badge tl-no">in every leak corpus</span> A dictionary hit: rule engines try these first, so its entropy is that of picking one of ~445,000 leaked words \u2014 about 19 bits, no matter how long it is.';
+ }else{
+  bits=raw;
+  var rep=/^(.+)\\1+$/.test(s);if(rep){bits-=Math.log(s.length)/Math.LN2;note+='Repeated pattern \\u2014 the repeat is free to an attacker. ';}
+  var run=hasRun(s);if(run){bits-=16;note+='Keyboard/sequence run "'+run+'" \\u2014 discounted 16 bits. ';}
+  var digitTail=/^\\D+\\d{1,4}$/.test(s);if(digitTail){bits-=8;note+='Digits tacked on the end \u2014 attackers try those templates first, so minus 8 bits. ';}}
+ bits=Math.max(0,bits);
+ var badge=bits<28?['tl-no','trivially crackable']:bits<40?['tl-no','weak']:bits<60?['tl-ok','okay for online']:bits<80?['tl-ok','strong']:['tl-ok','excellent'];
+ var html='<div class="tl-big">'+Math.round(bits)+' bits</div>';
+ html+='<p><span class="tl-badge '+badge[0]+'">'+badge[1]+'</span> Against an offline rig at 10¹⁰ guesses/s: about <b>'+human(bits)+'</b> on average.</p>';
+ html+='<table class="tl-tab"><tbody>';
+ html+='<tr><td>Length</td><td>'+s.length+' characters</td></tr>';
+ html+='<tr><td>Character pool</td><td>'+p+' symbols \\u2192 log₂('+p+') = '+(Math.log(p)/Math.LN2).toFixed(2)+' bits per character</td></tr>';
+ html+='<tr><td>Raw entropy</td><td>'+raw.toFixed(1)+' bits</td></tr>';
+ html+='<tr><td>After penalties</td><td><b>'+bits.toFixed(1)+' bits</b>'+(note?' \\u2014 '+note:'')+'</td></tr>';
+ html+='</tbody></table>';
+ html+='<p class="meta">Where the numbers come from: 40 bits is crackable in days by a serious GPU rig; 60 bits is a nation-state nuisance; 80+ is safe until quantum brute-forcing changes the game, and nothing changes that the <b>length</b> term beats the <b>symbol soup</b> term — four random words (≈ 4×11 bits from a 4096-word dict each... realistically 45 bits) beat "P@ssw0rd!" (which is 6). The honest bar for real humans: a unique passphrase of five random words, plus the site using two-factor.</p>';
+ $('ps-out').innerHTML=html;}
+$('ps-go').onclick=render;$('ps-in').oninput=render;render();`,
+  seo: `<h2 class="section-title">How password lists actually get cracked</h2>
+  <p>No attacker tries character-by-character. Rule engines (Hashcat, John) apply mutations to the million-password leak corpora that are already public — append digits, capitalise, leet-swap, double the word — which is why "Corr3ct-H0rse!" scores far below its raw entropy. The effective strength of a password is its rank in a human-behaviour distribution, not its length times its pool; this page approximates that with the three penalties every corpus study finds (dictionary membership, runs/patterns, template endings). The counterweight is random words from a diceware-style choice, where the entropy really is log₂(dictsize) per word because no human skill is involved in the picking — and where a 20-character password is easy to type, remember and read back over the phone.</p>`,
+});
+
+// ── 66. /alat/repeating — decimal expansion & repeating cycle ────────────────
+TOOLKIT.push({
+  slug: 'repeating', ic: '🔁', name: 'Repeating Decimal',
+  title: 'Repeating Decimal Finder — Long Division With the Cycle Marked | Tukuk-OS',
+  desc: 'Divide any two integers and see the exact decimal: terminating digits, the repeating cycle in parentheses with its length, the remainders that prove it, and the fraction reduced first.',
+  hero: 'Repeating Decimal', sub: '1/7 = 0.(142857) · cycle length · remainder proof · reduced form',
+  navBlurb: 'See the infinite inside a fraction: the long-division expansion with the repeating cycle marked, its length, and the remainder trail that proves it must repeat.',
+  hubBlurb: 'any fraction expanded to its exact repeating decimal with the cycle length and the remainder proof, BigInt-exact',
+  lead: 'A decimal either <b>terminates</b> or <b>repeats</b> — there is no third option, and the proof fits in one page of long division. Remainders are integers between 0 and the divisor, so after at most d−1 steps one must appear twice, and the digits between the two sightings are the cycle. This page runs the division in BigInt (so 1/97 comes out exact, not float-rounded), marks the cycle, reports its length, and shows the remainder trail so you can <i>see</i> the pigeonhole working.',
+  form: `<div class="tl-form">
+  ${field('Numerator', '<input id="rp-a" type="number" step="1" value="1">')}
+  ${field('Denominator', '<input id="rp-b" type="number" step="1" value="7">')}
+  <button class="tl-btn primary" id="rp-go" type="button">Expand</button>
+</div>
+<div class="tl-res" id="rp-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function gcd(a,b){while(b){var t=a%b;a=b;b=t;}return a;}
+function render(){var a=parseInt($('rp-a').value,10),b=parseInt($('rp-b').value,10);
+ if(isNaN(a)||isNaN(b)||b===0||Math.abs(b)>1000000||Math.abs(a)>1000000){$('rp-out').innerHTML='<span class="tl-badge tl-no">check input</span> Two integers, denominator not 0, both within \\u00b11,000,000.';return;}
+ var neg=(a<0)!==(b<0);a=Math.abs(a);b=Math.abs(b);
+ var g=gcd(a,b),an=a/g,bn=b/g;
+ var whole=Math.floor(an/bn),rem=BigInt(an%bn),B=BigInt(bn);
+ var digits=[],seen={},pos=0,cycleAt=-1,trail=[];
+ while(rem!==0n){if(seen[rem]!==undefined){cycleAt=seen[rem];break;}
+  seen[rem]=pos;var num=rem*10n;var dg=Number(num/B);digits.push(dg);
+  trail.push(String(num)+' \\u00f7 '+bn+' = '+dg+' r '+(num%B));rem=num%B;pos++;}
+ var pre=neg?'-':'';
+ var html;
+ if(rem===0n){var dec=digits.join('');
+  html='<div class="tl-big">'+pre+whole+(dec?'.'+dec:'')+'</div>';
+ }else{
+  var cyc=digits.slice(cycleAt).join('');
+  html='<div class="tl-big">'+pre+whole+'.'+digits.slice(0,cycleAt).join('')+'<span style="text-decoration:overline">'+cyc+'</span></div>';
+ }
+ if(rem!==0n){
+  html+='<p>Cycle length <b>'+(digits.length-cycleAt)+'</b>'+(cycleAt>0?', after '+cycleAt+' non-repeating '+(cycleAt===1?'digit':'digits'):'')+' \\u00b7 exact value '+pre+whole+'.'+digits.slice(0,cycleAt).join('')+'('+digits.slice(cycleAt).join('')+')</p>';
+ }else{
+  html+='<p><span class="tl-badge tl-ok">terminates</span> '+a+'/'+b+' = '+an+'/'+bn+(bn===1?' is a whole number.':' ends after '+digits.length+' '+(digits.length===1?'digit':'digits')+' because '+bn+' divides a power of 10.')+'</p>';
+ }
+ html+='<table class="tl-tab"><tbody>';
+ html+='<tr><td>Reduced fraction</td><td>'+a+'/'+b+' = '+an+'/'+bn+' (gcd '+g+')</td></tr>';
+ if(rem!==0n)html+='<tr><td>Why it repeats</td><td>remainders are integers in 1 to '+(bn-1)+', so after at most '+(bn-1)+' steps the pigeonhole principle forces a repeat \\u2014 the digits between two identical remainders loop forever.</td></tr>';
+ var f2=BigInt(bn);while(f2%2n===0n)f2/=2n;while(f2%5n===0n)f2/=5n;
+ html+='<tr><td>Terminating test</td><td>a fraction terminates exactly when its reduced denominator has no prime factors except 2 and 5; after stripping those from '+bn+', '+(f2===1n?'nothing remains \\u2014 which is why it ends':', which leaves '+f2+', which is why it loops')+'.</td></tr>';
+ html+='</tbody></table>';
+ var steps=[];for(var i=0;i<Math.min(trail.length,12);i++)steps.push(trail[i]);
+ html+='<p class="meta">First remainder steps: '+(steps.length?steps.join(' \\u00b7 '):'none \\u2014 whole number')+'. For a prime denominator like '+bn+', the cycle length divides \\u03c6('+bn+')='+(bn-1)+': 1/7 runs the full 6-digit reptend 142857, while 1/3 and 1/11 cycle in a single digit. The numerator only rotates the same cycle \\u2014 2/7 is 285714, the same six digits shifted.</p>';
+ $('rp-out').innerHTML=html;}
+$('rp-go').onclick=render;$('rp-a').oninput=render;$('rp-b').oninput=render;render();`,
+  seo: `<h2 class="section-title">The pigeonhole principle, sold as arithmetic</h2>
+  <p>Long division on a remainder that has appeared before must produce the same digit and the same next remainder as the first time — the loop is forced, not observed. That single fact gives every property above: cycles of length at most d−1, the 2-and-5 terminating rule (those factors are exactly the ones that can be "absorbed" by multiplying the remainder by 10 until it is coprime), and the reason 1/7 and 2/7 are the same six digits rotated: the cycle is a property of the denominator, and the numerator only chooses the starting point inside it.</p>`,
+});
+
+// ── 67. /alat/kbd — keyboard tester ──────────────────────────────────────────
+TOOLKIT.push({
+  slug: 'kbd', ic: '⌨️', name: 'Keyboard Test',
+  title: 'Keyboard Tester — Press Every Key, See Every Register | Tukuk-OS',
+  desc: 'A live keyboard health check: press any key and watch its chip light up, with the code, the keydown/keyup state, and a completeness count. Runs offline in the browser — useful for loaner laptops and dead switches.',
+  hero: 'Keyboard Test', sub: 'live keydown map · codes & states · completeness counter · offline',
+  navBlurb: 'Press every key and see every register — the two-minute health check for a secondhand laptop, a borrowed keyboard or a suspect switch.',
+  hubBlurb: 'a live keyboard test with key codes, pressed state and a completeness counter for checking every switch works',
+  lead: 'The browser reports three useful things per keystroke: <b>event.key</b> (what was typed, layout-aware), <b>event.code</b> (which physical switch went down, layout-blind — <code>KeyA</code> is the same key on AZERTY and QWERTY), and the <b>repeat</b> flag, which tells held keys from machine-gun chattering switches. A failing keyboard usually fails in exactly one of these streams: a dead switch sends nothing, a chattering switch sends repeated keydowns without keyup, and a stuck key shows as a code that never leaves the pressed set.',
+  form: `<div class="tl-form">
+  <p class="meta">Click anywhere on this page first, then press keys. Chips light while a key is held and stay green once tested. <button class="tl-btn" id="kb-rs" type="button" style="margin-left:8px">Reset</button></p>
+  <div id="kb-grid"></div>
+</div>
+<div class="tl-res" id="kb-out">—</div>`,
+  css: `
+.kb-key{display:inline-block;min-width:34px;padding:6px 8px;margin:2px;border-radius:6px;background:#e3e6ec;border:1px solid #c9cfda;text-align:center;font-size:.78rem;cursor:default;transition:transform .06s}
+.kb-key.kb-hit{background:#d1f5dd;border-color:#11753a}
+.kb-key.kb-down{background:#6366f1;border-color:#4f46a8;color:#fff;transform:translateY(2px)}
+.kb-sub{display:block;font-size:.62rem;opacity:.65}
+.kb-space{min-width:240px}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var ROWS=[['Esc','F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12'],['\u0060','1','2','3','4','5','6','7','8','9','0','-','=','Backspace'],['Tab','q','w','e','r','t','y','u','i','o','p','[',']','\\\\'],['CapsLock','a','s','d','f','g','h','j','k','l',';','Enter'],['Shift','z','x','c','v','b','n','m',',','.','/','Shift'],['Control','Meta','Alt',' ','Alt','Meta','Menu','Control']];
+var down={},tested={},POS={};
+(function(){for(var r=0;r<ROWS.length;r++)for(var c=0;c<ROWS[r].length;c++)POS[ROWS[r][c]]=1;})();
+var TOTAL=Object.keys(POS).length;
+function norm(k){if(k===' ')return ' ';if(k&&k.length===1)return k.toLowerCase();return k;}
+function clsFor(L){return 'kb-key'+(L===' '?' kb-space':'')+(down[L]?' kb-down':tested[L]?' kb-hit':'');}
+function nameOf(L){return L===' '?'space':L==='\\\\'?'backslash':L;}
+function grid(){var h='';for(var r=0;r<ROWS.length;r++){for(var c=0;c<ROWS[r].length;c++){var L=ROWS[r][c];
+ h+='<span class="'+clsFor(L)+'">'+nameOf(L)+'</span>';}h+='<br>';}
+ $('kb-grid').innerHTML=h;}
+function status(){var hit=0,k,miss=[];
+ for(k in POS){if(tested[k])hit++;else miss.push(nameOf(k));}
+ var h='<div class="tl-big">'+hit+' / '+TOTAL+' tested</div>'+
+  '<p>Keys lit: '+hit+' of '+TOTAL+' positions. '+(hit===TOTAL?'<span class="tl-badge tl-ok">all good</span> Every mapped position has registered at least once.':'<span class="tl-badge tl-no">missing</span> Untried: '+miss.slice(0,14).join(', ')+(miss.length>14?' \u2026':'')+'.</p>');
+ var held=Object.keys(down);if(held.length)h+='<p class="meta">Currently held: '+held.map(nameOf).join(' + ')+'. If one of these is not physically pressed, that switch is stuck.</p>';
+ $('kb-out').innerHTML=h;grid();}
+document.onkeydown=function(e){var L=norm(e.key);if(!POS[L])return;
+ if(e.preventDefault)e.preventDefault();down[L]=1;grid();};
+document.onkeyup=function(e){var L=norm(e.key);if(!POS[L])return;delete down[L];tested[L]=1;status();};
+$('kb-rs').onclick=function(){down={};tested={};status();};
+status();`,
+  seo: `<h2 class="section-title">What the test can and cannot catch</h2>
+  <p>A browser test sees the key events your operating system delivers, which is enough to find dead switches, stuck keys and double-triggering (a chattering contact fires keydown twice before keyup — watch the held list). It cannot test keys the OS grabs before the page sees them (Fn combos, system media keys, some firmware macros), and laptop Fn layers usually remap underneath, which is why <code>code</code> is the layout-blind half of the report. For a serious used-laptop inspection, press every chip here, then also open a text editor and type the whole home row — belt and braces.</p>`,
+});
+
+// ── 68. /alat/pomodoro — focus timer ─────────────────────────────────────────
+TOOLKIT.push({
+  slug: 'pomodoro', ic: '🍅', name: 'Pomodoro Timer',
+  title: 'Pomodoro Timer — 25/5 Focus Cycles With Long Breaks | Tukuk-OS',
+  desc: 'A classic Cirillo pomodoro: work blocks, short breaks, a long break every fourth session — the countdown kept as an end timestamp so a throttled background tab cannot steal minutes. No install, in your browser.',
+  hero: 'Pomodoro Timer', sub: '25 work · 5 break · long break every 4 · Date.now clock',
+  navBlurb: 'Run proper pomodoro sessions — 25 minutes of work, 5 of rest, a long break every fourth — with the countdown kept on the system clock, so a throttled tab loses nothing.',
+  hubBlurb: 'a pomodoro focus timer with work, short and long phases and a session tally, clocked from Date.now so throttling cannot drift it',
+  lead: 'Francesco Cirillo picked 25 minutes in the late 1980s for the boring, correct reason: a kitchen timer that size fits a task you can start when you do not feel like starting anything. The technique is the cycle — <b>work, short break, a long break after every fourth pomodoro</b>. This page keeps the countdown as an <b>end timestamp compared against Date.now()</b>, not a counter that decrements: browsers throttle background timers to roughly one tick per second, but a timestamp survives any throttle, so leaving the tab cannot make a 25-minute block silently become 25 minutes and 40 seconds.',
+  form: `<div class="tl-form">
+  <div class="pm-wrap"><span class="pm-clock" id="pm-clock">25:00</span><div class="meta" id="pm-phase">ready</div></div>
+  ${field('Work (minutes)', '<input id="pm-work" type="number" min="5" max="60" step="1" value="25">')}
+  ${field('Short break', '<input id="pm-short" type="number" min="1" max="15" step="1" value="5">')}
+  ${field('Long break', '<input id="pm-long" type="number" min="10" max="45" step="1" value="15">')}
+  ${field('Pomodoros until long break', '<input id="pm-cycle" type="number" min="2" max="8" step="1" value="4">')}
+  <button class="tl-btn primary" id="pm-go" type="button">▶ Start</button>
+  <button class="tl-btn" id="pm-rs" type="button">Reset</button>
+</div>
+<div class="tl-res" id="pm-out">—</div>`,
+  css: `
+.pm-wrap{text-align:center;padding:12px 0}
+.pm-clock{font-size:3rem;font-weight:700;letter-spacing:.06em}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var NAMES={work:'Work',short:'Short break',long:'Long break'};
+var TITLE=document.title,st={run:false,end:0,rest:0,phase:'work',done:0},T=null,AC=null;
+function mins(k){var v=parseFloat($(k).value);if(isNaN(v))v=25;return Math.max(30000,v*60000);}
+function len(){return st.phase==='work'?mins('pm-work'):st.phase==='short'?mins('pm-short'):mins('pm-long');}
+function fmt(ms){var s=Math.max(0,Math.ceil(ms/1000)),m=Math.floor(s/60);s=s%60;return (m<10?'0':'')+m+':'+(s<10?'0':'')+s;}
+function left(){return st.run?st.end-Date.now():st.rest;}
+function chime(n){try{var W=window.AudioContext||window.webkitAudioContext;if(!W)return;if(!AC)AC=new W();var i=0;
+ (function ring(){if(i>=n)return;var o=AC.createOscillator(),g=AC.createGain();o.type='sine';
+  o.frequency.value=i%2?660:880;
+  g.gain.setValueAtTime(0.0001,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.5,AC.currentTime+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+0.4);
+  o.connect(g);g.connect(AC.destination);o.start(AC.currentTime);o.stop(AC.currentTime+0.45);
+  i++;setTimeout(ring,560);})();}catch(e){}}
+function paint(){var l=left();$('pm-clock').textContent=fmt(l);
+ $('pm-phase').textContent=NAMES[st.phase]+(st.run?' \\u00b7 running':st.rest>0?' \\u00b7 paused':' \\u00b7 ready')+' \\u00b7 '+st.done+' done';
+ if(st.run)document.title=fmt(l)+' \\u2014 '+NAMES[st.phase];}
+function summary(){var w=parseInt($('pm-work').value,10)||25;
+ var h='<div class="tl-big">'+st.done+' pomodoro'+(st.done===1?'':'s')+' \\u00b7 '+(st.done*w)+' focused minutes</div>';
+ h+='<table class="tl-tab"><tbody><tr><td>Plan</td><td>'+$('pm-work').value+' work / '+$('pm-short').value+' short / '+$('pm-long').value+' long, long break every '+$('pm-cycle').value+'</td></tr>';
+ h+='<tr><td>Clock</td><td>end-timestamp vs Date.now \\u2014 a backgrounded or throttled tab cannot drift the block</td></tr></tbody></table>';
+ h+='<p class="meta">Cirillo\\u2019s own rules: a pomodoro is indivisible (interrupted means it does not count), breaks are for water, standing and windows \\u2014 not for the next task, and the long break earns its length by the fourth, when the fourth 25 minutes would otherwise be the worst of the day. Ultradian research suggests natural cycles nearer 50\\u201390 minutes, which is exactly why every field above is editable.</p>';
+ $('pm-out').innerHTML=h;}
+function advance(){
+ if(st.phase==='work'){st.done++;chime(Math.min(st.done,4));
+  var every=parseInt($('pm-cycle').value,10)||4;
+  st.phase=(st.done%every===0)?'long':'short';}
+ else{st.phase='work';chime(1);}}
+function tick(){if(!st.run)return;
+ if(Date.now()>=st.end){advance();st.end=Date.now()+len();}
+ paint();}
+function go(){if(st.run){st.run=false;if(T)clearInterval(T);T=null;st.rest=Math.max(0,st.end-Date.now());$('pm-go').textContent='\\u25b6 Resume';document.title=TITLE;}
+ else{if(st.rest<=0)st.rest=len();st.end=Date.now()+st.rest;st.rest=0;st.run=true;T=setInterval(tick,250);$('pm-go').textContent='Pause';}
+ paint();}
+function rs(){if(T)clearInterval(T);T=null;st.run=false;st.phase='work';st.done=0;st.rest=len();
+ $('pm-go').textContent='\\u25b6 Start';document.title=TITLE;paint();summary();}
+$('pm-go').onclick=go;$('pm-rs').onclick=rs;
+['pm-work','pm-short','pm-long','pm-cycle'].forEach(function(k){$(k).oninput=function(){if(!st.run)st.rest=len();paint();};});
+rs();`,
+  seo: `<h2 class="section-title">Why the timer is a timestamp, not a countdown</h2>
+  <p>A counter that subtracts one every 250 ms loses accuracy the moment the browser puts the tab to sleep: background timers are throttled to roughly one tick a second in most engines, and a frozen tab may receive nothing at all until it is focused again. Store the end instant instead and the worst case becomes a display that updates late, never a minute that goes missing — the same reason the lap stopwatch above works and a naïve countdown app does not. As for 25 itself: it is a convention, not a finding. The measured ultradian rhythm is nearer 90 minutes, and novices do better with short cycles they actually finish than with long ones they abandon — which is the honest argument for keeping the defaults and editing them only when a whole day of pomodoros says otherwise.</p>`,
+});
+
+// ── 69. /alat/reading-time — words to minutes ────────────────────────────────
+TOOLKIT.push({
+  slug: 'reading-time', ic: '📖', name: 'Reading Time',
+  title: 'Reading Time Calculator — Words to Minutes at Real Speeds | Tukuk-OS',
+  desc: 'Paste an article and get an honest reading time: words counted the way a word processor counts them, with minutes at measured silent, read-aloud and narration speeds. Nothing is uploaded.',
+  hero: 'Reading Time', sub: 'words counted locally · 238 / 160 / 130 wpm · zero upload',
+  navBlurb: 'Count a text the way a word processor does and quote the reading time that matches the claim — average silent reading, reading aloud, or a recorded narration, all from research speeds.',
+  hubBlurb: 'a reading-time estimator that counts words locally and prices them at the measured 238, 160 and 130 words-per-minute speeds',
+  lead: 'Blog widgets set reading time by dividing words by 200 and rounding up; the research says something more specific. Brysbaert\u2019s 2019 synthesis of 190 studies puts the average adult at about <b>238 words per minute reading silently</b> in English, while <b>reading aloud to someone runs near 150</b> and a prepared spoken presentation closer to <b>130</b> — audiobook narration sits around 160. This page counts words the way a word processor does (trim, then split on whitespace) and prices the same text at every speed, so you can quote the number that matches the claim you are making.',
+  form: `<div class="tl-form">
+  <textarea id="rt-in" rows="8" spellcheck="false">The first drafts of this page were timed by hand, which turned out to be the wrong experiment entirely. Reading a printed page and reading a screen are different physical acts: on a screen the eyes saccade in an F pattern, scrolling replaces the return sweep, and most visitors skim before they commit. So a published reading time is not a promise about how long someone will spend; it is a promise about how long the text is if someone reads every word in order. That is still useful information — it tells the writer when a piece has outgrown its argument, and it tells the reader whether the next ten minutes are worth starting. The numbers below come from large-scale timing studies rather than folklore, and they disagree with the round estimates most tools print by a margin that matters once a text passes a thousand words.</textarea>
+  ${field('Your speed', '<select id="rt-wpm"><option value="238" selected>238 wpm — average silent reading</option><option value="200">200 wpm — the blogging convention</option><option value="160">160 wpm — audiobook narration</option><option value="150">150 wpm — reading aloud</option><option value="130">130 wpm — spoken presentation</option></select>')}
+</div>
+<div class="tl-res" id="rt-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var SPEEDS=[[238,'Average silent reading (Brysbaert 2019)'],[200,'The blogging convention'],[160,'Audiobook narration'],[150,'Reading aloud to someone'],[130,'A measured spoken presentation']];
+function c(){var t=$('rt-in').value.replace(/\\r/g,'').trim();
+ if(!t)return{w:0,ch:0,s:0,p:0};
+ var w=t.split(/\\s+/).length,ch=t.length;
+ var s=(t.match(/[.!?]+(?:\\s|$)/g)||[]).length||1;
+ var p=t.split(/\\n{2,}/).length;return{w:w,ch:ch,s:s,p:p};}
+function fm(min){if(min<=0)return '0 seconds';if(min<1)return Math.max(1,Math.round(min*60))+' seconds';
+ var m=Math.floor(min),sec=Math.round((min-m)*60);return m+' min'+(sec?' '+sec+' s':'');}
+function render(){var x=c(),sel=parseInt($('rt-wpm').value,10)||238;
+ var h='<div class="tl-big">'+fm(x.w/sel)+'</div>';
+ h+='<table class="tl-tab"><tbody><tr><td>Words</td><td>'+x.w+'</td></tr>';
+ h+='<tr><td>Characters (with spaces)</td><td>'+x.ch+'</td></tr>';
+ h+='<tr><td>Sentences</td><td>'+x.s+'</td></tr>';
+ h+='<tr><td>Average sentence</td><td>'+(x.w&&x.s?(x.w/x.s).toFixed(1)+' words':'\\u2014')+'</td></tr>';
+ h+='<tr><td>Paragraphs</td><td>'+x.p+'</td></tr></tbody></table>';
+ h+='<table class="tl-tab"><tbody><tr><td>Assumption</td><td>Minutes</td></tr>';
+ SPEEDS.forEach(function(sp){h+='<tr><td>'+sp[1]+' \\u2014 '+sp[0]+' wpm</td><td>'+fm(x.w/sp[0])+(sp[0]===sel?' \\u2190 chosen':'')+'</td></tr>';});
+ h+='</tbody></table>';
+ h+='<p class="meta">Words follow the whitespace convention: contractions count once, a URL counts once, and a 500-word page costs a skimming reader far less than any line above \\u2014 these are times for linear reading, which almost nobody does on a screen. The F-pattern eye-tracking literature is unanimous that the first two paragraphs do most of the work.</p>';
+ $('rt-out').innerHTML=h;}
+$('rt-in').oninput=render;$('rt-wpm').onchange=render;render();`,
+  seo: `<h2 class="section-title">Why published reading times overstate and understate at once</h2>
+  <p>They overstate what a screen reader actually spends \u2014 visitors skim, bounce mid-list and scroll past the middle of long paragraphs, so the time on page for a "5-minute" article is routinely half that. And they understate what the same article costs a careful reader: the 238 wpm average is measured on continuous prose without headings, code blocks, tables or links pulling the eye; add any structure and the true linear time stretches, because attention costs are not in the word count. The honest use of a reading time is comparative \u2014 "this is twice as long as the last one" \u2014 not predictive. If a number must be predictive, the study-speed line (150\u2013160 wpm) is the one that survives when the text contains anything a reader has to think about.</p>`,
+});
+
+// ── 70. /alat/ean13 — EAN-13 barcode generator ───────────────────────────────
+TOOLKIT.push({
+  slug: 'ean13', ic: '🏷️', name: 'EAN-13 Barcode',
+  title: 'EAN-13 Barcode Generator — Check Digit and Bars in Your Browser | Tukuk-OS',
+  desc: 'Type 12 digits, get the computed modulo-10 check digit and a crisp EAN-13 drawn on canvas with the human-readable digits — parity tables and weighting shown, zero uploads, zero libraries.',
+  hero: 'EAN-13 Barcode', sub: '12 digits → check digit · canvas bars · parity tables explained',
+  navBlurb: 'Generate real EAN-13 barcodes from 12 digits — the check digit computed with the official 1,3 weights and the bars drawn straight onto a canvas, with the encoding table on the page.',
+  hubBlurb: 'an EAN-13 barcode generator with the modulo-10 check digit, the first-digit parity encoding and a canvas drawing you can print at 2 px per module',
+  lead: 'An EAN-13 is 95 modules of bars encoding 13 digits, but only 12 are ever typed: the thirteenth is a <b>modulo-10 check digit</b> weighted 1,3,1,3… from the left, so a single mistyped digit or a transposed adjacent pair changes the weighted sum and every scanner rejects the code. The first digit is never drawn as bars — it hides in the <b>parity pattern</b> of the left half (which of its six digits use the mirrored G pattern instead of L), which is what lets the same six digits encode two different ways and lets a reader tell an upside-down barcode from a right-way-up one. This page computes the check digit, builds the module string from the published tables and paints it directly on a canvas.',
+  form: `<div class="tl-form">
+  ${field('12 digits (or full 13)', '<input id="ea-in" type="text" inputmode="numeric" maxlength="13" value="590123412345" size="16">')}
+  <button class="tl-btn primary" id="ea-go" type="button">Draw</button>
+  <button class="tl-btn" id="ea-rnd" type="button">Random test code</button>
+  <div style="background:#fff;display:inline-block;padding:8px;margin-top:10px"><canvas id="ea-cv" width="205" height="122"></canvas></div>
+</div>
+<div class="tl-res" id="ea-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var R=['1110010','1100110','1101100','1000010','1011100','1001110','1010000','1000100','1001000','1110100'];
+function comp(s){var o='',i;for(i=0;i<s.length;i++)o+=s.charAt(i)==='0'?'1':'0';return o;}
+function rev(s){return s.split('').reverse().join('');}
+var L=[],G=[],q;for(q=0;q<10;q++){L[q]=comp(R[q]);G[q]=rev(R[q]);}
+var PAR={0:'LLLLLL',1:'LLGLGG',2:'LLGGLG',3:'LLGGGL',4:'LGLLGG',5:'LGGLLG',6:'LGGGLL',7:'LGLGLG',8:'LGLGGL',9:'LGGLGL'};
+function check(d12){var s=0,k;for(k=0;k<12;k++)s+=parseInt(d12.charAt(k),10)*(k%2===1?3:1);return (10-s%10)%10;}
+function enc(d13){var p=PAR[parseInt(d13.charAt(0),10)],bits='101',k;
+ for(k=1;k<7;k++)bits+=(p.charAt(k-1)==='L'?L:G)[parseInt(d13.charAt(k),10)];
+ bits+='01010';
+ for(k=7;k<13;k++)bits+=R[parseInt(d13.charAt(k),10)];
+ return bits+'101';}
+function ctx2d(){try{var cv=$('ea-cv');return cv&&cv.getContext?cv.getContext('2d'):null;}catch(e){return null;}}
+function draw(bits){var x=ctx2d();if(!x||!x.fillRect)return;var m=2,i;
+ x.fillStyle='#ffffff';x.fillRect(0,0,205,122);x.fillStyle='#000000';
+ for(i=0;i<bits.length;i++)if(bits.charAt(i)==='1'){var tall=(i<3||(i>=45&&i<50)||i>=92);x.fillRect(5+i*m,5,m,tall?104:90);}}
+function label(d13){var x=ctx2d();if(!x||!x.fillText)return;
+ x.font='11px monospace';x.fillStyle='#000';
+ x.fillText(d13.charAt(0),1,117);x.fillText(d13.slice(1,7),11,117);x.fillText(d13.slice(7,13),105,117);}
+function render(){var v=($('ea-in').value||'').replace(/[^0-9]/g,''),note='';
+ if(v.length===13){var c=check(v.slice(0,12));
+  note=parseInt(v.charAt(12),10)===c?'<span class="tl-badge tl-ok">check digit valid</span> '+c+' verified with the 1,3,1,3\\u2026 weights.'
+   :'<span class="tl-badge tl-no">bad check digit</span> This code should end in '+c+' \\u2014 the bars use your 13, but no scanner will accept it.';}
+ else if(v.length===12){var c2=check(v);v=v+String(c2);
+  note='<span class="tl-badge tl-ok">check digit computed</span> '+c2+' \\u2014 (10 \\u2212 weighted sum mod 10) mod 10.';}
+ else{$('ea-out').innerHTML='<span class="tl-badge tl-no">check input</span> Enter 12 digits (the 13th is computed for you) or a full 13.';return;}
+ draw(enc(v));label(v);
+ $('ea-out').innerHTML='<div class="tl-big">'+v+'</div><p>'+note+'</p>'+
+  '<p class="meta">95 modules: start guard 101, six left digits in the L/G parity pattern '+PAR[parseInt(v.charAt(0),10)]+' chosen by the first digit, centre guard 01010, six right digits always R, end guard 101. The default 590 is the well-known Polish company prefix from the specification examples \\u2014 GS1 assigns real prefixes commercially, so a random code here is for mockups and print tests, not for shops.</p>'+
+  '<p class="meta">What the check digit catches: every single-digit error (weights 1 and 3 are both coprime with 10), and every adjacent transposition except pairs differing by exactly 5 (0\\u21945, 1\\u21946, \\u2026), which leave the weighted sum unchanged \\u2014 the well-known limit of all mod-10 schemes.</p>';
+}
+$('ea-go').onclick=render;$('ea-in').oninput=render;
+$('ea-rnd').onclick=function(){var d='',k;for(k=0;k<12;k++)d+=Math.floor(Math.random()*10);$('ea-in').value=d;render();};
+render();`,
+  seo: `<h2 class="section-title">Where a printed barcode can still fail you</h2>
+  <p>The encoding above is exact, but a printed code lives or dies on optics: the quiet zone of at least nine empty modules on each side, a bar-width variation under about 15% (cheap inkjet dot gain doubles thin bars and scanners read 11 for 1), and contrast that survives the shelf light — black on white, never the reverse, because most readers illuminate with a red laser and red ink reads as white. At 2 px per module the narrowest bar is 0.33 mm on a 96 dpi screen, which is under most printers\u2019 honest capability; for print, redraw at 3\u20134 px per module (the EAN spec\u2019s nominal 37.29 mm width for the full 95 modules at 0.33 mm each). And the deepest trap is not technical at all: reuse a number from the internet and two products collide in every till that trusts GS1 \u2014 test barcodes should visibly say they are tests, which is why the random button produces codes rather than letting you paste a real one quietly.</p>`,
+});
+
+// ── 71. /alat/slug — URL slug generator ──────────────────────────────────────
+TOOLKIT.push({
+  slug: 'slug', ic: '✂️', name: 'Slug Generator',
+  title: 'URL Slug Generator — Clean ASCII Slugs From Any Title | Tukuk-OS',
+  desc: 'Turn a title into a URL slug: accents stripped by NFD decomposition, symbols spelled out (& becomes and), one separator, lowercase, length cut on a boundary. All in your browser.',
+  hero: 'Slug Generator', sub: 'accents stripped · & → and · boundary-safe length cut',
+  navBlurb: 'Crème Brûlée becomes creme-brulee — accents stripped properly, symbols spelled out before they are dropped, and the length cut never leaves a dangling dash.',
+  hubBlurb: 'a URL slug maker with real accent folding, symbol spelling, separator collapsing and a word-boundary-safe length cut',
+  lead: 'Search-engine guidance on slugs is short and boring, which is the point: lowercase, hyphens, no keyword stuffing, and then <b>stop changing them</b>. The interesting work is in the conversion. <b>NFD decomposition</b> turns an "é" into "e" plus a combining mark, so deleting the mark range leaves a plain "e" — fold by stripping diacritics and you get "crme" instead. Symbols get <b>spelled out before they are dropped</b>, so "Tea & Toast" slugs as tea-and-toast rather than tea-toast, and the length cut happens on a separator boundary so a truncated slug never ends in a dangling dash. The result is checked against pure ASCII at the end: a correct slug needs no percent-encoding at all.',
+  form: `<div class="tl-form">
+  ${field('Title', '<input id="sl-in" type="text" value="Crème Brûlée — Recipe #7 at 3pm & 50% off!" size="48">')}
+  ${field('Separator', '<select id="sl-sep"><option value="-" selected>hyphen (recommended)</option><option value="_">underscore (snake_case)</option></select>')}
+  ${field('Max length', '<input id="sl-max" type="number" min="8" max="120" step="1" value="60">')}
+  <button class="tl-btn" id="sl-copy" type="button">Copy slug</button>
+</div>
+<div class="tl-res" id="sl-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function spell(s){return s.replace(/&/g,' and ').replace(/@/g,' at ').replace(/%/g,' percent ')
+ .replace(/\\u00b0/g,' degrees ').replace(/\\u00a3/g,' pound ').replace(/\\u20ac/g,' euro ').replace(/\\u00a7/g,' section ');}
+function make(){var sep=$('sl-sep').value;
+ var s=spell($('sl-in').value.toLowerCase());
+ if(s.normalize)s=s.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'');
+ s=s.replace(/[^a-z0-9]+/g,sep);
+ var double=sep+sep;while(s.indexOf(double)>=0)s=s.split(double).join(sep);
+ s=s.replace(new RegExp('^'+sep+'+|'+sep+'+$','g'),'');
+ var max=parseInt($('sl-max').value,10)||60,cut=false;
+ if(s.length>max){s=s.slice(0,max);s=s.replace(new RegExp('[^a-z0-9]+$'),'');cut=true;}
+ return{s:s,cut:cut};}
+function render(){var r=make(),out=r.s;
+ var h='<div class="tl-big">'+(out||'<span class="tl-badge tl-no">empty</span>')+'</div>';
+ h+='<table class="tl-tab"><tbody><tr><td>Length</td><td>'+out.length+' characters</td></tr>';
+ h+='<tr><td>Needs percent-encoding</td><td>'+(out&&!/[^a-z0-9_-]/.test(out)?'no \\u2014 pure ASCII':'yes \\u2014 '+encodeURIComponent(out))+'</td></tr>';
+ h+='<tr><td>Words joined</td><td>'+(out?(out.split(/[-_]/).length):0)+'</td></tr></tbody></table>';
+ if(r.cut)h+='<p class="meta">Cut to '+$('sl-max').value+' characters at the last separator boundary \\u2014 a slug ending in a dangling dash is the mark of a naive slicer.</p>';
+ if(!out)h+='<p class="meta">Nothing survived: the input had no letters or digits at all (emoji-only titles really do happen in the logs of every CMS).</p>';
+ h+='<p class="meta">Rules, in order: lowercase; spell & @ % \\u00b0 \\u00a3 \\u20ac; NFD-fold accents (crème → creme, never crme); everything outside a-z0-9 becomes one separator; collapse repeats; trim head and tail; cut long slugs on a boundary. Emoji and CJK are dropped rather than transliterated \\u2014 a slug that survives every CMS export is a boring slug.</p>';
+ $('sl-out').innerHTML=h;}
+$('sl-copy').onclick=function(){try{var r=make();
+ if(r.s&&navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(r.s);}catch(e){}};
+$('sl-in').oninput=render;$('sl-sep').onchange=render;$('sl-max').oninput=render;render();`,
+  seo: `<h2 class="section-title">The one rule that matters more than the folding</h2>
+  <p>Do not rename a live slug. Every change turns old links into 404s or, if you 301 them, into redirect chains that search engines follow less eagerly each hop — and a page inside a chain loses the crawl budget it used to spend on you. Hyphens beat underscores because search engines have historically treated the hyphen as a word boundary and the underscore as a glue character, so creme-brulee reads as two words and creme_brulee as one mangled one; browsers and humans also word-break hyphenated URLs at the line edge. But none of that justifies churn: a mediocre slug that has accumulated six years of links outperforms a perfect slug that had to be 301-recovered. Generate the slug once, before the URL is published, and let it stay.</p>`,
+});
+
 module.exports = { TOOLKIT, toolkitPage, navItems, hubLines, sitemapPaths };

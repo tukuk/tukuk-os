@@ -101,7 +101,18 @@ const PAGES = [
   { path: '/alat/heartrate', marker: 'HR Zones', ids: ['hz-age', 'hz-rest', 'hz-out'] },
   { path: '/alat/caffeine', marker: 'Caffeine Decay', ids: ['cf-mg', 'cf-at', 'cf-hl', 'cf-go', 'cf-out'] },
   { path: '/alat/moon', marker: 'Moon Phase', ids: ['mn-d', 'mn-go', 'mn-out'] },
-  { path: '/alat/easter', marker: 'Easter Date', ids: ['ep-y', 'ep-go', 'ep-out'] }
+  { path: '/alat/easter', marker: 'Easter Date', ids: ['ep-y', 'ep-go', 'ep-out'] },
+  // ── seventh wave (Nov 2026 batch 6 — the hundredth tool) ──
+  { path: '/alat/weekday', marker: 'Weekday Finder', ids: ['wd-d', 'wd-n', 'wd-hunt', 'wd-go', 'wd-out'] },
+  { path: '/alat/time-diff', marker: 'Days Between', ids: ['tf-a', 'tf-b', 'tf-conv', 'tf-go', 'tf-out'] },
+  { path: '/alat/unit-prefix', marker: 'KB vs KiB', ids: ['up-u', 'up-v', 'up-mbps', 'up-go', 'up-out'] },
+  { path: '/alat/pwstrength', marker: 'Password Entropy', ids: ['ps-in', 'ps-go', 'ps-out'] },
+  { path: '/alat/repeating', marker: 'Repeating Decimal', ids: ['rp-a', 'rp-b', 'rp-go', 'rp-out'] },
+  { path: '/alat/kbd', marker: 'Keyboard Test', ids: ['kb-rs', 'kb-grid', 'kb-out'] },
+  { path: '/alat/pomodoro', marker: 'Pomodoro Timer', ids: ['pm-clock', 'pm-work', 'pm-short', 'pm-long', 'pm-cycle', 'pm-go', 'pm-rs', 'pm-out'] },
+  { path: '/alat/reading-time', marker: 'Reading Time', ids: ['rt-in', 'rt-wpm', 'rt-out'] },
+  { path: '/alat/ean13', marker: 'EAN-13 Barcode', ids: ['ea-in', 'ea-go', 'ea-rnd', 'ea-cv', 'ea-out'] },
+  { path: '/alat/slug', marker: 'Slug Generator', ids: ['sl-in', 'sl-sep', 'sl-max', 'sl-copy', 'sl-out'] }
 ];
 
 for (const page of PAGES) {
