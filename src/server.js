@@ -12376,7 +12376,16 @@ table.tl-tab{width:100%;border-collapse:collapse;font-size:.92rem;margin:10px 0}
 .tl-chip{border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:.85rem;text-decoration:none;color:var(--text,#e6e9ef);background:var(--panel,#171a21);white-space:nowrap;transition:border-color .15s,transform .12s,box-shadow .15s}
 .tl-chip:hover{border-color:var(--accent,#4c8dff);transform:translateY(-1px);box-shadow:0 3px 10px rgba(76,141,255,.25)}
 main header h1{letter-spacing:-.015em;line-height:1.15}
-.tagline:empty{display:none}`;
+.tagline:empty{display:none}
+.tl-search{width:100%;box-sizing:border-box;padding:12px 16px;border:1px solid var(--line);border-radius:12px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:inherit;font-size:1rem;transition:border-color .15s,box-shadow .15s}
+.tl-search:hover{border-color:var(--accent,#4c8dff)}
+.tl-search:focus{outline:none;border-color:var(--accent,#4c8dff);box-shadow:0 0 0 3px rgba(76,141,255,.22)}
+.tl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin:16px 0}
+.tl-card{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel,#171a21);text-decoration:none;color:var(--text,#e6e9ef);transition:border-color .15s,transform .12s,box-shadow .15s}
+.tl-card:hover{border-color:var(--accent,#4c8dff);transform:translateY(-2px);box-shadow:0 6px 16px rgba(76,141,255,.22)}
+.tl-card b{font-size:.95rem;display:flex;align-items:center;gap:8px}
+.tl-card .tl-ic{font-size:1.25rem;line-height:1}
+.tl-card .tl-bl{font-size:.8rem;color:var(--muted,#9aa3b2);line-height:1.45}`;
 
 // The shared enhancement layer, injected by worldDoc only when selfUrl is an
 // /alat tool page — three quiet touches every tool gets at once: Enter runs the
@@ -12418,8 +12427,13 @@ qs('.tl-res').forEach(function(r){
 // Focus mode (Nov 2026): tool pages end with one quiet row of chips, not a
 // 100-card wall of blurbs. Same links, same crawl graph — just no prose between
 // the tool and the footer. The hub keeps its full descriptions in its own body.
-function toolsNav() {
-  const items = [
+// One source for every tool the hub and the chip-nav know about: the hand-
+// written first-wave entries plus the whole TOOLKIT registry. toolHubItems()
+// feeds BOTH the chip row at the bottom of every tool page and the card grid
+// on the hub itself, so a new tool can never appear in one and be missing
+// from the other.
+function toolHubItems() {
+  return [
     { href: '/alat', icon: '🧰', name: 'Everyday Tools', blurb: 'The whole toolbox at a glance — converters, calculators, colour checkers and generators that run entirely in your browser.' },
     { href: '/alat/unit', icon: '📐', name: 'Unit Converter', blurb: 'Length, weight, volume, area, speed, temperature, time and digital storage — exact factors, every unit at once, nothing uploaded.' },
     { href: '/alat/date', icon: '📅', name: 'Date & Age Calculator', blurb: 'Days between any two dates, add or subtract days, exact age in years-months-days, working days and days to your next birthday.' },
@@ -12452,47 +12466,45 @@ function toolsNav() {
     { href: '/alat/image-to-pdf', icon: '🖼️', name: 'Images to PDF', blurb: 'Put photos, scans or screenshots into one PDF — A4, US Letter or a page sized to each image — without uploading. JPEG and PNG files are embedded byte-for-byte, untouched.' },
     ...toolbox.navItems(),
   ];
+}
+
+function toolsNav() {
   return `<nav aria-label="Everyday Tools — tukuk.org/alat" class="tl-nav">`
-    + items.map((s) => `<a class="tl-chip" href="${s.href}">${s.icon} ${escapeHtml(s.name)}</a>`).join('')
+    + toolHubItems().map((s) => `<a class="tl-chip" href="${s.href}">${s.icon} ${escapeHtml(s.name)}</a>`).join('')
     + `</nav>`;
 }
 
 function alatHubPage() {
+  // The hub is a shop window, not a phone directory: one card per tool with
+  // icon and blurb, plus a search box that filters the grid as you type
+  // (Nov 2026 — visitors kept scrolling the prose wall and asking "where are
+  // the tools?"). Same hundred links, same crawl graph, now glanceable.
+  const hubCards = toolHubItems().filter((s) => s.href !== '/alat');
+  const cards = hubCards.map((s) =>
+    `<a class="tl-card" href="${s.href}"><b><span class="tl-ic">${s.icon}</span>${escapeHtml(s.name)}</b><span class="tl-bl">${escapeHtml(s.blurb)}</span></a>`).join('\n  ');
   const body = `<p><b>The honest kind of useful.</b> A hundred small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your files, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
   <h2 class="section-title">In the toolbox</h2>
-  <p><b><a href="/alat/unit">📐 Unit converter</a></b> — eight categories with exact, definition-based factors (1 inch really is 2.54 cm); every unit in the category updates at once.</p>
-  <p><b><a href="/alat/date">📅 Date &amp; age calculator</a></b> — counting days between deadlines, ages to the day, working days between dates, and the reliable <i>days-until-birthday</i>.</p>
-  <p><b><a href="/alat/color">🎨 Colour &amp; contrast checker</a></b> — the official WCAG maths with pass/fail badges, and it suggests the nearest colour that <i>does</i> pass.</p>
-  <p><b><a href="/alat/password">🔐 Password generator</a></b> — uniform random picks from your browser’s cryptographic generator with real entropy numbers, not a smiley face.</p>
-  <p><b><a href="/alat/text">✂️ Text toolkit</a></b> — word &amp; reading time counts, six case styles, URL and Base64 encode/decode, and SHA-256 hashes for file or text integrity.</p>
-  <p><b><a href="/alat/bmi">❤️ BMI &amp; calorie calculator</a></b> — the health numbers that come from arithmetic: BMI bands, healthy weight range, and calorie needs from the published Mifflin-St Jeor equation.</p>
-  <p><b><a href="/alat/image">🖼️ Image compressor</a></b> — shrink photos and screenshots with quality and resize controls; your file is re-encoded on your own device and never uploaded.</p>
-  <p><b><a href="/alat/dictionary">📖 Dictionary &amp; translator</a></b> — word meanings and translation across dozens of human languages, plus ancient scripts and playful animal/alien/sound codes, all with spoken pronunciation.</p>
-  <p><b><a href="/alat/percentage">🧮 Percentage calculator</a></b> — the four questions people actually type: what is X% of Y, X is what percent of Y, percent change, and adding or subtracting a percentage — with the arithmetic shown.</p>
-  <p><b><a href="/alat/loan">🏦 Loan &amp; compound interest calculator</a></b> — monthly payment, total interest, the real savings from overpaying, and what regular saving grows into after compounding.</p>
-  <p><b><a href="/alat/qr">🔳 QR code generator</a></b> — links, text and Wi-Fi credentials into a scannable code with L/M/Q/H error correction, drawn on a canvas and downloaded as a print-ready PNG.</p>
-  <p><b><a href="/alat/ip">📍 What is my IP?</a></b> — your public address, the ISP and inferred city from a keyless database, and the browser fields any site can read, all explained instead of hidden.</p>
-  <p><b><a href="/alat/epoch">⏱ Unix timestamp converter</a></b> — epoch to date and back, seconds-versus-milliseconds auto-detection, ISO 8601, time zones and a live clock.</p>
-  <p><b><a href="/alat/random">🎲 Random numbers &amp; dice</a></b> — unbiased integer ranges, d4–d100 rolls and a raffle-style list picker from the operating system’s cryptographic generator.</p>
-  <p><b><a href="/alat/pdf">📄 PDF tools</a></b> — merge, extract, delete, rotate and split pages; the file is opened and re-saved by your browser, so the document never reaches a server.</p>
-  <p><b><a href="/alat/json">🧩 JSON formatter</a></b> — format, minify and validate with the exact line and column of an error, keeping large numbers and key order intact.</p>
-  <p><b><a href="/alat/hash">🔑 Checksum &amp; hash</a></b> — MD5 through SHA-512 for text or a whole file, so a download can be checked against its published value without handing the file to anyone.</p>
-  <p><b><a href="/alat/base64">🔁 Base64 encoder</a></b> — correct UTF-8 both ways, URL-safe output and a file turned into a <code>data:</code> URL, with the caveat that encoding is not encryption.</p>
-  <p><b><a href="/alat/timezone">🌍 Time zone meeting planner</a></b> — up to eight cities, every hour of the chosen day, with true UTC offsets and the best overlap named for you instead of counted by hand.</p>
-  <p><b><a href="/alat/uuid">🆔 UUID generator</a></b> — random v4 and time-ordered v7 in bulk, plus a decoder that reports the version, variant and any timestamp hiding inside an identifier.</p>
-  <p><b><a href="/alat/cron">⏰ Cron expression explainer</a></b> — a schedule in plain English with its next ten runs on your clock, every field range-checked, and the day-of-month/day-of-week OR trap spelled out.</p>
-  <p><b><a href="/alat/regex">🔍 Regex tester</a></b> — write a pattern, see live match highlighting with groups; a common-pattern library gets you started on email, URL and IPv4.</p>
-  <p><b><a href="/alat/csv">📊 CSV viewer &amp; converter</a></b> — paste delimited text, get a formatted table and clean JSON, with RFC 4180 quoting handled correctly.</p>
-  <p><b><a href="/alat/diff">🔀 Text diff</a></b> — compare two blocks of text line-by-line or word-by-word; see additions and deletions highlighted instantly.</p>
-  <p><b><a href="/alat/url">🔗 URL parser &amp; encoder</a></b> — break a URL into every component, or encode/decode query values side-by-side to catch the classic percent-encoding bug.</p>
-  <p><b><a href="/alat/char">🔣 Character &amp; Unicode reference</a></b> — inspect code points, HTML entities, UTF-8 bytes and UTF-16 units for any character; a quick-reference table for typographic symbols.</p>
-  <p><b><a href="/alat/compass">🧭 Compass &amp; bearing</a></b> — a live on-screen compass off your phone’s magnetometer, with the great-circle bearing and distance to any world city; a desktop without a sensor falls back to a manual dial.</p>
-  <p><b><a href="/alat/convert">🔄 Image converter</a></b> — convert between PNG, JPEG, WebP, BMP and ICO, and turn an SVG into a real picture at any size; the file is decoded and re-encoded by your own browser and never uploaded.</p>
-  <p><b><a href="/alat/image-to-pdf">🖼️ Images to PDF</a></b> — assemble photos, scans or screenshots into one document, A4 or Letter or sized page-per-image; JPEG and PNG files are embedded byte-for-byte, with no re-compression and no upload.</p>
-  ${toolbox.hubLines()}
+  <input class="tl-search" id="tg-q" type="search" placeholder="Search the toolbox — try qr, json, bmi, design… (press / to jump here)" autocomplete="off" aria-label="Search the toolbox">
+  <p class="meta" id="tg-count">${hubCards.length} tools · start typing to filter the grid</p>
+  <div class="tl-grid" id="tg-grid">
+  ${cards}
+  </div>
   <h2 class="section-title">Why browser-local, and why it matters to you</h2>
   <p>Most “free tool” sites ship your input to a server, paste eight ads around it and remember nothing about how the maths works. Here every answer comes from arithmetic your browser can verify: unit factors from international definitions, date counts from the Gregorian calendar itself, contrast ratios from the published WCAG formula, passwords from the operating system’s random source. That makes them <b>private by construction</b> — a password page that runs locally is not a promise, it is a fact you can check in your network tab.</p>
-  <p class="meta">Prefer maps and time? The neighbouring <a href="/maps">Maps &amp; Navigation</a> cluster adds routing, distances, sun times and world clocks — and <a href="/today">📰 Today</a> turns weather and currency rates into a one-screen daily briefing with an <a href="/today.xml">RSS feed</a>. Everything on tukuk.org is free without an account.</p>`;
+  <p class="meta">Prefer maps and time? The neighbouring <a href="/maps">Maps &amp; Navigation</a> cluster adds routing, distances, sun times and world clocks — and <a href="/today">📰 Today</a> turns weather and currency rates into a one-screen daily briefing with an <a href="/today.xml">RSS feed</a>. Everything on tukuk.org is free without an account.</p>
+  <script>(function(){try{
+var q=document.getElementById('tg-q'),c=document.getElementById('tg-count'),g=document.getElementById('tg-grid');
+if(!q||!c||!g)return;
+var cards=[].slice.call(g.querySelectorAll('.tl-card')),total=cards.length,base=c.textContent;
+function filt(){var words=q.value.toLowerCase().split(/\\s+/),i,j,ok,n=0;
+ for(i=words.length-1;i>=0;i--)if(!words[i])words.splice(i,1);
+ for(i=0;i<total;i++){var t=cards[i].textContent.toLowerCase();ok=true;
+  for(j=0;j<words.length;j++)if(t.indexOf(words[j])<0){ok=false;break;}
+  cards[i].style.display=ok?'':'none';if(ok)n++;}
+ c.textContent=n===total?base:(n+' of '+total+' tools match — clear the box to see them all');}
+q.addEventListener('input',filt);
+document.addEventListener('keydown',function(e){if(e.key==='/'&&!e.ctrlKey&&!e.metaKey&&!e.altKey){var tag=(document.activeElement||{}).tagName||'';if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;q.focus();e.preventDefault();}});
+}catch(e){}})();</script>`;
   return worldDoc({
     title: 'Everyday Tools — Converters, Calculators, PDF, JSON, Hashing & Generators | Tukuk-OS',
     desc: 'A hundred useful tools that run entirely in your browser: unit conversion, date and age maths, base and fraction converters, prime checks, statistics, salary and tip calculators, countdowns, JWT and HTML-entity decoding, Roman numerals, number-to-words, combinations, triangle solver, readability scores, calorie needs, inflation maths, ciphers, recipe and paint scalers, dice odds, a daily water target, guided breathing pacer, compound interest, GST/VAT add-and-remove, Morse and NATO phonetic, ISO week numbers, Markdown to HTML, programmer case converter, coordinate distance, printable month grid, typing speed, GPA and shoe-size converters, screen PPI comparison, a Web Audio metronome, lap stopwatch, blood-type Punnett square, DNA translator, subnet calculator, heart-rate zones, caffeine half-life, moon phase and Easter computus, weekday finder, days-between dates, KB-vs-KiB bytes, password entropy, repeating decimals, a keyboard tester, pomodoro timer, reading-time estimator, EAN-13 barcodes and slug maker, a canvas design studio and more — private, free, no account.',

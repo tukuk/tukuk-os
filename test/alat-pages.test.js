@@ -211,6 +211,10 @@ test('tool pages ship the shared polish layer and enhancer', async () => {
   // The hub itself is not a tool page — the enhancer is scoped to /alat/x only.
   const hub = await (await fetch(base + '/alat')).text();
   assert.ok(!hub.includes('copy result'), 'hub page should not ship the tool enhancer');
+  // The hub is a card grid with a live filter, not a wall of prose (Nov 2026).
+  assert.ok(hub.includes('class="tl-grid" id="tg-grid"'), 'hub must render the tool card grid');
+  assert.ok(hub.includes('id="tg-q"'), 'hub must ship the toolbox search box');
+  assert.ok(hub.includes('class="tl-card"'), 'hub cards must use the tl-card class');
 });
 
 // ── English-only URLs ──
