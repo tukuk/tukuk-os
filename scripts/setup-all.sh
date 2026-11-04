@@ -808,9 +808,16 @@ if [[ -f "$INSTALL_DIR/deploy/cockpit-lan-socket.sh" ]]; then
   # starts from sockets.target, i.e. EARLIER than multi-user.target. Without the ordering it
   # comes up first on a stale drop-in and the console is dead for the first seconds of every
   # boot after a lease change, until the regenerator restarts it.
+  # DefaultDependencies=no is the other half, learned the hard way on 4 Nov 2026: the implicit
+  # After=basic.target pulls this unit in behind sockets.target, and Before=cockpit.socket then
+  # forms the cycle cockpit.socket → this unit → network-online → NetworkManager → basic.target
+  # → sockets.target → cockpit.socket. systemd's fix is to DELETE cockpit.socket's start job —
+  # a console that never comes up, and a blocking restart from inside this unit deadlocks on its
+  # own job queue. So: no implicit deps, only the three orderings spelled out below.
   cat > /etc/systemd/system/cockpit-lan-socket.service << 'EOF'
 [Unit]
 Description=Cockpit socket: bind to the LAN addresses this boot actually has
+DefaultDependencies=no
 After=network-online.target
 Wants=network-online.target
 Before=cockpit.socket

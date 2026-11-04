@@ -157,6 +157,11 @@ test('the boot unit runs before cockpit.socket, not after it', () => {
   assert.ok(unit, 'the unit heredoc is gone — setup-all installs the unit inline');
   assert.match(unit, /^Before=cockpit\.socket$/m, 'the regenerator must run before the socket it rewrites for');
   assert.ok(!/^After=cockpit\.socket$/m.test(unit), 'After=cockpit.socket would guarantee the stale bind');
+  // The cycle breaker, learned on 4 Nov 2026: without DefaultDependencies=no the implicit
+  // After=basic.target routes this unit back through sockets.target, the Before= becomes a
+  // loop, systemd deletes cockpit.socket's start job — and a blocking restart from inside
+  // the unit waits on a job ordered behind itself.
+  assert.match(unit, /^DefaultDependencies=no$/m, 'implicit deps put this unit in an ordering cycle with sockets.target');
   // …and REBUILD.md has to say why, or the next handover drops the line as noise.
   const doc = fs.readFileSync(path.join(ROOT, 'deploy/REBUILD.md'), 'utf8');
   assert.match(doc, /Before=cockpit\.socket/);

@@ -488,7 +488,10 @@ because the restart job is ordered after the very unit job it runs inside — th
 `activating (start)` for hours, the socket's own boot job was deleted to break the ordering cycle,
 and nothing listened on 9090 at all. Under systemd (`INVOCATION_ID` set) the script queues the job
 with `--no-block` instead, and issues it even when the drop-in is unchanged, because a deleted boot
-job means "unchanged" is not the same as "started". Loopback stays in the list so
+job means "unchanged" is not the same as "started". The unit also carries `DefaultDependencies=no`:
+the implicit `After=basic.target` is what routes the regenerator back through `sockets.target` and
+closes the ordering cycle in the first place, and systemd's answer to a cycle is to delete a job —
+here always cockpit.socket's. Loopback stays in the list so
 `ssh -L 9090:127.0.0.1:9090 tukuk@<host>` still reaches the console. No firewall rule is added by a
 script: automating `ufw` over SSH is how a box gets locked out a second time.
 
