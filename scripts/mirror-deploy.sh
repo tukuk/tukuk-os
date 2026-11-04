@@ -39,6 +39,15 @@ if [ ! -d "$OUT/alat" ]; then
   exit 1
 fi
 
+# The live-first failover rule (www serves the running apex when it answers,
+# the snapshot only when it does not) travels with every deployment: Pages
+# runs a _worker.js found at the project root in front of all assets. Copy
+# it in right here so a refresh can never deploy the dumb-mirror behaviour
+# by forgetting a step — the file's absence simply keeps the static fallback.
+if [ -f deploy/pages-worker.js ]; then
+  cp deploy/pages-worker.js "$OUT/_worker.js"
+fi
+
 # wrangler reads the token from its own env var name; map ours onto it.
 # --commit-dirty: the snapshot lives in /var/tmp but wrangler is invoked from
 # the repo cwd, and a server tree with touched data/ files must not stall it.
