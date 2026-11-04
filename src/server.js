@@ -10549,6 +10549,7 @@ ${siteHeader('learn')}
   </main>
 </div>
 ${siteFooter()}
+${toolFocus ? TL_ENHANCE_JS : ''}
 </body>
 </html>`;
 }
@@ -12319,40 +12320,100 @@ render();setInterval(render,1000);
 }
 
 // ── /alat — Everyday Tools hub + five browser-local utilities ─────────────
+// Shared polish layer (Nov 2026 v2): all hundred tool pages draw their chrome
+// from this one block — focus rings, hover lift, gradient primary buttons, a
+// result card that breathes when the answer changes, mobile-stacked fields and
+// the copy-result strip styled for TL_ENHANCE_JS below. Per-tool CSS (t.css)
+// still layers on top of this, and every rule keeps its var() dark/light pair.
 const TOOLS_CSS = `.tl-form{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:14px 0}
 .tl-form label{display:flex;flex-direction:column;gap:4px;font-size:.85rem;color:var(--muted,#9aa3b2)}
-.tl-form input,.tl-form select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:inherit;min-width:150px}
-textarea.tl-in{width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:13px/1.5 ui-monospace,Consolas,monospace;min-height:140px}
-.tl-btn{border:1px solid var(--line);border-radius:8px;background:var(--panel,#171a21);color:var(--text,#e6e9ef);padding:8px 14px;font:inherit;cursor:pointer}
-.tl-btn:hover{border-color:var(--accent,#4c8dff)}
-.tl-btn.primary{background:var(--accent-fill,#2a6edb);border-color:transparent;color:#fff;font-weight:700}
-.tl-res{border:1px solid var(--line);border-radius:12px;padding:12px 16px;background:var(--panel,#171a21);margin:12px 0;line-height:1.6}
-.tl-big{font-size:1.5rem;font-weight:800;color:var(--accent,#4c8dff);word-break:break-all}
+.tl-form input,.tl-form select{padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:inherit;min-width:150px;min-height:40px;box-sizing:border-box;transition:border-color .15s,box-shadow .15s}
+.tl-form input:hover,.tl-form select:hover{border-color:var(--accent,#4c8dff)}
+.tl-form input:focus,.tl-form select:focus{outline:none;border-color:var(--accent,#4c8dff);box-shadow:0 0 0 3px rgba(76,141,255,.22)}
+.tl-form input[type=color]{padding:2px}
+textarea.tl-in{width:100%;box-sizing:border-box;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--bg,#0f1115);color:var(--text,#e6e9ef);font:13px/1.5 ui-monospace,Consolas,monospace;min-height:140px;transition:border-color .15s,box-shadow .15s}
+textarea.tl-in:hover{border-color:var(--accent,#4c8dff)}
+textarea.tl-in:focus{outline:none;border-color:var(--accent,#4c8dff);box-shadow:0 0 0 3px rgba(76,141,255,.22)}
+.tl-btn{border:1px solid var(--line);border-radius:9px;background:var(--panel,#171a21);color:var(--text,#e6e9ef);padding:9px 16px;min-height:40px;font:inherit;font-weight:600;cursor:pointer;transition:border-color .15s,transform .12s,box-shadow .15s,filter .15s}
+.tl-btn:hover{border-color:var(--accent,#4c8dff);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.28)}
+.tl-btn:active{transform:translateY(0) scale(.98);box-shadow:none}
+.tl-btn.primary{background:linear-gradient(180deg,#4c8dff,#2a6edb);border-color:transparent;color:#fff;font-weight:700;box-shadow:0 2px 10px rgba(76,141,255,.35)}
+.tl-btn.primary:hover{filter:brightness(1.08);box-shadow:0 6px 18px rgba(76,141,255,.45)}
+.tl-btn:focus-visible,.tl-chip:focus-visible,.tl-copy:focus-visible{outline:2px solid var(--accent,#4c8dff);outline-offset:2px}
+.tl-res{border:1px solid var(--line);border-left:4px solid var(--accent,#4c8dff);border-radius:14px;padding:14px 18px;background:linear-gradient(180deg,rgba(76,141,255,.06),transparent 55%),var(--panel,#171a21);margin:12px 0;line-height:1.6;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+.tl-res.tl-flash{animation:tlpop .45s ease-out}
+@keyframes tlpop{0%{box-shadow:0 0 0 3px rgba(76,141,255,.5),0 2px 10px rgba(0,0,0,.18);transform:translateY(2px)}100%{box-shadow:0 0 0 0 rgba(76,141,255,0),0 2px 10px rgba(0,0,0,.18);transform:none}}
+.tl-copy{display:inline-block;margin:-4px 0 14px;padding:5px 12px;font-size:.78rem;font-weight:600;color:var(--muted,#9aa3b2);background:transparent;border:1px dashed var(--line);border-radius:999px;cursor:pointer;transition:color .15s,border-color .15s,transform .12s}
+.tl-copy:hover{color:var(--text,#e6e9ef);border-color:var(--accent,#4c8dff);transform:translateY(-1px)}
+.tl-big{font-size:clamp(1.3rem,4vw,1.8rem);font-weight:800;color:var(--accent,#4c8dff);word-break:break-all;line-height:1.25}
 .tl-pick{font:700 1.35rem/1.7 ui-monospace,Consolas,monospace;color:var(--accent,#4c8dff);word-break:break-word}
 .tl-chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
 table.tl-tab{width:100%;border-collapse:collapse;font-size:.92rem;margin:10px 0}
-.tl-tab td{padding:6px 10px;border-bottom:1px solid var(--line)}
+.tl-tab td{padding:7px 10px;border-bottom:1px solid var(--line)}
+.tl-tab tbody tr:nth-child(odd) td{background:rgba(148,163,184,.05)}
 .tl-tab td:last-child{text-align:right;font-variant-numeric:tabular-nums}
-.tl-tab tr{cursor:pointer}
-.tl-tab tr:hover{background:var(--panel,#171a21)}
+.tl-tab tr{cursor:pointer;transition:background .12s}
+.tl-tab tr:hover{background:rgba(76,141,255,.10)}
 .tl-pass{font:700 20px/1.4 ui-monospace,Consolas,monospace;letter-spacing:.5px;word-break:break-all}
-.tl-badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.8rem;font-weight:700;margin-right:6px}
+.tl-badge{display:inline-block;padding:3px 11px;border-radius:999px;font-size:.8rem;font-weight:700;margin-right:6px;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .tl-ok{background:#11753a;color:#fff}
 .tl-no{background:#a02020;color:#fff}
-.sw{display:inline-block;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);cursor:pointer;margin:2px}
+.sw{display:inline-block;width:34px;height:34px;border-radius:8px;border:1px solid var(--line);cursor:pointer;margin:2px;transition:transform .12s,box-shadow .12s}
+.sw:hover{transform:scale(1.15);box-shadow:0 2px 8px rgba(0,0,0,.4)}
 .tl-tab th{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);font-size:.8rem;color:var(--muted,#9aa3b2);vertical-align:bottom;font-weight:700}
 .z-tab td:last-child{text-align:left}
 .z-tab .z-good{background:rgba(19,138,61,.22)}
 .z-tab .z-ok{background:rgba(176,132,20,.20)}
 .z-off{color:var(--muted,#9aa3b2);font-size:.8rem;font-weight:400}
 .u-out{font:13px/1.7 ui-monospace,Consolas,monospace}
-@media(max-width:640px){.tl-big{font-size:1.2rem}}
+@media(max-width:640px){.tl-big{font-size:1.2rem}.tl-form label{flex:1 1 100%}.tl-form input:not([type=color]):not([type=checkbox]):not([type=radio]):not([type=range]),.tl-form select{width:100%}}
+@media(prefers-reduced-motion:reduce){.tl-res.tl-flash{animation:none}.tl-btn:hover,.tl-chip:hover,.sw:hover,.tl-copy:hover{transform:none}}
 .tl-more{margin:14px 0}
-.tl-more summary{cursor:pointer;color:var(--muted,#9aa3b2);font-size:.9rem;border:1px solid var(--line);border-radius:10px;padding:8px 14px;background:var(--panel,#171a21);list-style:none}
-.tl-more summary:hover{border-color:var(--accent,#4c8dff)}
+.tl-more summary{cursor:pointer;color:var(--muted,#9aa3b2);font-size:.9rem;border:1px solid var(--line);border-radius:10px;padding:9px 14px;background:var(--panel,#171a21);list-style:none;transition:border-color .15s,color .15s}
+.tl-more summary:hover{border-color:var(--accent,#4c8dff);color:var(--text,#e6e9ef)}
+.tl-more[open] summary{border-color:var(--accent,#4c8dff)}
 .tl-nav{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0}
-.tl-chip{border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:.85rem;text-decoration:none;color:var(--text,#e6e9ef);background:var(--panel,#171a21);white-space:nowrap}
-.tl-chip:hover{border-color:var(--accent,#4c8dff)}`;
+.tl-chip{border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:.85rem;text-decoration:none;color:var(--text,#e6e9ef);background:var(--panel,#171a21);white-space:nowrap;transition:border-color .15s,transform .12s,box-shadow .15s}
+.tl-chip:hover{border-color:var(--accent,#4c8dff);transform:translateY(-1px);box-shadow:0 3px 10px rgba(76,141,255,.25)}
+main header h1{letter-spacing:-.015em;line-height:1.15}
+.tagline:empty{display:none}`;
+
+// The shared enhancement layer, injected by worldDoc only when selfUrl is an
+// /alat tool page — three quiet touches every tool gets at once: Enter runs the
+// primary button, each result card grows a dashed copy strip (inserted BESIDE
+// the card so a tool overwriting its innerHTML can never wipe it), and the card
+// pulses when its answer actually changes, on a 1.2 s cooldown so live tickers
+// breathe instead of strobing. ES5, wrapped in try/catch, silent on reduced
+// motion — the page must still work if this script never runs at all.
+const TL_ENHANCE_JS = `<script>(function(){try{
+var qs=function(s){return [].slice.call(document.querySelectorAll(s));};
+var REDUCED=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+qs('.tl-form').forEach(function(f){f.addEventListener('keydown',function(e){
+ if(e.key!=='Enter')return;var t=e.target||{};if(t.tagName==='TEXTAREA')return;
+ var b=f.querySelector('.tl-btn.primary')||f.querySelector('.tl-btn');
+ if(b&&b.click){e.preventDefault();b.click();}
+});});
+qs('.tl-res').forEach(function(r){
+ var b=document.createElement('button');b.type='button';b.className='tl-copy';b.textContent='⧉ copy result';
+ b.onclick=function(){
+  var txt=(r.innerText||r.textContent||'').trim();
+  var done=function(ok){b.textContent=ok?'✓ copied':'✗ copy failed — select the text instead';setTimeout(function(){b.textContent='⧉ copy result';},1400);};
+  try{if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(function(){done(true);},function(){done(false);});return;}}catch(e){}
+  try{var ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();var ok=document.execCommand('copy');document.body.removeChild(ta);done(ok);}catch(e2){done(false);}
+ };
+ r.parentNode.insertBefore(b,r.nextSibling);
+ if(!window.MutationObserver||REDUCED)return;
+ var last=0,prev=r.textContent||'';
+ new MutationObserver(function(muts){
+  var ours=false;
+  for(var i=0;i<muts.length;i++){var a=muts[i].addedNodes;
+   for(var j=0;j<a.length;j++)if(a[j]===b)ours=true;}
+  if(ours)return;
+  var now=Date.now();if(now-last<1200)return;last=now;
+  var nowTxt=r.textContent||'';if(nowTxt===prev)return;prev=nowTxt;
+  r.classList.remove('tl-flash');void r.offsetWidth;r.classList.add('tl-flash');
+ }).observe(r,{childList:true,characterData:true,subtree:true});
+});}catch(e){}})();</script>`;
 
 // Focus mode (Nov 2026): tool pages end with one quiet row of chips, not a
 // 100-card wall of blurbs. Same links, same crawl graph — just no prose between

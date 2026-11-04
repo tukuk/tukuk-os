@@ -197,6 +197,22 @@ test('report-only CSP covers the third parties the pages embed', async () => {
   assert.ok(!enforced.includes('script-src'), 'script-src must not be enforced on interactive pages');
 });
 
+// The shared polish layer (Nov 2026): every tool page draws its chrome from
+// TOOLS_CSS and gets its copy strip, Enter-to-run and result pulse from one
+// injected script. Both live in the shell, so a regression here silently
+// strips all hundred tools at once — this test is the tripwire.
+test('tool pages ship the shared polish layer and enhancer', async () => {
+  const html = await (await fetch(base + '/alat/percentage')).text();
+  assert.ok(html.includes('.tl-copy{'), 'polish CSS must style the copy strip');
+  assert.ok(html.includes('@keyframes tlpop'), 'result pulse keyframes must be present');
+  assert.ok(html.includes('prefers-reduced-motion'), 'the pulse must respect reduced motion');
+  assert.ok(html.includes('copy result'), 'enhancer script must add the copy strip');
+  assert.ok(html.includes('Enter'), 'enhancer must wire Enter-to-run');
+  // The hub itself is not a tool page — the enhancer is scoped to /alat/x only.
+  const hub = await (await fetch(base + '/alat')).text();
+  assert.ok(!hub.includes('copy result'), 'hub page should not ship the tool enhancer');
+});
+
 // ── English-only URLs ──
 // The site is written in English, so a tool's URL is English too. The older Malay slugs are
 // still in search results and old bookmarks, so each must redirect permanently to its
