@@ -161,3 +161,23 @@ test('the boot unit runs before cockpit.socket, not after it', () => {
   const doc = fs.readFileSync(path.join(ROOT, 'deploy/REBUILD.md'), 'utf8');
   assert.match(doc, /Before=cockpit\.socket/);
 });
+
+test('the boot path restarts the socket without blocking on its own ordering', () => {
+  // On 4 Nov 2026 the console was unreachable because this deadlock fired: the unit is
+  // ordered Before=cockpit.socket, and its ExecStart ran a BLOCKING `systemctl restart
+  // cockpit.socket` — a job ordered after the very unit job it was running inside, so the
+  // service hung in `activating (start)` forever and cockpit.socket's start job was deleted
+  // at boot to break the ordering cycle. The script must therefore queue the job
+  // (--no-block) when it runs under systemd, and only block when an operator runs it by
+  // hand. The assertion reads the source because the restart must never be executed here.
+  const src = fs.readFileSync(SCRIPT, 'utf8');
+  assert.match(src, /\$\{INVOCATION_ID:-\}/, 'the script cannot tell a boot run from an interactive one');
+  assert.match(src, /restart --no-block cockpit\.socket/, 'a blocking restart inside the unit deadlocks the console');
+  assert.match(src, /start --no-block cockpit\.socket/, 'a deleted boot job still needs a plain start queued');
+  // Unchanged drop-in must still queue the start: the boot cycle deletes cockpit.socket's own
+  // job, so an early `exit 0` on "unchanged" leaves a console that never comes up.
+  assert.ok(!/^\s*exit 0$/m.test(src), 'an early exit skips the start the deleted boot job needs');
+  // The interactive branch keeps the blocking restart so setup-all/pin-lan-address still wait.
+  assert.match(src, /systemctl restart cockpit\.socket/, 'interactive runs must still see the outcome');
+  assert.match(src, /systemctl daemon-reload/, 'systemd re-reads the drop-in only after a reload');
+});

@@ -482,7 +482,13 @@ seen at install time is what made the console unreachable on 28 Oct 2026: the dr
 `active` while every LAN connection was refused. The unit carries `Before=cockpit.socket` on purpose:
 `cockpit.socket` starts from `sockets.target`, which is earlier than the `multi-user.target` the
 regenerator is wanted by, so without it the socket comes up on the previous boot's drop-in and the
-console is dead for the first seconds after any lease change. Loopback stays in the list so
+console is dead for the first seconds after any lease change. That `Before=` has a sharp edge, learned
+on 4 Nov 2026: the script's ExecStart must NOT run a blocking `systemctl restart cockpit.socket`,
+because the restart job is ordered after the very unit job it runs inside — the unit hung in
+`activating (start)` for hours, the socket's own boot job was deleted to break the ordering cycle,
+and nothing listened on 9090 at all. Under systemd (`INVOCATION_ID` set) the script queues the job
+with `--no-block` instead, and issues it even when the drop-in is unchanged, because a deleted boot
+job means "unchanged" is not the same as "started". Loopback stays in the list so
 `ssh -L 9090:127.0.0.1:9090 tukuk@<host>` still reaches the console. No firewall rule is added by a
 script: automating `ufw` over SSH is how a box gets locked out a second time.
 

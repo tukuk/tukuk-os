@@ -64,13 +64,14 @@ next="$(mktemp)"
 } > "$next"
 
 mkdir -p "$(dirname "$CONF")"
+CHANGED=1
 if [[ -f "$CONF" ]] && cmp -s "$next" "$CONF"; then
   echo "[cockpit-lan] unchanged: ${ADDRS[*]:-no LAN address} + 127.0.0.1"
-  rm -f "$next"
-  exit 0
+  CHANGED=0
 fi
-
-install -m 0644 "$next" "$CONF"
+if [[ "$CHANGED" == "1" ]]; then
+  install -m 0644 "$next" "$CONF"
+fi
 rm -f "$next"
 # A box with no global IPv4 yet (network-online fires early) would leave only
 # loopback behind — say so instead of reporting success.
@@ -79,8 +80,22 @@ if [[ "${#ADDRS[@]}" -eq 0 ]]; then
 fi
 if [[ "$RESTART" == "1" ]]; then
   systemctl daemon-reload
-  # restart, not enable --now: a unit already listening on a dead address must be
-  # torn down before it can pick up the new one.
-  systemctl restart cockpit.socket 2>/dev/null || systemctl enable --now cockpit.socket 2>/dev/null || true
+  if [[ -n "${INVOCATION_ID:-}" ]]; then
+    # Running as cockpit-lan-socket.service, which is ordered Before=cockpit.socket. A
+    # BLOCKING restart deadlocks against that ordering: the restart job is ordered after the
+    # very job it waits inside, so on 4 Nov 2026 the unit hung in `activating (start)` for
+    # hours with nothing listening on 9090. --no-block queues the job and lets this job
+    # finish; the ordering then starts the socket on the freshly written drop-in.
+    # Issue it even when the drop-in is unchanged: the boot-time ordering cycle can delete
+    # cockpit.socket's own start job, so "nothing to rewrite" must not mean "nothing to start".
+    systemctl restart --no-block cockpit.socket 2>/dev/null ||
+      systemctl start --no-block cockpit.socket 2>/dev/null || true
+  else
+    # Interactive (setup-all.sh, pin-lan-address.sh): a blocking restart, and enable --now if
+    # the socket was never started at all, so the operator sees the outcome before moving on.
+    # restart, not enable --now: a unit already listening on a dead address must be
+    # torn down before it can pick up the new one.
+    systemctl restart cockpit.socket 2>/dev/null || systemctl enable --now cockpit.socket 2>/dev/null || true
+  fi
 fi
 echo "[cockpit-lan] bound to 127.0.0.1 + ${ADDRS[*]:-<no LAN address>}:9090"
