@@ -4487,4 +4487,475 @@ $('wg-new').onclick=pick;$('wg-cat').onchange=pick;pick();`,
   <p>E, T, A, O, I, N — in English text the eight most common letters cover roughly two thirds of all occurrences, which is why the player who opens with them wins more than the one hunting for favourite letters. Against this game's banks the same advice holds with one tweak: every word is lowercase, singular and unhyphenated, so vowels-first openings are almost always right, and a first guess of Q or Z is a life spent shopping.</p>`,
 });
 
+// ── 84. /alat/citation-maker — reference formatter ─────────────────────────
+TOOLKIT.push({
+  slug: 'citation-maker', ic: '📚', name: 'Citation Maker',
+  title: 'Citation Maker — APA, MLA, Chicago and Harvard References | Tukuk-OS',
+  desc: 'Type the author, year, title and publisher once and get the reference in APA, MLA, Chicago or Harvard style — punctuation and italics placed for you.',
+  hero: 'Citation Maker', sub: 'book & webpage · APA · MLA · Chicago · Harvard · copy-ready',
+  navBlurb: 'Five boxes in, a correctly punctuated reference out — APA, MLA, Chicago or Harvard, for books and webpages, entirely in your browser.',
+  hubBlurb: 'turn source details into an APA, MLA, Chicago or Harvard reference with the italics, commas and access dates placed for you',
+  lead: 'The gap between a good reference list and a marked-down one is usually punctuation: where the year sits, what is in italics, whether a webpage needs an access date. Fill five boxes once and this page places them the way each style wants. Copy the result into your assignment — and cross-check anything unusual (edited chapters, interviews, old editions) against your school guide.',
+  form: `<div class="tl-form">
+  ${field('Source type', '<select id="ct-type"><option value="book" selected>book</option><option value="web">webpage</option></select>')}
+  ${field('Style', '<select id="ct-style"><option value="apa" selected>APA (7th)</option><option value="mla">MLA (9th)</option><option value="chicago">Chicago</option><option value="harvard">Harvard</option></select>')}
+  ${field('Authors — surname first, as printed on the book', '<input id="ct-authors" type="text" value="Zimmerman, B. J., & Schunk, D. H." autocomplete="off" spellcheck="false">')}
+  ${field('Year', '<input id="ct-year" type="text" value="2011" autocomplete="off" spellcheck="false">')}
+  ${field('Title', '<input id="ct-title" type="text" value="Handbook of Self-Regulation of Learning and Performance" autocomplete="off" spellcheck="false">')}
+  ${field('Publisher, or website name', '<input id="ct-pub" type="text" value="Routledge" autocomplete="off" spellcheck="false">')}
+  ${field('URL (webpages only)', '<input id="ct-url" type="text" value="" autocomplete="off" spellcheck="false">')}
+  <button class="tl-btn primary" id="ct-go" type="button">Format the reference</button>
+</div>
+<div class="tl-res" id="ct-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function val(id){return $(id).value.trim();}
+function acc(){var d=new Date(),mo=['January','February','March','April','May','June','July','August','September','October','November','December'];return d.getDate()+' '+mo[d.getMonth()]+' '+d.getFullYear();}
+function render(){var ty=val('ct-type'),st=val('ct-style'),au=val('ct-authors')||'Author A.',yr=esc(val('ct-year'))||'n.d.',ti=esc(val('ct-title'))||'Untitled work.',pu=esc(val('ct-pub')),ur=esc(val('ct-url')),out;
+ if(ty==='book'){var pub=pu||'Publisher';
+  if(st==='apa')out=esc(au)+' ('+yr+'). <i>'+ti+'</i>. '+pub+'.';
+  else if(st==='mla')out=esc(au)+'. <i>'+ti+'</i>. '+pub+', '+yr+'.';
+  else if(st==='chicago')out=esc(au)+'. <i>'+ti+'</i>. '+pub+', '+yr+'.';
+  else out=esc(au)+' ('+yr+') <i>'+ti+'</i>. '+pub+'.';}
+ else{var site=pu||'Site name',url=ur?ur:'[url]';
+  if(st==='apa')out=esc(au)+' ('+yr+'). <i>'+ti+'</i>. '+site+'. '+url;
+  else if(st==='mla')out=esc(au)+'. "'+ti+'." <i>'+site+'</i>, '+yr+', '+url+'. Accessed '+acc()+'.';
+  else if(st==='chicago')out=esc(au)+'. "'+ti+'." <i>'+site+'</i>. '+(val('ct-year')?yr+', ':'')+'accessed '+acc()+', '+url+'.';
+  else out=esc(au)+' ('+yr+') <i>'+ti+'</i>. '+site+'. Available at: '+url+' (Accessed: '+acc()+').';}
+ $('ct-out').innerHTML='<div class="tl-big">'+out+'</div><p class="meta">Each style puts the year somewhere that suits its discipline — APA front (science cares how old the finding is), MLA last (literature cares that the source exists). Mixing styles is the one true error; keep every entry in the same shape.</p>';}
+$('ct-type').onchange=render;$('ct-style').onchange=render;$('ct-go').onclick=render;
+$('ct-authors').oninput=render;$('ct-year').oninput=render;$('ct-title').oninput=render;$('ct-pub').oninput=render;$('ct-url').oninput=render;
+render();`,
+  seo: `<h2 class="section-title">Access dates are not decoration</h2>
+  <p>A book citation is a promise that anyone can find the same words you did; a webpage citation is a promise about a moving target. That is why the newer styles grew an access date — the page you read may be revised or gone by the time your marker clicks the link. Screenshot anything you cite from a site with no author, no date and no sign of maintenance, and name the screenshot in the entry.</p>`,
+});
+
+// ── 85. /alat/summarizer — key-sentence extractor ─────────────────────────
+TOOLKIT.push({
+  slug: 'summarizer', ic: '✂️', name: 'Text Summarizer',
+  title: 'Text Summarizer — Pull the Key Sentences from Any Passage | Tukuk-OS',
+  desc: 'Paste a passage and keep its load-bearing sentences: a word-frequency summary with a keyword list and a word-saving count. Nothing leaves the tab.',
+  hero: 'Text Summarizer', sub: 'key sentences · keyword list · compression count · all local',
+  navBlurb: 'Finds the sentences a passage is actually about by word frequency and keeps the best three — with a keyword list, running in your tab.',
+  hubBlurb: 'paste any passage and get its three load-bearing sentences plus a keyword list — honest counting, no server, nothing stored',
+  lead: 'No model and no magic — one old, honest idea: the words that repeat across a passage are what it is <i>about</i>, and the sentences stacked with them are its load-bearing walls. Pick the top-scoring sentences, keep them in their original order, and most of a first-draft summary writes itself. Use it as a start, then rewrite from memory — that rewrite is where the studying happens.',
+  form: `<div class="tl-form">
+  ${field('Your passage', '<textarea class="tl-in" id="sm-in" spellcheck="false">Testing yourself beats re-reading, and it is the most repeated finding in learning science. When you try to recall a fact and then check it, the effort leaves a stronger trace than another pass over the same page. Re-reading feels easier, and that ease is a trap, because fluency is often mistaken for knowing. The best routine is simple: read once, close the book, write down everything you can remember, then compare and repair the gaps. Repeat the closed-book pass the next day, then a week later, then a month later. Each recall that succeeds makes the next one cheaper and slower to forget. This works for a paragraph of notes or a chapter of a textbook, because repetition of ideas is what marks a passage as about itself. Nothing here needs talent or software, only the willingness to feel the difficulty while it works.\n</textarea>')}
+  ${field('Keep', '<select id="sm-len"><option value="1">1 sentence</option><option value="2">2 sentences</option><option value="3" selected>3 sentences</option><option value="4">4 sentences</option><option value="5">5 sentences</option></select>')}
+  <button class="tl-btn primary" id="sm-go" type="button">Summarize ↓</button>
+</div>
+<div class="tl-res" id="sm-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+var STOP={the:1,a:1,an:1,and:1,or:1,but:1,of:1,to:1,in:1,on:1,at:1,for:1,with:1,as:1,by:1,is:1,are:1,was:1,were:1,it:1,its:1,this:1,that:1,from:1,not:1,so:1,if:1,then:1,than:1,when:1,while:1,you:1,your:1,we:1,he:1,she:1,they:1,be:1,been:1,who:1,which:1};
+function words(s){return s.toLowerCase().replace(/[^a-z' ]/g,' ').split(/\\s+/).filter(function(w){return w&&STOP[w]==null;});}
+function sents(t){var out=[],buf='',i,c;for(i=0;i<t.length;i++){c=t.charAt(i);buf+=c;if(c==='.'||c==='!'||c==='?'){if(buf.trim().length>3)out.push(buf.trim());buf='';}}if(buf.trim().length>3)out.push(buf.trim());return out;}
+function run(){var t=$('sm-in').value,n=parseInt($('sm-len').value,10)||3,S=sents(t),i,j,f={},sc=[];
+ if(!S.length){$('sm-out').innerHTML='<span class="tl-badge tl-no">not enough to read</span> Paste a passage of at least a couple of sentences first.';return;}
+ for(i=0;i<S.length;i++){var ws=words(S[i]);for(j=0;j<ws.length;j++)f[ws[j]]=(f[ws[j]]||0)+1;}
+ for(i=0;i<S.length;i++){var w2=words(S[i]),s=0;for(j=0;j<w2.length;j++)s+=f[w2[j]]||0;sc.push(s/(w2.length||1));}
+ var idx=[];for(i=0;i<S.length;i++)idx.push(i);
+ idx.sort(function(a,b){return sc[b]-sc[a];});
+ var take=idx.slice(0,Math.min(n,S.length));take.sort(function(a,b){return a-b;});
+ var text='';for(i=0;i<take.length;i++)text+=(i?' ':'')+esc(S[take[i]]);
+ var inW=words(t).length,outW=words(text).length,pct=inW?Math.max(0,Math.round(100*(1-outW/inW))):0;
+ var top=Object.keys(f).sort(function(a,b){return f[b]-f[a];}).slice(0,8);
+ $('sm-out').innerHTML='<div class="tl-big">'+text+'</div><p class="meta"><b>'+take.length+'</b> key sentences · '+inW+' → '+outW+' words · '+pct+'% shorter · source had '+S.length+' sentences</p><p class="meta">Keywords: '+top.map(esc).join(', ')+'</p>';}
+$('sm-go').onclick=run;$('sm-in').oninput=run;$('sm-len').onchange=run;
+run();`,
+  seo: `<h2 class="section-title">When counting words lies</h2>
+  <p>Frequency spotting does not understand: it can miss the quiet sentence that reverses everything — <i>but the study was never replicated</i> — and it cannot compress the way a reader who knows the field can. Treat the output as scaffolding. The durable habit is what follows: read the picked sentences, close them, and say the passage back in your own words. If you cannot, the summary was the wrong size, not the wrong sentences.</p>`,
+});
+
+// ── 86. /alat/typing-test — words per minute ───────────────────────────────
+TOOLKIT.push({
+  slug: 'typing-test', ic: '⌨️', name: 'Typing Speed Test',
+  title: 'Typing Speed Test — Words Per Minute and Accuracy | Tukuk-OS',
+  desc: 'Type a fair test sentence and get live words-per-minute and accuracy, checked word by word as you go. One screen, in your browser, nothing stored.',
+  hero: 'Typing Speed Test', sub: 'live wpm · word-by-word marking · accuracy · endless sentences',
+  navBlurb: 'A no-nonsense WPM check: type the sentence shown, watch correct words turn green and wrong ones red, get speed and accuracy the moment you finish.',
+  hubBlurb: 'type the shown sentence and get live wpm and accuracy with word-by-word marking — a warm-up before typed essays or exam revision',
+  lead: 'Typed notes, typed essays, typed exams — the faster and cleaner your typing, the less the keyboard throttles what you know. This is the standard test in miniature: one sentence at a time, words marked green or red as you go, speed measured the honest way (five correct <i>characters</i> is a word, not five guesses).',
+  form: `<div class="tl-form">
+  <div class="tl-big" id="ty-text">—</div>
+  ${field('Type the sentence above', '<textarea class="tl-in" id="ty-in" rows="3" spellcheck="false" autocomplete="off"></textarea>')}
+  <button class="tl-btn primary" id="ty-new" type="button">New sentence ↷</button>
+</div>
+<div class="tl-res" id="ty-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var BANK=['the best time to revise a fact is just before you forget it','short daily sessions beat one long weekend of cramming','read the question twice before trusting your first answer','an outline is a promise your paragraphs then have to keep','testing yourself feels harder and that is exactly the point','sleep is when today practice becomes tomorrow memory','write the summary from memory before you reread the page','a missed question taught is worth two answered ones'];
+var target='',t0=0;
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function paint(typed){var tw=target.split(' '),pw=typed===''?[]:typed.split(' '),h='',i;
+ for(i=0;i<tw.length;i++){var g='';
+  if(pw[i]!=null)g=pw[i]===tw[i]?' style="color:#3fbf6f"':' style="color:#ff6b6b"';
+  h+='<span'+g+'>'+esc(tw[i])+'</span> ';}
+ $('ty-text').innerHTML=h;}
+function stat(typed){var okc=0,i;for(i=0;i<typed.length&&i<target.length;i++)if(typed.charAt(i)===target.charAt(i))okc++;
+ var mins=t0?Math.max((Date.now()-t0)/60000,0.001):0;
+ return {okc:okc,wpm:mins?(okc/5)/mins:0,acc:typed.length?Math.round(100*okc/typed.length):100};}
+function fresh(){target=BANK[Math.floor(Math.random()*BANK.length)];t0=0;$('ty-in').value='';paint('');
+ $('ty-out').innerHTML='<span class="tl-badge">ready</span> The clock starts at your first keystroke and stops when the sentence matches. Correct characters only count — five of them make a word.';}
+$('ty-in').oninput=function(){var typed=this.value||'';if(!t0)t0=Date.now();paint(typed);
+ var s=stat(typed);
+ if(typed===target&&typed.length){$('ty-out').innerHTML='<div class="tl-big">'+Math.round(s.wpm)+' wpm · '+s.acc+'% accurate</div><p class="meta">Finished in '+Math.round((Date.now()-t0)/1000)+'s. Press New sentence for another lap — three laps a day, a week before the exam, is a real typing plan.</p>';return;}
+ $('ty-out').innerHTML='<span class="tl-badge">live</span> '+Math.round(s.wpm)+' wpm · '+s.acc+'% accuracy · '+s.okc+' correct characters';};
+$('ty-new').onclick=fresh;
+fresh();`,
+  css: `#ty-text{min-height:2.4em}`,
+  seo: `<h2 class="section-title">Why speed is accuracy you stopped thinking about</h2>
+  <p>Every keystroke you have to think about is a thought you cannot spend on the sentence you are writing. Research on writing keeps finding the same shape: once typing passes roughly fifteen to twenty words a minute, fluency starts improving noticeably, because the fingers stopped being the bottleneck. So the useful drill is not fast — it is <i>clean</i>: accuracy above ninety-five per cent first, and the speed arrives on its own.</p>`,
+});
+
+// ── 87. /alat/essay-planner — paragraph-by-paragraph plan ──────────────────
+TOOLKIT.push({
+  slug: 'essay-planner', ic: '🗒', name: 'Essay Planner',
+  title: 'Essay Planner — Turn Three Points into a Paragraph Plan | Tukuk-OS',
+  desc: 'Give it a topic and three points and get the paragraph-by-paragraph skeleton: hook, thesis, evidence slots, counter-argument and conclusion.',
+  hero: 'Essay Planner', sub: 'topic + 3 points → paragraph-by-paragraph plan · argument or essay shape',
+  navBlurb: 'The five-paragraph skeleton done properly: thesis built from your own points, evidence slots for each body paragraph, and the counter-argument you cannot skip.',
+  hubBlurb: 'paste a topic and three points and get the full essay skeleton — thesis, evidence slots, counter-argument and a word budget',
+  lead: 'Most essays fail before the first sentence is written: the writer sits down with an opinion but no architecture. This planner takes the topic and the three reasons you would give in the corridor, and returns the paragraph-by-paragraph skeleton — what each paragraph must <i>do</i>, with the evidence slots left open for you to fill. Print it, or keep it open beside the draft.',
+  form: `<div class="tl-form">
+  ${field('Essay topic or question', '<input id="es-topic" type="text" value="Should school start later?" autocomplete="off">')}
+  ${field('Shape', '<select id="es-type"><option value="arg" selected>argumentative</option><option value="exp">exploratory</option></select>')}
+  ${field('Your three points — one per line', '<textarea class="tl-in" id="es-points" spellcheck="false">classroom attendance and focus improve\nthe change is fairer for working families\nsleep research supports the shift</textarea>')}
+  <button class="tl-btn primary" id="es-go" type="button">Build the plan ↓</button>
+</div>
+<div class="tl-res" id="es-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function pts(){return $('es-points').value.split('\\n').map(function(s){return s.trim();}).filter(function(s){return s;});}
+function plan(){var topic=$('es-topic').value.trim()||'your topic',ty=$('es-type').value,P=pts();
+ if(!P.length)P=['your first strongest reason','your second strongest reason','your third strongest reason'];
+ while(P.length<3)P.push('a third reason worth finding');
+ var h='<p class="meta">Skeleton for <b>'+esc(topic)+'</b> · '+(ty==='arg'?'argumentative':'exploratory')+' shape · the thesis below already names your three points</p>';
+ h+='<div class="tl-big">Thesis: I argue that '+esc(topic)+' — because <i>'+esc(P[0])+'</i>, <i>'+esc(P[1])+'</i> and <i>'+esc(P[2])+'</i>.</div>';
+ h+='<table class="tl-tab"><thead><tr><th>Paragraph</th><th>What it must do</th></tr></thead><tbody>';
+ h+='<tr><td>1 · Introduction</td><td>Hook — a number, a question or one scene, not a definition of the word since. Two sentences of background. End on the thesis above.</td></tr>';
+ for(var i=0;i<3;i++)h+='<tr><td>'+(i+2)+' · Body '+(i+1)+'</td><td>Open with the point in a sentence: <i>'+esc(P[i])+'</i>. Then evidence you can name — a study, a statistic, a quote, a worked example. Then the two sentences markers look for: why does this evidence prove the point, and how does it tie back to the thesis?</td></tr>';
+ if(ty==='arg')h+='<tr><td>5 · Counter</td><td>State the strongest objection fairly (steel-man, not straw-man), concede whatever is true in it, then answer it: why your case still stands.</td></tr>';
+ h+='<tr><td>'+(ty==='arg'?6:5)+' · Conclusion</td><td>Restate the thesis in new words, sweep the three points in a single breath, and finish on the so-what — what should change if you are right.</td></tr>';
+ h+='</tbody></table><p class="meta">Six paragraphs at ~120 words is a '+(ty==='arg'?'720':'600')+'-word essay. Write the body first and the introduction last — by then you know what you actually argued.</p>';
+ $('es-out').innerHTML=h;}
+$('es-go').onclick=plan;$('es-topic').oninput=plan;$('es-type').onchange=plan;$('es-points').oninput=plan;
+plan();`,
+  seo: `<h2 class="section-title">Why the introduction gets written last</h2>
+  <p>Markers read thousands of openings that promise everything and say nothing — <i>since the dawn of time, people have debated…</i> The introduction written after the body is different: it can announce the actual argument in the first sentence because the writer now knows what it is. The plan above keeps the slot for the hook but builds the thesis from your own three points, so re-writing it later costs one sentence, not a paragraph.</p>`,
+});
+
+// ── 88. /alat/cloze-test — fill-the-gap passage maker ───────────────────
+TOOLKIT.push({
+  slug: 'cloze-test', ic: '🕳', name: 'Cloze Test Maker',
+  title: 'Cloze Test Maker — Turn Any Notes into a Gap-Fill Exercise | Tukuk-OS',
+  desc: 'Paste your own notes and get a fill-the-gap worksheet with a word bank and an answer key — every fifth word or every long word, blanked.',
+  hero: 'Cloze Test Maker', sub: 'your text → numbered gaps · word bank · answer key',
+  navBlurb: 'Your paragraph becomes a gap-fill test: key words lifted out into a shuffled bank, numbered blanks in place, one click to show the answers.',
+  hubBlurb: 'turn your own notes into a fill-the-blank drill — numbered gaps, shuffled word bank, toggleable answer key',
+  lead: 'Cloze exercises work because a blank forces retrieval — you cannot skim past it the way you skim past a highlighted fact. Teachers hand out the water-cycle paragraph; you can now make one from <i>your</i> paragraph: paste the notes, choose how often a word is lifted out, print or copy the sheet. The word bank is shuffled, so the blanks are honest, and the answer key stays hidden until you want it.',
+  form: `<div class="tl-form">
+  ${field('Your passage', '<textarea class="tl-in" id="cl-in" spellcheck="false">The water cycle moves the same water the dinosaurs drank. The Sun heats the surface of the sea, and water vapour rises into the air. High in the sky the vapour cools and condenses into clouds. When the drops grow heavy enough, they fall as rain. Some of that rain soaks into the ground and refills the aquifers we pump from. Rivers carry the rest back to the sea, and the whole cycle begins again.</textarea>')}
+  ${field('Blank out', '<select id="cl-mode"><option value="every" selected>every 5th word</option><option value="long">long words (6+ letters)</option></select>')}
+  ${field('Every …-th word', '<input id="cl-n" type="number" min="2" max="12" step="1" value="5">')}
+  <button class="tl-btn primary" id="cl-go" type="button">Make the gaps ↓</button>
+  <button class="tl-btn" id="cl-key" type="button">Show answer key</button>
+</div>
+<div class="tl-res" id="cl-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var OUT=[],AS=[],showKey=false;
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function clean(w){return w.replace(/[^A-Za-z']/g,'').toLowerCase();}
+function shuffle(a){var i,j,t;for(i=a.length-1;i>0;i--){j=Math.floor(Math.random()*(i+1));t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function build(){var toks=$('cl-in').value.replace(/\\s+/g,' ').trim().split(' '),mode=$('cl-mode').value,n=Math.max(2,parseInt($('cl-n').value,10)||5);
+ OUT=[];AS=[];
+ for(var i=0;i<toks.length;i++){var c=clean(toks[i]);
+  var pickme=mode==='every'?(((i+1)%n===0)&&c.length>2):(c.length>=6);
+  if(pickme&&c&&AS.length<15){AS.push(c);OUT.push('['+(AS.length)+']');}else OUT.push(toks[i]);}
+ render();}
+function render(){
+ if(!AS.length){$('cl-out').innerHTML='<span class="tl-badge tl-no">no gaps</span> Nothing matched — shorten the step, paste more text, or switch the blank mode.';return;}
+ var h='<div class="tl-big">'+OUT.map(esc).join(' ')+'</div>'
+  +'<p class="meta"><b>'+AS.length+'</b> blanks · every word in the bank belongs somewhere above · press the key to check answers</p>'
+  +'<p class="meta">Word bank: '+esc(shuffle(AS.slice()).join('  ·  '))+'</p>';
+ if(showKey)h+='<p class="meta">Answers: '+AS.map(function(w,i){return (i+1)+'. '+esc(w);}).join(' · ')+'</p>';
+ $('cl-out').innerHTML=h;}
+$('cl-go').onclick=build;$('cl-mode').onchange=build;$('cl-n').oninput=build;$('cl-in').oninput=build;
+$('cl-key').onclick=function(){showKey=!showKey;$('cl-key').textContent=showKey?'Hide answer key':'Show answer key';render();};
+build();`,
+  seo: `<h2 class="section-title">Why your own text beats a worksheet</h2>
+  <p>A gap-fill drawn from last week's notes tests exactly the words your class is actually using — including the ones a printed worksheet would never think to blank. Two habits make it stick: do the sheet once with the bank visible, then again the next day from memory with the bank hidden; and keep a pen beside the screen, because writing the recovered word is the part that strengthens it.</p>`,
+});
+
+// ── 89. /alat/cornell-notes — printable Cornell page ────────────────────────
+TOOLKIT.push({
+  slug: 'cornell-notes', ic: '📓', name: 'Cornell Notes Page',
+  title: 'Cornell Notes Generator — The Study Page That Marks Itself | Tukuk-OS',
+  desc: 'Type a topic and get a printable Cornell notes page: cue column, ruled note area, summary box — the layout that turns notes into self-testing.',
+  hero: 'Cornell Notes Page', sub: 'cue column · note area · summary box · print-ready',
+  navBlurb: 'Generates the Cornell two-column layout with a summary footer for any topic — fill it during class, then cover the notes and answer your own cues.',
+  hubBlurb: 'print a Cornell notes page for any topic — cue column, ruled notes area and a summary box to fill the same evening',
+  lead: 'Walter Pauk’s layout at Cornell survived fifty years of study advice because it builds the review into the page: you <i>write</i> in the wide column during class, then <i>question</i> the narrow cue column right after, and the summary box forces one retrieval the same evening. This generator prints the scaffolding for any topic — the discipline is yours.',
+  form: `<div class="tl-form">
+  ${field('Topic / lecture title', '<input id="cn-topic" type="text" value="Photosynthesis — Chapter 5" autocomplete="off">')}
+  ${field('Source (book, page, lecture)', '<input id="cn-src" type="text" value="Biology textbook pp. 84-97" autocomplete="off">')}
+  ${field('Note lines', '<input id="cn-lines" type="number" min="4" max="20" step="1" value="10">')}
+  <button class="tl-btn primary" id="cn-go" type="button">Make the page</button>
+  <button class="tl-btn" id="cn-print" type="button">Print 🖨</button>
+</div>
+<div class="tl-res" id="cn-out">—</div>`,
+  css: `.cn-wrap{border:1px solid var(--line,#2c313c);border-radius:10px;margin-top:12px;overflow:hidden}.cn-head{padding:10px 14px;border-bottom:1px solid var(--line,#2c313c)}.cn-body{display:flex}.cn-cue{width:34%;border-right:1px dashed var(--line,#2c313c);padding:10px 14px}.cn-note{flex:1;padding:10px 14px}.cn-rule{border-bottom:1px dashed var(--line,#2c313c);height:30px}.cn-sum{border-top:1px solid var(--line,#2c313c);padding:10px 14px}@media print{.tl-form,.tl-navchip,footer,.ad{visibility:hidden}.cn-wrap{border-color:#999}}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+var MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function render(){var topic=esc($('cn-topic').value.trim()||'Untitled topic'),src=esc($('cn-src').value.trim()),d=new Date();
+ var n=Math.min(20,Math.max(4,parseInt($('cn-lines').value,10)||10)),i,rules='',cues='';
+ for(i=0;i<n;i++)rules+='<div class="cn-rule"></div>';
+ var Q=['Who / what?','Why does it matter?','How does it work?','Give an example','What would an exam ask?'];
+ for(i=0;i<Q.length;i++)cues+='<p class="meta"><b>'+Q[i]+'</b> —</p>';
+ $('cn-out').innerHTML='<div class="cn-wrap">'
+  +'<div class="cn-head"><b>'+topic+'</b>'+(src?' · Source: '+src:'')+' · '+DAYS[d.getDay()]+', '+d.getDate()+' '+MON[d.getMonth()]+' '+d.getFullYear()+'</div>'
+  +'<div class="cn-body"><div class="cn-cue"><p class="meta"><b>Cue column</b> — after class, write questions these notes can answer:</p>'+cues+'</div>'
+  +'<div class="cn-note"><p class="meta"><b>Note area</b> — during class: ideas, not transcripts. Fragments, diagrams, page numbers.</p>'+rules+'</div></div>'
+  +'<div class="cn-sum"><p class="meta"><b>Summary</b> — same evening, closed book: two or three sentences on what this page taught.</p><div class="cn-rule"></div><div class="cn-rule"></div></div></div>'
+  +'<p class="meta">The layout works because the columns do different jobs: capture on the right, retrieval on the left. Cover the notes with your hand, answer your own cues out loud, then check. That thirty-second ritual is the studying — the writing is only the prep.</p>';}
+$('cn-go').onclick=render;$('cn-topic').oninput=render;$('cn-src').oninput=render;$('cn-lines').oninput=render;
+$('cn-print').onclick=function(){try{window.print();}catch(e){$('cn-out').innerHTML+='<p class="meta">Printing is not available here — screenshot the page instead.</p>';}};
+render();`,
+  seo: `<h2 class="section-title">The rule that makes the layout worth it</h2>
+  <p>A Cornell page copied but never self-quizzened is just prettier notes. The one non-negotiable step is the cue column: questions written <i>from memory</i> within twenty-four minutes of the lecture — the recall window the spacing research keeps pointing at. Write the cues before you re-read anything, and the page starts marking itself.</p>`,
+});
+
+// ── 90. /alat/memory-kit — acronyms, sentences, chunks ────────────────────
+TOOLKIT.push({
+  slug: 'memory-kit', ic: '🧠', name: 'Memory Kit',
+  title: 'Memory Kit — Acronyms, Mnemonic Sentences & Number Chunking | Tukuk-OS',
+  desc: 'Paste any ordered list and get an acronym plus a first-letter sentence; key in a long number and get it chunked for working memory. In-browser.',
+  hero: 'Memory Kit', sub: 'acronym · first-letter sentence · number chunking · your list, your peg',
+  navBlurb: 'Turns any ordered list into an acronym and a first-letter sentence, and chunks long numbers into fours — the three tricks memorists actually use.',
+  hubBlurb: 'your list becomes an acronym and a mnemonic sentence, your long number becomes four-digit chunks — working memory does the rest',
+  lead: 'Working memory holds about four items — which is why phone numbers were designed in chunks and why an eight-planet list fails to go in raw. The fix is never more repetition; it is <i>recoding</i>: one meaningless list becomes one meaningful string, and one long number becomes a handful of familiar groups. Paste the list you have to learn; the kit builds the pegs.',
+  form: `<div class="tl-form">
+  ${field('Your list — one item per line, in order', '<textarea class="tl-in" id="mk-list" spellcheck="false">Mercury\nVenus\nEarth\nMars\nJupiter\nSaturn\nUranus\nNeptune</textarea>')}
+  ${field('A number to chunk (optional)', '<input id="mk-num" type="text" value="019837465512038" autocomplete="off" spellcheck="false">')}
+  <button class="tl-btn primary" id="mk-go" type="button">Build my pegs ↓</button>
+</div>
+<div class="tl-res" id="mk-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var BANK={a:'awesome',b:'brave',c:'clever',d:'dark',e:'eager',f:'fast',g:'golden',h:'happy',i:'iron',j:'jolly',k:'kind',l:'lively',m:'magic',n:'night',o:'open',p:'proud',q:'quick',r:'red',s:'silent',t:'tall',u:'urgent',v:'vivid',w:'wild',x:'xenon',y:'young',z:'zebra'};
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function run(){var items=$('mk-list').value.split('\\n').map(function(s){return s.trim();}).filter(function(s){return s;});
+ if(!items.length){$('mk-out').innerHTML='<span class="tl-badge tl-no">empty list</span> One item per line — the things you need to recall, in the order you need them.';return;}
+ var ac=items.map(function(w){return w.charAt(0).toUpperCase();}).join('');
+ var sent=items.map(function(w){var l=w.charAt(0).toLowerCase(),x=BANK[l]||l;return '<b>'+x.charAt(0).toUpperCase()+'</b>'+x.slice(1);}).join(' ');
+ var digits=($('mk-num').value||'').replace(/\\D+/g,''),chunked=digits.replace(/(\\d{4})(?=\\d)/g,'$1 ');
+ var h='<div class="tl-big">'+esc(ac)+'</div>'
+  +'<p class="meta">'+items.map(function(w){return esc(w);}).join(' → ')+'</p>'
+  +'<p class="meta">First-letter sentence: '+sent+'.</p>';
+ if(digits)h+='<p class="meta">Chunked: <b>'+esc(chunked)+'</b> — four digits at a time, which is what a phone exchange and your working memory both agree on.</p>';
+ h+='<p class="meta">Say the sentence three times, then write the list from memory — the letters are the scaffold, the recall is the brick. If the generated sentence is dull, replace one word with something ridiculous; images that embarrass you are the ones that stay.</p>';
+ $('mk-out').innerHTML=h;}
+$('mk-go').onclick=run;$('mk-list').oninput=run;$('mk-num').oninput=run;
+run();`,
+  seo: `<h2 class="section-title">Why weird beats tidy</h2>
+  <p>Mnemonic research is quietly consistent about one thing: distinctiveness survives. The acronym everyone in the class already knows is noise; the sentence with your grandmother in it is not. The kit prints a neutral scaffold on purpose — the final step, swapping in absurd or personal images for the boring words, is the part no generator can do for you, and the part that decides whether the list is there tomorrow.</p>`,
+});
+
+// ── 91. /alat/reading-pace — pages a day to finish ─────────────────────
+TOOLKIT.push({
+  slug: 'reading-pace', ic: '📖', name: 'Reading Pace Calculator',
+  title: 'Reading Pace Calculator — Pages a Day to Finish on Time | Tukuk-OS',
+  desc: 'Book length, pages read, days to the deadline — get the pages a day you actually need, with a pace table and the finish date. No account.',
+  hero: 'Reading Pace Calculator', sub: 'pages left → pages a day · finish date · pace comparison',
+  navBlurb: 'Type the page count, where you are and the deadline: get the daily pages needed, a pace table, and whether 15 a day saves you or dooms you.',
+  hubBlurb: 'find the pages per day that finish the book by the deadline — with a pace table so you can see what slower really costs',
+  lead: 'The question a reading list never answers is the only one that matters on a Sunday night: how much per day is actually enough? Three numbers in — length, position, runway — and the daily figure falls out, along with the honest comparison: read slower than this number and the deadline does the editing for you.',
+  form: `<div class="tl-form">
+  ${field('Pages in the book', '<input id="rg-tot" type="number" min="1" step="1" value="288">')}
+  ${field('Pages already read', '<input id="rg-done" type="number" min="0" step="1" value="54">')}
+  ${field('Days to the deadline', '<input id="rg-days" type="number" min="1" max="365" step="1" value="14">')}
+  <button class="tl-btn primary" id="rg-go" type="button">Work out my pace</button>
+</div>
+<div class="tl-res" id="rg-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+var MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function nice(d){return DAYS[d.getDay()]+', '+d.getDate()+' '+MON[d.getMonth()];}
+function run(){var tot=parseInt($('rg-tot').value,10)||0,done=parseInt($('rg-done').value,10)||0,days=parseInt($('rg-days').value,10)||0,left=tot-done;
+ if(tot<=0){$('rg-out').innerHTML='<span class="tl-badge tl-no">no book</span> Type the page count first — cover or syllabus.';return;}
+ if(left<=0){$('rg-out').innerHTML='<span class="tl-badge tl-ok">finished</span> All '+tot+' pages are read. Now write the two-sentence takeaway while the book is still warm — that is the part that keeps it.';return;}
+ if(days<=0){$('rg-out').innerHTML='<span class="tl-badge tl-no">no runway</span> Days to the deadline must be at least one.';return;}
+ var per=Math.ceil(left/days),d=new Date();d.setDate(d.getDate()+days);
+ var paces=[per,10,15,20,25,30],seen={},rows='';
+ for(var i=0;i<paces.length;i++){var p=paces[i];if(p<1||seen[p])continue;seen[p]=1;
+  var need=Math.ceil(left/p);
+  rows+='<tr><td>'+p+' pages a day</td><td>'+need+' days</td><td>'+(need<=days?'makes the date':'too slow')+'</td></tr>';}
+ $('rg-out').innerHTML='<div class="tl-big">'+per+' pages a day</div>'
+  +'<p class="meta">'+left+' pages left of '+tot+' · '+days+' days to the deadline · landing the day you plan: '+nice(d)+'</p>'
+  +'<table class="tl-tab"><thead><tr><th>If you read</th><th>Done in</th><th>Verdict</th></tr></thead><tbody>'+rows+'</tbody></table>'
+  +'<p class="meta">Round up and take the buffer: a plan that finishes a day early survives a bad week. Split the daily pages across two sittings if you can — recall is better at both ends of a session than in the middle of one long one.</p>';}
+$('rg-go').onclick=run;$('rg-tot').oninput=run;$('rg-done').oninput=run;$('rg-days').oninput=run;
+run();`,
+  seo: `<h2 class="section-title">The deadline is the rare ingredient</h2>
+  <p>Reading without a date attached drifts to the bottom of the list — motivation is not the missing variable, a forcing function is. That is why this calculator starts from the deadline instead of the material: set the class test, the book-club date, the syllabus checkpoint first, and the pace falls out of arithmetic. If the number looks unreasonable, the honest fix is the book, not the schedule.</p>`,
+});
+
+// ── 92. /alat/assignment-planner — what to do first ──────────────────────
+TOOLKIT.push({
+  slug: 'assignment-planner', ic: '🗓', name: 'Assignment Prioritiser',
+  title: 'Assignment Prioritiser — What to Do First, by Effort per Day | Tukuk-OS',
+  desc: 'List every assignment with its deadline and how hard it feels, and get the order to work in — effort per remaining day, ranked and explained.',
+  hero: 'Assignment Prioritiser', sub: 'name | days left | effort 1-5 · ranked order · first move',
+  navBlurb: 'Pastes-in your whole assignment list and ranks it by effort per remaining day — the maths behind the answer to “what should I do first”.',
+  hubBlurb: 'list assignments with days left and effort, get the work order by pressure per day — with a concrete first move for each',
+  lead: 'Deadline-first ordering is a trap: the essay due Friday can quietly eat the week while the problem set due tomorrow waits behind it. The honest ranking divides each job\u2019s effort by the days left around it — pressure per day, not just distance — and the top of that list is genuinely where tonight belongs.',
+  form: `<div class="tl-form">
+  ${field('Assignments — one per line: name | days left | effort 1-5', '<textarea class="tl-in" id="as-in" spellcheck="false">History essay | 3 | 4\nMaths problem set | 1 | 2\nScience report | 7 | 5\nReading log | 2 | 1</textarea>')}
+  <button class="tl-btn primary" id="as-go" type="button">Rank my week ↓</button>
+</div>
+<div class="tl-res" id="as-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function parse(){var lines=$('as-in').value.split('\\n'),out=[],i,p;
+ for(i=0;i<lines.length;i++){p=lines[i].split('|');
+  if(p.length>=3&&p[0].trim())out.push({n:p[0].trim(),d:parseInt(p[1],10)||0,e:Math.max(1,Math.min(5,parseInt(p[2],10)||3))});}
+ return out;}
+function advice(a){if(a.d<=0)return 'Overdue — hand in something imperfect today beats nothing tomorrow.';
+ if(a.d<=1&&a.e>=4)return 'Start tonight and cut scope: an 80% answer written beats a 100% plan imagined.';
+ if(a.d<=2)return 'Book a fixed slot today; two quiet hours now is worth five scattered ones later.';
+ if(a.e>=4)return 'Split into two sittings — the second one catches what the first one missed.';
+ if(a.d>=6)return 'Not yet — but set the start date now, or future-you inherits this as an emergency.';
+ return 'Small and soon: do the next 25 minutes of it and cross it off.';}
+function run(){var T=parse();
+ if(!T.length){$('as-out').innerHTML='<span class="tl-badge tl-no">empty list</span> One assignment per line: <code>name | days left | effort 1-5</code>.';return;}
+ T.sort(function(a,b){return (b.e/Math.max(b.d,0.5))-(a.e/Math.max(a.d,0.5));});
+ var rows='',i;
+ for(i=0;i<T.length;i++)rows+='<tr><td>'+(i+1)+'</td><td><b>'+esc(T[i].n)+'</b></td><td>'+T[i].d+' day'+(T[i].d===1?'':'s')+'</td><td>'+T[i].e+'/5 · ~'+(T[i].e*2)+' h</td><td>'+advice(T[i])+'</td></tr>';
+ $('as-out').innerHTML='<div class="tl-big">First: '+esc(T[0].n)+'</div>'
+  +'<table class="tl-tab"><thead><tr><th>#</th><th>Assignment</th><th>Due in</th><th>Effort</th><th>First move</th></tr></thead><tbody>'+rows+'</tbody></table>'
+  +'<p class="meta">Ranked by effort per remaining day — that ratio, not the deadline alone, is what the evening should serve. Hours shown are your effort guess × 2; replace them with whatever your marker\\u2019s rubric says. Overdue work (0 days) takes the top seat on purpose.</p>';}
+$('as-go').onclick=run;$('as-in').oninput=run;
+run();`,
+  seo: `<h2 class="section-title">Effort is a guess — make it a cheap one</h2>
+  <p>The 1–5 number asks the only question that predicts procrastination: not <i>is this important</i> (yes, all of it is) but <i>how big does this feel</i>. Estimating effort takes ten seconds and is usually within a sitting of the truth; and once a dreaded 5 turns out to be a 3, the ranking updates for free. Re-run the list whenever the week changes — the maths costs nothing, which is the point of doing it here instead of in your head at 1am.</p>`,
+});
+
+// ── 93. /alat/mind-map — branch map from your notes ────────────────────
+TOOLKIT.push({
+  slug: 'mind-map', ic: '🌳', name: 'Mind Map Builder',
+  title: 'Mind Map Builder — Turn a Topic and Branches into a Map | Tukuk-OS',
+  desc: 'Type a topic and one branch per line with its leaves, and get a clean printable mind map — the recall sketch students draw before exams.',
+  hero: 'Mind Map Builder', sub: 'topic → branches → leaves · print-ready · one line each',
+  navBlurb: 'One line per branch: the topic blooms into a structured map you can print, or use as the target sketch to redraw from memory.',
+  hubBlurb: 'type one branch per line and get a clean topic map — the pre-exam sketch that shows what you can and cannot recall',
+  lead: 'A mind map is only useful if it can be redrawn from memory — which means it must be small enough to hold and structured enough to check against. This builder enforces both quietly: four to six branches, three to four leaves each, everything from a plain list of lines. Build it from your notes, close the notes, redraw it blank; the gaps in your drawing are exactly what to revise.',
+  form: `<div class="tl-form">
+  ${field('Central topic', '<input id="mm-topic" type="text" value="World War II" autocomplete="off">')}
+  ${field('Branches — one per line: branch | leaf | leaf | leaf', '<textarea class="tl-in" id="mm-branches" spellcheck="false">Causes | Treaty of Versailles | Great Depression | Appeasement\nAllies | Britain | Soviet Union | United States\nAxis | Germany | Italy | Japan\nOutcome | United Nations | Cold War | Decolonisation</textarea>')}
+  <button class="tl-btn primary" id="mm-go" type="button">Draw the map ↓</button>
+</div>
+<div class="tl-res" id="mm-out">—</div>`,
+  css: `.mm-root{display:inline-block;background:#4c8dff;color:#0b0e14;font-weight:700;padding:10px 16px;border-radius:10px;margin:6px 0 12px}.mm-branch{border-left:3px solid #4c8dff;padding:4px 0 4px 14px;margin:0 0 10px 8px}.mm-b{display:block;font-weight:700;margin-bottom:2px}.mm-l{display:block;color:inherit}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function parse(){var lines=$('mm-branches').value.split('\\n'),out=[],i,p;
+ for(i=0;i<lines.length;i++){p=lines[i].split('|');
+  if(p.length>=2&&p[0].trim())out.push({b:p[0].trim(),l:p.slice(1).map(function(x){return x.trim();}).filter(function(x){return x;})});}
+ return out;}
+function render(){var t=esc($('mm-topic').value.trim()||'Central topic'),B=parse();
+ if(!B.length){$('mm-out').innerHTML='<span class="tl-badge tl-no">no branches</span> One branch per line: <code>branch | leaf | leaf</code>.';return;}
+ var leaves=0,rows='',i;
+ for(i=0;i<B.length;i++){leaves+=B[i].l.length;
+  rows+='<div class="mm-branch"><span class="mm-b">'+esc(B[i].b)+'</span><span class="mm-l">'+B[i].l.map(esc).join('  ·  ')+'</span></div>';}
+ $('mm-out').innerHTML='<div class="mm-root">'+t+'</div>'+rows
+  +'<p class="meta"><b>'+B.length+'</b> branches · '+leaves+' leaves. Read the map out loud left to right once, then close this tab and redraw it on blank paper — the leaves your drawing is missing are the exact list to revise tomorrow.</p>';}
+$('mm-go').onclick=render;$('mm-topic').oninput=render;$('mm-branches').oninput=render;
+render();`,
+  seo: `<h2 class="section-title">The redraw is the tool</h2>
+  <p>Drawing a mind map once feels productive and proves nothing; redrawing it from memory a day later is a retrieval test with the answer sheet built in. That is why the builder keeps maps to four or six branches — beyond that the page is a poster, not a memory. When your redraw matches this one, swap the topic in and build the next map from the same notes; that is when the chapter is genuinely yours.</p>`,
+});
+
+// ── 94. /alat/weekly-plan — subject-hours into a week grid ────────────────
+TOOLKIT.push({
+  slug: 'weekly-plan', ic: '📆', name: 'Weekly Study Grid',
+  title: 'Weekly Study Grid — Spread Your Subjects Across the Week | Tukuk-OS',
+  desc: 'List subjects with hours per week and get a balanced study grid: interleaved sessions, three hours a day maximum, ready to print and follow.',
+  hero: 'Weekly Study Grid', sub: 'subject | hours → interleaved week · 3 h a day cap · printable',
+  navBlurb: 'Turn "Maths 4h, English 3h" into a real week: subjects interleaved day to day, capped at three hours a day, printed as a simple grid.',
+  hubBlurb: 'give each subject its weekly hours and get an interleaved day-by-day grid — mixed subjects beat blocked ones all week long',
+  lead: 'Blocked practice — all of one subject until it is done — feels efficient and fades fastest; interleaving spreads the same hours so each subject is re-met just as it starts to slip. This grid does the spreading mechanically: round-robin the subjects, three sessions a day maximum, and the week hands itself back as a printable table.',
+  form: `<div class="tl-form">
+  ${field('Subjects — one per line: name | hours per week', '<textarea class="tl-in" id="tw-in" spellcheck="false">Maths | 4\nEnglish | 3\nScience | 3\nHistory | 2</textarea>')}
+  ${field('Study days', '<select id="tw-days"><option value="7" selected>all 7 days</option><option value="5">school days only</option></select>')}
+  <button class="tl-btn primary" id="tw-go" type="button">Fill my week ↓</button>
+</div>
+<div class="tl-res" id="tw-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var D7=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function run(){var lines=$('tw-in').value.split('\\n'),S=[],i,total=0,p;
+ for(i=0;i<lines.length;i++){p=lines[i].split('|');
+  if(p.length>=2&&p[0].trim()){var h=Math.max(1,parseInt(p[1],10)||1);S.push({n:p[0].trim(),h:h});total+=h;}}
+ if(!S.length){$('tw-out').innerHTML='<span class="tl-badge tl-no">no subjects</span> One per line: <code>Maths | 4</code>.';return;}
+ var days=parseInt($('tw-days').value,10)||7,queue=[],loop=true;
+ while(loop){loop=false;for(i=0;i<S.length;i++){if(S[i].h>0){queue.push(S[i].n);S[i].h--;loop=true;}}}
+ var rows='',extra=0;
+ for(i=0;i<queue.length;i+=3){var chunk=queue.slice(i,i+3),dn=(i/3)|0;
+  if(dn<days)rows+='<tr><td>'+D7[dn]+'</td><td>'+chunk.map(esc).join(' + ')+'</td></tr>';else extra+=chunk.length;}
+ $('tw-out').innerHTML='<div class="tl-big">'+days+'-day grid · <b>'+total+'</b> hours</div>'
+  +'<table class="tl-tab"><thead><tr><th>Day</th><th>Sessions (1 h each)</th></tr></thead><tbody>'+rows+'</tbody></table>'
+  +'<p class="meta">Subjects arrive round-robin, so Maths is met Monday, Tuesday and Wednesday rather than marathoned once — mixing days is what makes the hours stick. '+(extra?extra+' hours spill past this week: cut a subject or extend the plan, do not double up a day. ':'')+'The grid repeats every week until the exam; a collapsed day moves the session, never deletes it.</p>';}
+$('tw-go').onclick=run;$('tw-in').oninput=run;$('tw-days').onchange=run;
+run();`,
+  seo: `<h2 class="section-title">Why three a day is the cap</h2>
+  <p>There is a ceiling on how much focused recall a school day can carry before quality collapses — three honest hours beats six attended ones. The cap also does a scheduling trick: with at most three sessions a day, the grid always leaves room for the assembly, the match and the bad night, which is the difference between a plan that survives February and a poster on the wall.</p>`,
+});
+
+// ── 95. /alat/study-log — minutes actually spent ────────────────────
+TOOLKIT.push({
+  slug: 'study-log', ic: '⏱', name: 'Study Log',
+  title: 'Study Log — Add Up the Hours You Actually Studied | Tukuk-OS',
+  desc: 'Paste your session log — date, subject, minutes — and get totals per subject, hours a day and where the time really went. Local only, nothing saved.',
+  hero: 'Study Log', sub: 'date | subject | minutes → totals per subject · daily average · the honest picture',
+  navBlurb: 'The five-line tally of your week: minutes per subject, average per study day, and the quiet discovery that History got nine minutes again.',
+  hubBlurb: 'paste date, subject and minutes per session and get the week summed — per subject, per day, no comforting rounding',
+  lead: 'Everyone\u2019s felt sense of a study week is wrong in the same direction: the comfortable subject swells, the dreaded one shrinks. A log is the cure — write the line the moment the session ends, paste the lines here on Sunday, and let the arithmetic be awkward on your behalf. Nothing is stored: the log lives wherever you keep it, and this page only counts.',
+  form: `<div class="tl-form">
+  ${field('Your sessions — one per line: date | subject | minutes', '<textarea class="tl-in" id="sl-in" spellcheck="false">2026-11-02 | Maths | 45\n2026-11-02 | English | 30\n2026-11-03 | Science | 60\n2026-11-04 | Maths | 40\n2026-11-05 | Maths | 50\n2026-11-05 | History | 25</textarea>')}
+  <button class="tl-btn primary" id="sl-go" type="button">Add it up ↓</button>
+</div>
+<div class="tl-res" id="sl-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmt(m){return m>=60?(Math.floor(m/60)+' h '+((m%60)?(m%60)+' m':'')):(m+' min');}
+function run(){var lines=$('sl-in').value.split('\\n'),i,p,map={},days={},total=0,count=0;
+ for(i=0;i<lines.length;i++){p=lines[i].split('|');
+  if(p.length>=3&&p[1].trim()){var s=p[1].trim(),m=parseInt(p[2],10)||0;
+   map[s]=(map[s]||0)+m;days[p[0].trim()]=1;total+=m;count++;}}
+ if(!count){$('sl-out').innerHTML='<span class="tl-badge tl-no">no sessions</span> One per line: <code>2026-11-05 | Maths | 45</code>.';return;}
+ var list=Object.keys(map).map(function(k){return {n:k,t:map[k]};}).sort(function(a,b){return b.t-a.t;});
+ var dayCount=Object.keys(days).length,rows='';
+ for(i=0;i<list.length;i++)rows+='<tr><td>'+esc(list[i].n)+'</td><td>'+fmt(list[i].t)+'</td><td>'+Math.round(100*list[i].t/total)+'%</td></tr>';
+ $('sl-out').innerHTML='<div class="tl-big">'+fmt(total)+' logged</div>'
+  +'<table class="tl-tab"><thead><tr><th>Subject</th><th>Time</th><th>Share</th></tr></thead><tbody>'+rows+'</tbody></table>'
+  +'<p class="meta">'+count+' sessions across '+dayCount+' day'+(dayCount===1?'':'s')+' · about '+Math.round(total/dayCount)+' min on a study day · most-visited subject: <b>'+esc(list[0].n)+'</b>.</p>'
+  +'<p class="meta">Compare the shares against what the exam weighs, not against what feels relaxing. The subject at the bottom of this table is next week\\u2019s first session.</p>';}
+$('sl-go').onclick=run;$('sl-in').oninput=run;
+run();`,
+  seo: `<h2 class="section-title">Logging works because it is retrospective</h2>
+  <p>A planned hour of study stretches to forty honest minutes once the phone is counted out and the hard paragraph is counted in — which is why this page sums what happened instead of promising what will. Keep the log in the notes app, the desk pad, anywhere it survives the week; come Sunday, paste and total. Two people keeping a log for a term reliably change one thing: where the first session of the week goes.</p>`,
+});
+
 module.exports = { TOOLKIT, toolkitPage, navItems, hubLines, sitemapPaths };

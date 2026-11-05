@@ -125,7 +125,20 @@ const PAGES = [
   { path: '/alat/spelling', marker: 'Spelling Practice', ids: ['sp-lv', 'sp-line', 'sp-in', 'sp-check', 'sp-say', 'sp-hint', 'sp-new', 'sp-out'] },
   { path: '/alat/solar-system', marker: 'Solar System Explorer', ids: ['so-p', 'so-out'] },
   { path: '/alat/study-planner', marker: 'Study Planner', ids: ['pl-exam', 'pl-hrs', 'pl-go', 'pl-out'] },
-  { path: '/alat/word-guess', marker: 'Word Guess', ids: ['wg-cat', 'wg-a', 'wg-z', 'wg-new', 'wg-out'] }
+  { path: '/alat/word-guess', marker: 'Word Guess', ids: ['wg-cat', 'wg-a', 'wg-z', 'wg-new', 'wg-out'] },
+  // ── ninth wave (Nov 2026 — study aids batch) ──
+  { path: '/alat/citation-maker', marker: 'Citation Maker', ids: ['ct-type', 'ct-style', 'ct-authors', 'ct-year', 'ct-title', 'ct-pub', 'ct-url', 'ct-go', 'ct-out'] },
+  { path: '/alat/summarizer', marker: 'Text Summarizer', ids: ['sm-in', 'sm-len', 'sm-go', 'sm-out'] },
+  { path: '/alat/typing-test', marker: 'Typing Speed Test', ids: ['ty-text', 'ty-in', 'ty-new', 'ty-out'] },
+  { path: '/alat/essay-planner', marker: 'Essay Planner', ids: ['es-topic', 'es-type', 'es-points', 'es-go', 'es-out'] },
+  { path: '/alat/cloze-test', marker: 'Cloze Test Maker', ids: ['cl-in', 'cl-mode', 'cl-n', 'cl-go', 'cl-key', 'cl-out'] },
+  { path: '/alat/cornell-notes', marker: 'Cornell Notes Page', ids: ['cn-topic', 'cn-src', 'cn-lines', 'cn-go', 'cn-print', 'cn-out'] },
+  { path: '/alat/memory-kit', marker: 'Memory Kit', ids: ['mk-list', 'mk-num', 'mk-go', 'mk-out'] },
+  { path: '/alat/reading-pace', marker: 'Reading Pace Calculator', ids: ['rg-tot', 'rg-done', 'rg-days', 'rg-go', 'rg-out'] },
+  { path: '/alat/assignment-planner', marker: 'Assignment Prioritiser', ids: ['as-in', 'as-go', 'as-out'] },
+  { path: '/alat/mind-map', marker: 'Mind Map Builder', ids: ['mm-topic', 'mm-branches', 'mm-go', 'mm-out'] },
+  { path: '/alat/weekly-plan', marker: 'Weekly Study Grid', ids: ['tw-in', 'tw-days', 'tw-go', 'tw-out'] },
+  { path: '/alat/study-log', marker: 'Study Log', ids: ['sl-in', 'sl-go', 'sl-out'] }
 ];
 
 for (const page of PAGES) {

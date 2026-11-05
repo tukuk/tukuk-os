@@ -884,6 +884,113 @@ test('word-guess: Q appears in no bank word, so pressing it always costs a life'
   assert.equal(dom.get('wg-q').disabled, true, 'used keys must grey out');
 });
 
+// ── study aids batch (Nov 2026) — the same hand-checked standard ──
+test('citation-maker: APA puts the year first, MLA drags it to the end', () => {
+  const { dom } = runTool(bySlug('citation-maker'));
+  const apa = dom.get('ct-out')._html;
+  assert.ok(apa.includes('(2011). <i>Handbook of Self-Regulation'), 'APA: year right after the authors');
+  assert.ok(apa.includes('Routledge.'), 'APA: publisher closes the book reference');
+  const mla = runTool(bySlug('citation-maker'), { 'ct-style': 'mla' });
+  const out = mla.dom.get('ct-out')._html;
+  assert.ok(out.includes('Routledge, 2011.'), 'MLA: publisher then year at the tail');
+  assert.ok(!out.includes('(2011).'), 'MLA must not keep the APA parenthetical');
+});
+
+test('summarizer: the default passage yields three scored sentences and keywords', () => {
+  const { dom } = runTool(bySlug('summarizer'));
+  const out = dom.get('sm-out')._html;
+  assert.ok(out.includes('<b>3</b> key sentences'), 'three is the default keep-count');
+  assert.ok(/\d+ → \d+ words/.test(out), 'compression count renders');
+  assert.ok(out.includes('Keywords:'), 'frequency keyword list renders');
+});
+
+test('typing-test: ready badge on load and nothing is marked before the first keystroke', () => {
+  const { dom } = runTool(bySlug('typing-test'));
+  assert.ok(dom.get('ty-out')._html.includes('ready'), 'idle state before the first keystroke');
+  // the sentence is picked at random from the bank, so only the colouring contract is testable
+  assert.ok(dom.get('ty-text')._html.includes('<span'), 'the sentence is painted word by word');
+  assert.ok(!dom.get('ty-text')._html.includes('style="color'), 'an untouched sentence carries no verdict colours');
+});
+
+test('essay-planner: the thesis is built from the three default points', () => {
+  const { dom } = runTool(bySlug('essay-planner'));
+  const out = dom.get('es-out')._html;
+  assert.ok(out.includes('Thesis: I argue that Should school start later?'), 'topic folded into the thesis');
+  assert.ok(out.includes('<i>classroom attendance and focus improve</i>'), 'point one is named in the thesis');
+  assert.ok(out.includes('5 · Counter'), 'argumentative shape reserves the counter-paragraph');
+  assert.ok(out.includes('720'), 'word budget for six paragraphs');
+});
+
+test('cloze-test: gaps numbered, bank shuffled, the key reveals answers', () => {
+  const { dom } = runTool(bySlug('cloze-test'));
+  let out = dom.get('cl-out')._html;
+  assert.ok(/<b>\d+<\/b> blanks/.test(out), 'blank count renders');
+  assert.ok(out.includes('[1]') && out.includes('Word bank:'), 'numbered gaps and a bank on load');
+  dom.get('cl-key').click();
+  out = dom.get('cl-out')._html;
+  assert.ok(out.includes('Answers: 1.'), 'answer key appears on demand');
+  assert.ok(dom.get('cl-key').textContent === 'Hide answer key', 'key button toggles its label');
+});
+
+test('cornell-notes: the page carries all three regions and the topic', () => {
+  const { dom } = runTool(bySlug('cornell-notes'));
+  const out = dom.get('cn-out')._html;
+  assert.ok(out.includes('Photosynthesis'), 'topic in the header line');
+  assert.ok(out.includes('Cue column') && out.includes('Note area') && out.includes('Summary'), 'three regions');
+  assert.ok((out.match(/cn-rule/g) || []).length >= 10, 'ruled note lines render at the default count');
+  assert.ok(out.includes('What would an exam ask?'), 'cue prompts are seeded');
+});
+
+test('memory-kit: planets compress to MVEMJSUN and the number lands in fours', () => {
+  const { dom } = runTool(bySlug('memory-kit'));
+  const out = dom.get('mk-out')._html;
+  assert.ok(out.includes('>MVEMJSUN<'), 'acronym of the eight default planets');
+  assert.ok(out.includes('First-letter sentence:'), 'mnemonic sentence built from the BANK');
+  assert.ok(out.includes('0198 3746 5512 038'), 'fifteen digits chunked into fours');
+});
+
+test('reading-pace: 234 pages over 14 days demands 17 a day', () => {
+  const { dom } = runTool(bySlug('reading-pace'));
+  const out = dom.get('rg-out')._html;
+  assert.ok(out.includes('17 pages a day'), 'ceil(234/14) = 17');
+  assert.ok(out.includes('makes the date') && out.includes('too slow'), 'pace table verdicts both appear');
+  const done = runTool(bySlug('reading-pace'), { 'rg-done': '288' });
+  assert.ok(done.dom.get('rg-out')._html.includes('tl-badge tl-ok">finished'), 'finished books say so');
+});
+
+test('assignment-planner: one day at effort 2 outranks three days at effort 4', () => {
+  const { dom } = runTool(bySlug('assignment-planner'));
+  const out = dom.get('as-out')._html;
+  assert.ok(out.includes('First: Maths problem set'), 'pressure per day beats raw deadline distance');
+  assert.ok(out.includes('7 days'), 'the science report still shows its runway');
+  assert.ok(out.includes('effort per remaining day'), 'the ranking rule is explained under the table');
+});
+
+test('mind-map: four branches twelve leaves from the default WWII outline', () => {
+  const { dom } = runTool(bySlug('mind-map'));
+  const out = dom.get('mm-out')._html;
+  assert.ok(out.includes('World War II'), 'topic sits in the root node');
+  assert.ok(out.includes('<b>4</b> branches · 12 leaves'), 'counts computed from the parsed lines');
+  assert.ok(out.includes('Treaty of Versailles') && out.includes('Appeasement'), 'leaves joined under their branch');
+});
+
+test('weekly-plan: twelve hours round-robin across the week without stacking a day', () => {
+  const { dom } = runTool(bySlug('weekly-plan'));
+  const out = dom.get('tw-out')._html;
+  assert.ok(out.includes('-day grid · <b>12</b> hours'), 'grid headline carries the hour total');
+  assert.ok(out.includes('Monday') && out.includes('Tuesday'), 'day names fill the grid');
+  const rows = [...out.matchAll(/<tr><td>(\w+)<\/td><td>([^<]+)<\/td><\/tr>/g)];
+  for (const r of rows) assert.equal(new Set(r[2].split(' + ')).size, r[2].split(' + ').length, r[1] + ' stacks the same subject twice');
+});
+
+test('study-log: the default week totals four hours ten and crowns Maths', () => {
+  const { dom } = runTool(bySlug('study-log'));
+  const out = dom.get('sl-out')._html;
+  assert.ok(out.includes('4 h 10 m logged'), '45+30+60+40+50+25 = 250 minutes');
+  assert.ok(out.includes('most-visited subject: <b>Maths</b>'), '135 minutes is the largest share');
+  assert.ok(out.includes('6 sessions across 4 days'), 'session and day counts are honest');
+});
+
 // The registry itself is the contract the second wave depends on: duplicate
 // slugs would silently shadow a route, a missing script would render a dead
 // form, and a tool with no hub/nav presence is invisible to readers.
