@@ -3890,4 +3890,601 @@ $('sl-in').oninput=render;$('sl-sep').onchange=render;$('sl-max').oninput=render
   <p>Do not rename a live slug. Every change turns old links into 404s or, if you 301 them, into redirect chains that search engines follow less eagerly each hop — and a page inside a chain loses the crawl budget it used to spend on you. Hyphens beat underscores because search engines have historically treated the hyphen as a word boundary and the underscore as a glue character, so creme-brulee reads as two words and creme_brulee as one mangled one; browsers and humans also word-break hyphenated URLs at the line edge. But none of that justifies churn: a mediocre slug that has accumulated six years of links outperforms a perfect slug that had to be 301-recovered. Generate the slug once, before the URL is published, and let it stay.</p>`,
 });
 
+// ── 72. /alat/flashcards — self-made study deck ──────────────────────────────
+TOOLKIT.push({
+  slug: 'flashcards', ic: '🗂', name: 'Flashcards',
+  title: 'Flashcard Maker — Build a Study Deck in Your Browser | Tukuk-OS',
+  desc: 'Turn any list of "front | back" lines into a flip, shuffle flashcard deck that keeps score. Vocabulary, dates, formulas — it runs in your browser and stores nothing.',
+  hero: 'Flashcards', sub: 'one card per line · flip · shuffle · knew-it tally',
+  navBlurb: 'Paste any "front | back" list and drill it as a shuffleable flashcard deck that tracks what you keep missing — no account, nothing stored.',
+  hubBlurb: 'write cards as "question | answer" lines, then flip, shuffle and mark what you knew — the deck lives only in your tab',
+  lead: 'Retrieval beats re-reading: a fact you try to answer and then check sticks far better than the same fact read fifty times. This maker turns plain text — <code>front | back</code>, one card per line — into a deck that shuffles, flips and keeps a knew-it tally, entirely in your browser.',
+  form: `<div class="tl-form">
+  ${field('Your deck — one card per line, written front | back', '<textarea class="tl-in" id="fc-in" spellcheck="false">capital of Japan | Tokyo\nlargest planet | Jupiter\nH2O is the formula for | water\nspeed of light, roughly | 300,000 km/s\ncurrency of Malaysia | ringgit\nwho wrote Hamlet | Shakespeare\nsquare root of 144 | 12\nsmallest prime number | 2</textarea>')}
+  <button class="tl-btn primary" id="fc-go" type="button">Start deck</button>
+  <button class="tl-btn" id="fc-reveal" type="button">Reveal answer</button>
+  <button class="tl-btn" id="fc-next" type="button">Next card ▶</button>
+  <button class="tl-btn" id="fc-shuffle" type="button">🔀 Shuffle</button>
+  <button class="tl-btn" id="fc-know" type="button" hidden>✓ Knew it</button>
+  <button class="tl-btn" id="fc-later" type="button" hidden>✗ Show it again later</button>
+</div>
+<div class="tl-res" id="fc-out">—</div>`,
+  css: `[hidden]{display:none!important}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var CARDS=[],pos=0,showBack=false,knew=0,later=0;
+function parse(){var lines=$('fc-in').value.split('\\n'),out=[],i,p;
+ for(i=0;i<lines.length;i++){p=lines[i].split('|');
+  if(p.length>=2&&p[0].trim()&&p[1].trim())out.push([p[0].trim(),p[1].trim()]);}
+ return out;}
+function render(){var el=$('fc-out'),c=CARDS[pos],h=!showBack||!CARDS.length;
+ $('fc-know').hidden=h;$('fc-later').hidden=h;
+ if(!CARDS.length){el.innerHTML='<span class="tl-badge tl-no">empty deck</span> One card per line as <code>front | back</code>, then press Start deck.';return;}
+ var tally='<p class="meta">Card '+(pos+1)+' of '+CARDS.length+' · knew it '+knew+(later?' · queued again '+later:'')+'</p>';
+ if(showBack)el.innerHTML='<div class="tl-big">'+c[1]+'</div><p class="meta">The question was: '+c[0]+'</p>'+tally;
+ else el.innerHTML='<div class="tl-big">'+c[0]+'</div>'+tally+'<p class="meta">Say the answer to yourself first — then hit Reveal.</p>';}
+function next(){pos++;if(pos>=CARDS.length)pos=0;showBack=false;render();}
+function start(){CARDS=parse();pos=0;showBack=false;knew=0;later=0;render();}
+$('fc-go').onclick=start;
+$('fc-reveal').onclick=function(){if(CARDS.length){showBack=true;render();}};
+$('fc-next').onclick=function(){if(CARDS.length)next();};
+$('fc-shuffle').onclick=function(){var i,j,t;for(i=CARDS.length-1;i>0;i--){j=Math.floor(Math.random()*(i+1));t=CARDS[i];CARDS[i]=CARDS[j];CARDS[j]=t;}pos=0;showBack=false;render();};
+$('fc-know').onclick=function(){if(CARDS.length){knew++;next();}};
+$('fc-later').onclick=function(){if(CARDS.length){var c=CARDS[pos];CARDS.push([c[0],c[1]]);later++;next();}};
+start();`,
+  seo: `<h2 class="section-title">Why "show it again later" is the whole trick</h2>
+  <p>Two effects carry flashcards: testing yourself before you look (retrieval practice) and bringing the misses back sooner than the easy ones (spacing). The ✗ button queues the card to the back of the deck so it returns while the slip is still fresh; the ✓ lets a known fact ride. What this page deliberately is not: a long-term scheduler. That needs a server that remembers you between visits, and everything here forgets the deck the moment the tab closes — which is also why you can keep using it for free.</p>`,
+});
+
+// ── 73. /alat/quiz-maker — notes to self-marking quiz ────────────────────────
+TOOLKIT.push({
+  slug: 'quiz-maker', ic: '❓', name: 'Quiz Maker',
+  title: 'Quiz Maker — Turn Notes into a Self-Marking Quiz | Tukuk-OS',
+  desc: 'Write questions as "Q | correct | wrong | wrong" lines and get a click-to-answer quiz that marks itself and keeps score. Runs in your browser, saves nothing.',
+  hero: 'Quiz Maker', sub: 'one question per line · 2–4 options · instant marking · score at the end',
+  navBlurb: 'Turn any notes into a self-marking multiple-choice quiz with the "question | correct | wrong" line format — options reshuffle every sit.',
+  hubBlurb: 'paste "question | correct answer | wrong answers" lines and sit a self-marking quiz with shuffled options and a final score',
+  lead: 'The quickest quiz that needs no account: one line is one question, split by <code>|</code> — question first, then the correct answer, then up to two wrong options. Distractors are optional (a two-option question works), the option order reshuffles on every sit, and the whole quiz is plain text you can email to a classmate who pastes it in and plays.',
+  form: `<div class="tl-form">
+  ${field('Your questions — one per line: question | correct answer | wrong | wrong', '<textarea class="tl-in" id="qz-in" spellcheck="false">What is the capital of France? | Paris | Lyon | Nice\nWhich planet is called the Red Planet? | Mars | Venus | Jupiter\nHow many continents are there? | 7 | 5 | 6\nWhich is the largest ocean? | Pacific | Atlantic | Indian\nWhich gas do plants breathe in? | carbon dioxide | oxygen | nitrogen</textarea>')}
+  <button class="tl-btn primary" id="qz-go" type="button">▶ Start quiz</button>
+  <button class="tl-btn tl-opt" id="qz-a0" type="button" hidden></button>
+  <button class="tl-btn tl-opt" id="qz-a1" type="button" hidden></button>
+  <button class="tl-btn tl-opt" id="qz-a2" type="button" hidden></button>
+  <button class="tl-btn tl-opt" id="qz-a3" type="button" hidden></button>
+  <button class="tl-btn" id="qz-next" type="button" hidden>Next question ▶</button>
+</div>
+<div class="tl-res" id="qz-fb"></div>
+<div class="tl-res" id="qz-out">—</div>`,
+  css: `[hidden]{display:none!important}.tl-opt{display:block;width:100%;text-align:left;margin-top:8px;padding:12px 16px;font-size:1rem}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var Q=[],pos=0,score=0,answered=false,started=false;
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function parse(){var lines=$('qz-in').value.split('\\n'),out=[],i,p,j,opts;
+ for(i=0;i<lines.length;i++){p=lines[i].split('|');
+  if(p.length>=2&&p[0].trim()&&p[1].trim()){opts=[];
+   for(j=1;j<p.length&&opts.length<4;j++)if(p[j].trim())opts.push(p[j].trim());
+   out.push({q:p[0].trim(),ok:opts[0],opts:opts});}}
+ return out;}
+function shuffle(a){var i,j,t;for(i=a.length-1;i>0;i--){j=Math.floor(Math.random()*(i+1));t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function hideOpts(){var i,b;for(i=0;i<4;i++){b=$('qz-a'+i);if(b)b.hidden=true;}}
+function showQ(){var q=Q[pos],i,b;q.sh=shuffle(q.opts.slice());answered=false;$('qz-fb').innerHTML='';$('qz-next').hidden=true;
+ for(i=0;i<4;i++){b=$('qz-a'+i);if(!b)continue;
+  if(i<q.sh.length){b.hidden=false;b.textContent=q.sh[i];}else b.hidden=true;}
+ render();}
+function render(){var el=$('qz-out');
+ if(!started){el.innerHTML='<span class="tl-badge">ready</span> <b>'+parse().length+'</b> questions parsed from the box above. Press Start quiz to sit them — option order reshuffles for every question and every sit.';hideOpts();$('qz-next').hidden=true;return;}
+ if(pos>=Q.length){var pct=Q.length?Math.round(100*score/Q.length):0;
+  el.innerHTML='<div class="tl-big">'+score+' / '+Q.length+' · '+pct+'%</div><p class="meta">'+(pct===100?'Flawless — now try teaching it to someone else.':pct>=70?'Strong run. The misses are worth a second sit.':pct>=40?'Getting there — start again and the reshuffled options will catch different gaps.':'Worth another go: read the misses below, then sit it again.')+'</p>';
+  hideOpts();$('qz-next').hidden=true;return;}
+ var q=Q[pos];
+ el.innerHTML='<p class="meta"><b>Question '+(pos+1)+' of '+Q.length+'</b> · score '+score+'</p><div class="tl-big">'+esc(q.q)+'</div>';}
+function answer(i){if(!started||answered||pos>=Q.length)return;
+ var q=Q[pos],mine=q.sh[i],ok=mine===q.ok;answered=true;if(ok)score++;
+ $('qz-fb').innerHTML=ok?'<span class="tl-badge tl-ok">correct</span> '+esc(mine):'<span class="tl-badge tl-no">not quite</span> you said '+esc(mine)+' — the answer is <b>'+esc(q.ok)+'</b>';
+ hideOpts();$('qz-next').hidden=false;render();}
+function start(){Q=parse();if(!Q.length)return;pos=0;score=0;started=true;showQ();}
+$('qz-go').onclick=start;
+$('qz-next').onclick=function(){if(!started)return;pos++;if(pos<Q.length)showQ();else render();};
+function bind(i){$('qz-a'+i).onclick=function(){answer(i);};}
+bind(0);bind(1);bind(2);bind(3);
+render();`,
+  seo: `<h2 class="section-title">On writing distractors worth the name</h2>
+  <p>A good wrong answer is a mistake somebody actually makes: the unit you forgot to convert, the plural you dropped, the second-best fact that is true of something else. Pick those and the quiz teaches discrimination, not just memory; pick <i>banana</i> and <i>pineapple</i> and it becomes a joke with a scoreboard. Two options is the minimum this tool accepts, three is the sweet spot, and four is where tired students start reading the last option first because they have learned to skip the first three.</p>`,
+});
+
+// ── 74. /alat/times-tables — multiplication drill ────────────────────────────
+TOOLKIT.push({
+  slug: 'times-tables', ic: '✖️', name: 'Times Tables Trainer',
+  title: 'Times Tables Trainer — Multiplication Practice with Scoring | Tukuk-OS',
+  desc: 'Drill the 2–12 times tables, single or mixed, with streaks, a per-minute speed score and an automatic review list of every miss.',
+  hero: 'Times Tables Trainer', sub: 'tables 2–12 or mixed · streak tracking · speed score · miss review',
+  navBlurb: 'Multiplication drills for one table or all of them mixed, with streaks, questions-per-minute and a review list built from your own misses.',
+  hubBlurb: 'pick a table or go mixed, beat the clock, and get every miss back as a review table at the end of the run',
+  lead: 'Fluency is automatic recall, and automatic recall comes from short frequent runs with instant feedback — which is exactly what this page does: one problem at a time, checked the moment you press Enter, misses logged, and a review table at the finish so the last ten minutes of practice go where they are needed.',
+  form: `<div class="tl-form">
+  ${field('Tables', '<select id="tt-tab"><option value="2">2s</option><option value="3">3s</option><option value="4">4s</option><option value="5">5s</option><option value="6">6s</option><option value="7">7s</option><option value="8">8s</option><option value="9">9s</option><option value="10">10s</option><option value="11">11s</option><option value="12">12s</option><option value="mixed" selected>mixed 2–12</option></select>')}
+  ${field('Run length', '<select id="tt-len"><option value="10" selected>10 questions</option><option value="20">20 questions</option><option value="50">50 questions</option></select>')}
+</div>
+<div class="tl-res" id="tt-q">—</div>
+<div class="tl-form">
+  ${field('Your answer', '<input id="tt-ans" type="number" step="1" autocomplete="off">')}
+  <button class="tl-btn primary" id="tt-go" type="button">Check ✓</button>
+  <button class="tl-btn" id="tt-new" type="button">Skip ↷</button>
+</div>
+<div class="tl-res" id="tt-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var cur=[0,0],made=0,score=0,streak=0,best=0,t0=0,wrongs=[],done=false;
+function gen(){var t=$('tt-tab').value,a,b;
+ if(t==='mixed'){a=2+Math.floor(Math.random()*11);b=2+Math.floor(Math.random()*11);}
+ else{a=parseInt(t,10);b=1+Math.floor(Math.random()*12);}
+ cur=[a,b];$('tt-ans').value='';$('tt-q').innerHTML='<div class="tl-big">'+a+' × '+b+' = ?</div>';}
+function secs(){return t0?Math.round((Date.now()-t0)/1000):0;}
+function line(){return '<p class="meta">Question '+(made+1)+' of '+$('tt-len').value+' · score '+score+'/'+made+' · streak '+streak+(best?' · best '+best:'')+' · '+secs()+'s</p>';}
+function finish(){done=true;var s=secs();
+ var h='<div class="tl-big">'+score+' / '+made+' in '+s+'s</div>';
+ if(wrongs.length){h+='<table class="tl-tab"><thead><tr><th>Missed</th><th>Answer</th></tr></thead><tbody>'
+  +wrongs.map(function(w){return '<tr><td>'+w[0]+'</td><td>'+w[1]+'</td></tr>';}).join('')+'</tbody></table><p class="meta">Now run the misses — that part is the whole workout.</p>';}
+ else{h+='<p class="meta">Flawless run.</p>';}
+ if(s>0)h+='<p class="meta">Speed: '+((made*60)/s).toFixed(1)+' questions per minute.</p>';
+ $('tt-out').innerHTML=h;$('tt-q').innerHTML='<div class="tl-big">Run finished</div>';}
+function check(){if(done)return;
+ var v=$('tt-ans').value.trim();
+ if(v===''){$('tt-out').innerHTML='<span class="tl-badge tl-no">type an answer</span> Work it out in your head, then key the number and press Check (or just hit Enter).';return;}
+ var ans=parseInt(v,10),right=cur[0]*cur[1];made++;if(!t0)t0=Date.now();
+ if(ans===right){score++;streak++;if(streak>best)best=streak;}
+ else{streak=0;wrongs.push([cur[0]+' × '+cur[1],String(right)]);}
+ $('tt-out').innerHTML=(ans===right?'<span class="tl-badge tl-ok">correct</span>':'<span class="tl-badge tl-no">missed — logged for review</span>')+line();
+ if(made>=parseInt($('tt-len').value,10)){finish();return;}
+ gen();}
+function skip(){if(done)return;made++;
+ $('tt-out').innerHTML='<span class="tl-badge">skipped</span>'+line();
+ if(made>=parseInt($('tt-len').value,10)){finish();return;}gen();}
+function reset(){made=0;score=0;streak=0;best=0;t0=0;wrongs=[];done=false;gen();
+ $('tt-out').innerHTML='<span class="tl-badge">go</span>'+line();$('tt-ans').focus&&$('tt-ans').focus();}
+$('tt-go').onclick=check;$('tt-new').onclick=skip;$('tt-tab').onchange=reset;$('tt-len').onchange=reset;reset();`,
+  seo: `<h2 class="section-title">Why the misses come back and the easy ones do not</h2>
+  <p>Practising what you already know feels productive and teaches almost nothing; the learning lives at the edge of what you can do. So the run logs every miss with its answer, and the review table at the finish is the list worth running again tomorrow — first mixed, then as a single-table drill if one digit keeps winning. Streaks are there because short-term feedback loops are what keep ten quiet minutes actually happening.</p>`,
+});
+
+// ── 75. /alat/clock-reading — analogue face practice ─────────────────────────
+TOOLKIT.push({
+  slug: 'clock-reading', ic: '🕐', name: 'Clock Reading',
+  title: 'Clock Reading Practice — Learn to Read an Analogue Clock | Tukuk-OS',
+  desc: 'Practice reading analogue clock faces: o-clock, half past, quarter to and five-minute drills with a drawn clock face and instant marking.',
+  hero: 'Clock Reading', sub: 'drawn clock face · o\u2019clock → 5-minute levels · self-marking',
+  navBlurb: 'A drawn analogue face, four difficulty levels and instant marking — the way children actually learn that the long hand counts minutes.',
+  hubBlurb: 'read the drawn clock face and type the time — four levels from o\u2019clock to any five-minute mark, marked instantly',
+  lead: 'Digital did it to clocks the way calculators did it to mental arithmetic: a whole generation can read a screen and cannot read a face. This drill draws a real analogue clock — hour hand short, minute hand long, hands placed with the actual gear maths (the hour hand creeps between numbers as minutes pass) — and asks for the time, from <i>o\u2019clock</i> down to any five-minute mark.',
+  form: `<div class="tl-form">
+  ${field('Difficulty', '<select id="cr-lv"><option value="hour" selected>o\u2019clock times</option><option value="half">half past</option><option value="quarter">quarter past / to</option><option value="five">any 5-minute mark</option></select>')}
+</div>
+<div class="tl-clock" id="cr-face"></div>
+<div class="tl-form">
+  ${field('What time is it?', '<input id="cr-ans" type="text" placeholder="e.g. 4:30" autocomplete="off">')}
+  <button class="tl-btn primary" id="cr-go" type="button">Check ✓</button>
+  <button class="tl-btn" id="cr-new" type="button">New clock ↷</button>
+</div>
+<div class="tl-res" id="cr-out">—</div>`,
+  css: `.tl-clock{display:flex;justify-content:center;padding:8px}.tl-clock svg{background:var(--panel,#171a21);border:1px solid var(--line,#2c313c);border-radius:50%}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var cur=[3,0],misses=0,solved=0;
+function face(h,m){var s='<svg viewBox="0 0 100 100" width="190" height="190">',n,a,x,y;
+ s+='<circle cx="50" cy="50" r="48" fill="none" stroke="#3a4150" stroke-width="2"/>';
+ for(n=1;n<=12;n++){a=n*30*Math.PI/180;x=50+38*Math.sin(a);y=50-38*Math.cos(a);
+  s+='<text x="'+x.toFixed(1)+'" y="'+(y+3.5).toFixed(1)+'" font-size="9" text-anchor="middle" fill="#9aa3b2">'+n+'</text>';}
+ a=((h%12)+m/60)*30*Math.PI/180;
+ s+='<line x1="50" y1="50" x2="'+(50+24*Math.sin(a)).toFixed(1)+'" y2="'+(50-24*Math.cos(a)).toFixed(1)+'" stroke="#e6e9ef" stroke-width="4" stroke-linecap="round"/>';
+ a=m*6*Math.PI/180;
+ s+='<line x1="50" y1="50" x2="'+(50+33*Math.sin(a)).toFixed(1)+'" y2="'+(50-33*Math.cos(a)).toFixed(1)+'" stroke="#4c8dff" stroke-width="2" stroke-linecap="round"/>';
+ s+='<circle cx="50" cy="50" r="2.5" fill="#e6e9ef"/></svg>';
+ return s;}
+function pad(m){return (m<10?'0':'')+m;}
+function gen(){var lv=$('cr-lv').value,h=1+Math.floor(Math.random()*12),m=0;
+ if(lv==='half')m=Math.random()<0.5?0:30;
+ else if(lv==='quarter')m=[0,15,30,45][Math.floor(Math.random()*4)];
+ else if(lv==='five')m=Math.floor(Math.random()*12)*5;
+ cur=[h,m];$('cr-face').innerHTML=face(h,m);$('cr-ans').value='';
+ $('cr-out').innerHTML='<span class="tl-badge">read the face</span> Short hand = hour, long hand = minutes. Type the answer as <b>h:mm</b>, for example 4:30. Solved '+solved+(misses?' · missed '+misses:'')+'.';}
+function check(){var mt=$('cr-ans').value.trim().match(/^(\\d{1,2}):(\\d{2})$/);
+ if(!mt){$('cr-out').innerHTML='<span class="tl-badge tl-no">check input</span> Write it as <b>h:mm</b> — like 4:30 or 11:15.';return;}
+ var h=parseInt(mt[1],10)%12,m=parseInt(mt[2],10);
+ if(h===cur[0]%12&&m===cur[1]){
+  $('cr-out').innerHTML='<span class="tl-badge tl-ok">correct</span> It was '+cur[0]+':'+pad(cur[1])+'. New clock coming up.';
+  solved++;gen();return;}
+ misses++;
+ if(misses%3===0){$('cr-out').innerHTML='<span class="tl-badge tl-no">here it is</span> The answer was <b>'+cur[0]+':'+pad(cur[1])+'</b> — hour hand near '+cur[0]+', minute hand on '+((cur[1]/5)||12)+'. Here is a fresh face.';gen();}
+ else $('cr-out').innerHTML='<span class="tl-badge tl-no">not that one</span> Remember: the short hand points at the hour it is walking toward, the long hand counts fives between the numbers. Try again or press New clock.';}
+$('cr-go').onclick=check;$('cr-new').onclick=gen;$('cr-lv').onchange=gen;
+$('cr-ans').onkeydown=function(e){if(e&&e.key==='Enter')check();};
+gen();`,
+  seo: `<h2 class="section-title">The one detail every clock face gets wrong</h2>
+  <p>The hour hand is not parked on the number — it crawls. At 2:30 it should sit exactly halfway between II and III, because a full dial sweep takes twelve hours, not twelve hops; this page draws it at <code>(hour + minutes/60) × 30°</code> for exactly that reason, which is also the read-your-own-face cue: the number the hour hand has just left is the hour, the number the minute hand points at is five times that. Once a child can explain why 2:30 looks "a bit past the 2", o\u2019clock to five-minute mastery is the same skill at finer steps.</p>`,
+});
+
+// ── 76. /alat/periodic-table — element explorer ──────────────────────────────
+TOOLKIT.push({
+  slug: 'periodic-table', ic: '🧪', name: 'Periodic Table Explorer',
+  title: 'Periodic Table Explorer — Search All 118 Elements | Tukuk-OS',
+  desc: 'Search or browse every element by name, symbol or number, with standard atomic weight and family — plus a random-element button for class drills.',
+  hero: 'Periodic Table Explorer', sub: 'all 118 elements · search by name, symbol or number · random element drill',
+  navBlurb: 'Every element from hydrogen to oganesson: atomic weight, family and state, searchable by name, symbol or number — with a random-element button.',
+  hubBlurb: 'look up any of the 118 elements by name, symbol or number — weight, family and state included, plus a random element for class drills',
+  lead: 'The whole table in one search box: name, symbol or atomic number, matched as you type. Weights are the IUPAC standard atomic weights rounded to four or five significant figures; for radioactive elements with no stable isotope the mass number of the longest-lived known isotope is shown, marked with a tilde. One hundred eighteen rows, no account, nothing fetched — the data is part of the page.',
+  form: `<div class="tl-form">
+  ${field('Search — name, symbol or number', '<input id="el-q" type="text" placeholder="e.g. oxygen, Fe, 47…" autocomplete="off" spellcheck="false">')}
+  <button class="tl-btn" id="el-rand" type="button">🎲 Random element</button>
+  <button class="tl-btn" id="el-all" type="button">Show the whole table</button>
+</div>
+<div class="tl-res" id="el-out">—</div>`,
+  css: `.el-sym{display:inline-block;width:2.4em;text-align:center;font-weight:700}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var D='1,H,Hydrogen,1.008,nm,gas;2,He,Helium,4.0026,noble,gas;3,Li,Lithium,6.94,alkali,solid;4,Be,Beryllium,9.012,alkaline,solid;5,B,Boron,10.81,metalloid,solid;6,C,Carbon,12.011,nm,solid;7,N,Nitrogen,14.007,nm,gas;8,O,Oxygen,15.999,nm,gas;9,F,Fluorine,18.998,halogen,gas;10,Ne,Neon,20.180,noble,gas;11,Na,Sodium,22.990,alkali,solid;12,Mg,Magnesium,24.305,alkaline,solid;13,Al,Aluminium,26.982,post,solid;14,Si,Silicon,28.085,metalloid,solid;15,P,Phosphorus,30.974,nm,solid;16,S,Sulfur,32.06,nm,solid;17,Cl,Chlorine,35.45,halogen,gas;18,Ar,Argon,39.95,noble,gas;19,K,Potassium,39.098,alkali,solid;20,Ca,Calcium,40.078,alkaline,solid;21,Sc,Scandium,44.956,trans,solid;22,Ti,Titanium,47.867,trans,solid;23,V,Vanadium,50.942,trans,solid;24,Cr,Chromium,51.996,trans,solid;25,Mn,Manganese,54.938,trans,solid;26,Fe,Iron,55.845,trans,solid;27,Co,Cobalt,58.933,trans,solid;28,Ni,Nickel,58.693,trans,solid;29,Cu,Copper,63.546,trans,solid;30,Zn,Zinc,65.38,trans,solid;31,Ga,Gallium,69.723,post,solid;32,Ge,Germanium,72.630,metalloid,solid;33,As,Arsenic,74.922,metalloid,solid;34,Se,Selenium,78.971,nm,solid;35,Br,Bromine,79.904,halogen,liq;36,Kr,Krypton,83.798,noble,gas;37,Rb,Rubidium,85.468,alkali,solid;38,Sr,Strontium,87.62,alkaline,solid;39,Y,Yttrium,88.906,trans,solid;40,Zr,Zirconium,91.224,trans,solid;41,Nb,Niobium,92.906,trans,solid;42,Mo,Molybdenum,95.95,trans,solid;43,Tc,Technetium,~98,trans,solid;44,Ru,Ruthenium,101.07,trans,solid;45,Rh,Rhodium,102.91,trans,solid;46,Pd,Palladium,106.42,trans,solid;47,Ag,Silver,107.87,trans,solid;48,Cd,Cadmium,112.41,trans,solid;49,In,Indium,114.82,post,solid;50,Sn,Tin,118.71,post,solid;51,Sb,Antimony,121.76,metalloid,solid;52,Te,Tellurium,127.60,metalloid,solid;53,I,Iodine,126.90,halogen,solid;54,Xe,Xenon,131.29,noble,gas;55,Cs,Caesium,132.91,alkali,solid;56,Ba,Barium,137.33,alkaline,solid;57,La,Lanthanum,138.91,lanth,solid;58,Ce,Cerium,140.12,lanth,solid;59,Pr,Praseodymium,140.91,lanth,solid;60,Nd,Neodymium,144.24,lanth,solid;61,Pm,Promethium,~145,lanth,solid;62,Sm,Samarium,150.36,lanth,solid;63,Eu,Europium,151.96,lanth,solid;64,Gd,Gadolinium,157.25,lanth,solid;65,Tb,Terbium,158.93,lanth,solid;66,Dy,Dysprosium,162.50,lanth,solid;67,Ho,Holmium,164.93,lanth,solid;68,Er,Erbium,167.26,lanth,solid;69,Tm,Thulium,168.93,lanth,solid;70,Yb,Ytterbium,173.05,lanth,solid;71,Lu,Lutetium,174.97,lanth,solid;72,Hf,Hafnium,178.49,trans,solid;73,Ta,Tantalum,180.95,trans,solid;74,W,Tungsten,183.84,trans,solid;75,Re,Rhenium,186.21,trans,solid;76,Os,Osmium,190.23,trans,solid;77,Ir,Iridium,192.22,trans,solid;78,Pt,Platinum,195.08,trans,solid;79,Au,Gold,196.97,trans,solid;80,Hg,Mercury,200.59,trans,liq;81,Tl,Thallium,204.38,post,solid;82,Pb,Lead,207.2,post,solid;83,Bi,Bismuth,208.98,post,solid;84,Po,Polonium,~209,post,solid;85,At,Astatine,~210,halogen,solid;86,Rn,Radon,~222,noble,gas;87,Fr,Francium,~223,alkali,solid;88,Ra,Radium,~226,alkaline,solid;89,Ac,Actinium,~227,actin,solid;90,Th,Thorium,232.04,actin,solid;91,Pa,Protactinium,231.04,actin,solid;92,U,Uranium,238.03,actin,solid;93,Np,Neptunium,~237,actin,solid;94,Pu,Plutonium,~244,actin,solid;95,Am,Americium,~243,actin,solid;96,Cm,Curium,~247,actin,solid;97,Bk,Berkelium,~247,actin,solid;98,Cf,Californium,~251,actin,solid;99,Es,Einsteinium,~252,actin,solid;100,Fm,Fermium,~257,actin,solid;101,Md,Mendelevium,~258,actin,solid;102,No,Nobelium,~259,actin,solid;103,Lr,Lawrencium,~266,actin,solid;104,Rf,Rutherfordium,~267,trans,solid;105,Db,Dubnium,~268,trans,solid;106,Sg,Seaborgium,~269,trans,solid;107,Bh,Bohrium,~270,trans,solid;108,Hs,Hassium,~277,trans,solid;109,Mt,Meitnerium,~278,unknown,solid;110,Ds,Darmstadtium,~281,unknown,solid;111,Rg,Roentgenium,~282,unknown,solid;112,Cn,Copernicium,~285,unknown,solid;113,Nh,Nihonium,~286,unknown,solid;114,Fl,Flerovium,~289,unknown,solid;115,Mc,Moscovium,~290,unknown,solid;116,Lv,Livermorium,~293,unknown,solid;117,Ts,Tennessine,~294,unknown,solid;118,Og,Oganesson,~294,unknown,solid',
+  ELS=D.split(';').map(function(r){var p=r.split(',');return {n:+p[0],s:p[1],name:p[2],w:p[3],fam:p[4],st:p[5]};}),
+  FAM={alkali:'alkali metal',alkaline:'alkaline earth',trans:'transition metal',post:'post-transition',metalloid:'metalloid',nm:'reactive nonmetal',halogen:'halogen',noble:'noble gas',lanth:'lanthanide',actin:'actinide',unknown:'synthetic (properties largely unmeasured)'},
+  ST={gas:'gas',liq:'liquid',solid:'solid'};
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function rows(list,limit){var i,html='<table class="tl-tab"><thead><tr><th>#</th><th>Symbol</th><th>Name</th><th>Weight</th><th>Family</th></tr></thead><tbody>';
+ for(i=0;i<list.length&&i<(limit||120);i++)html+='<tr><td>'+list[i].n+'</td><td class="el-sym">'+list[i].s+'</td><td>'+esc(list[i].name)+'</td><td>'+list[i].w+'</td><td>'+FAM[list[i].fam]+'</td></tr>';
+ return html+'</tbody></table>';}
+function card(e){return '<div class="tl-big">'+e.n+' · '+esc(e.name)+' ('+e.s+')</div>'
+ +'<table class="tl-tab"><tbody>'
+ +'<tr><td>Standard atomic weight</td><td>'+e.w+(e.w.charAt(0)==='~'?' u (longest-lived isotope)':' u')+'</td></tr>'
+ +'<tr><td>Family</td><td>'+FAM[e.fam]+'</td></tr>'
+ +'<tr><td>State at 25 °C</td><td>'+ST[e.st]+'</td></tr>'
+ +'<tr><td>Atomic number</td><td>'+e.n+' protons</td></tr></tbody></table>';}
+function render(){var q=$('el-q').value.trim().toLowerCase(),el=$('el-out'),list;
+ if(!q){el.innerHTML=card(ELS[0])+'<p class="meta">Showing hydrogen first — type to search, press <b>Show the whole table</b> for all 118, or take the random-element drill. Weights: IUPAC standard atomic values, rounded; ~ marks radioactive elements with no stable isotope.</p>';return;}
+ list=ELS.filter(function(e){return e.name.toLowerCase().indexOf(q)>=0||e.s.toLowerCase()===q||String(e.n)===q;});
+ if(!list.length){el.innerHTML='<span class="tl-badge tl-no">no match</span> Nothing in the table answers to <b>'+esc(q)+'</b>. Try part of a name (gold), a symbol (Au) or a number (79).';return;}
+ if(list.length===1){el.innerHTML=card(list[0]);return;}
+ el.innerHTML=rows(list,60)+'<p class="meta">'+list.length+' matches — narrow the search for a full card.</p>';}
+$('el-q').oninput=render;
+$('el-rand').onclick=function(){var e=ELS[Math.floor(Math.random()*ELS.length)];$('el-q').value='';
+ $('el-out').innerHTML=card(e)+'<p class="meta">Random draw — name it from memory, then search it to check.</p>';};
+$('el-all').onclick=function(){var q=$('el-q');q.value='';$('el-out').innerHTML=rows(ELS)+'<p class="meta">All 118 elements, hydrogen to oganesson. Search above to focus one.</p>';};
+render();`,
+  seo: `<h2 class="section-title">What the numbers actually mean</h2>
+  <p>The atomic weight is not the proton count — it is the average mass of the element as found in nature, weighted across its isotopes, which is why chlorine is 35.45 and not 35: a third of natural chlorine is the isotope with 17 neutrons and two thirds carry 19. The families on this page are the column groups of the standard table; the lanthanides and actinides are listed in place by number rather than in the two floating rows, which is the honest way for a search box even if it breaks the printed habit.</p>`,
+});
+
+// ── 77. /alat/flags-quiz — country ↔ flag drill ──────────────────────────────
+TOOLKIT.push({
+  slug: 'flags-quiz', ic: '🌍', name: 'Flags Quiz',
+  title: 'Flags Quiz — Country ↔ Emoji Flag Multiple Choice | Tukuk-OS',
+  desc: 'Quiz yourself on the world\u2019s countries: flag to name or name to flag, four options, instant marking and score. About 170 countries, all in-browser.',
+  hero: 'Flags Quiz', sub: 'flag ⇄ country name · four options · scored · about 170 countries',
+  navBlurb: 'Two-way flag drill over some 170 countries: see the flag and name it, or see the name and pick the flag — scored, self-marking, in-browser.',
+  hubBlurb: 'match countries to their emoji flags both ways — name→flag or flag→name — with instant marking over some 170 countries',
+  lead: 'The flags are drawn from ISO 3166-1 alpha-2 codes at runtime — every pair of regional-indicator letters is what renders a flag on your platform — so the data this quiz carries is plain text, and it works offline. Two directions: read a flag and choose the country, or read a name and pick the flag. Wrong options are always real countries, so a lucky guess still teaches something.',
+  form: `<div class="tl-form">
+  ${field('Direction', '<select id="fl-mode"><option value="name" selected>show the flag → pick the country</option><option value="flag">show the name → pick the flag</option></select>')}
+  <button class="tl-btn primary" id="fl-go" type="button">New question ▶</button>
+  <button class="tl-btn tl-opt" id="fl-a0" type="button" hidden></button>
+  <button class="tl-btn tl-opt" id="fl-a1" type="button" hidden></button>
+  <button class="tl-btn tl-opt" id="fl-a2" type="button" hidden></button>
+  <button class="tl-btn tl-opt" id="fl-a3" type="button" hidden></button>
+</div>
+<div class="tl-res" id="fl-out">—</div>`,
+  css: `[hidden]{display:none!important}.tl-opt{display:block;width:100%;text-align:left;margin-top:8px;padding:12px 16px;font-size:1.2rem}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var LIST='AD,Andorra;AE,United Arab Emirates;AF,Afghanistan;AG,Antigua and Barbuda;AL,Albania;AM,Armenia;AO,Angola;AR,Argentina;AT,Austria;AU,Australia;AZ,Azerbaijan;BA,Bosnia and Herzegovina;BB,Barbados;BD,Bangladesh;BE,Belgium;BF,Burkina Faso;BG,Bulgaria;BH,Bahrain;BI,Burundi;BJ,Benin;BN,Brunei;BO,Bolivia;BR,Brazil;BS,Bahamas;BT,Bhutan;BW,Botswana;BY,Belarus;BZ,Belize;CA,Canada;CD,DR Congo;CF,Central African Republic;CG,Congo;CH,Switzerland;CI,Ivory Coast;CL,Chile;CM,Cameroon;CN,China;CO,Colombia;CR,Costa Rica;CU,Cuba;CV,Cape Verde;CY,Cyprus;CZ,Czechia;DE,Germany;DJ,Djibouti;DK,Denmark;DM,Dominica;DO,Dominican Republic;DZ,Algeria;EC,Ecuador;EE,Estonia;EG,Egypt;ER,Eritrea;ES,Spain;ET,Ethiopia;FI,Finland;FJ,Fiji;FM,Micronesia;FR,France;GA,Gabon;GB,United Kingdom;GD,Grenada;GE,Georgia;GH,Ghana;GM,Gambia;GN,Guinea;GQ,Equatorial Guinea;GR,Greece;GT,Guatemala;GW,Guinea-Bissau;GY,Guyana;HN,Honduras;HR,Croatia;HT,Haiti;HU,Hungary;ID,Indonesia;IE,Ireland;IL,Israel;IN,India;IQ,Iraq;IR,Iran;IS,Iceland;IT,Italy;JM,Jamaica;JO,Jordan;JP,Japan;KE,Kenya;KG,Kyrgyzstan;KH,Cambodia;KI,Kiribati;KM,Comoros;KN,Saint Kitts and Nevis;KP,North Korea;KR,South Korea;KW,Kuwait;KZ,Kazakhstan;LA,Laos;LB,Lebanon;LI,Liechtenstein;LK,Sri Lanka;LR,Liberia;LS,Lesotho;LT,Lithuania;LU,Luxembourg;LV,Latvia;LY,Libya;MA,Morocco;MC,Monaco;MD,Moldova;ME,Montenegro;MG,Madagascar;MH,Marshall Islands;MK,North Macedonia;ML,Mali;MM,Myanmar;MN,Mongolia;MR,Mauritania;MT,Malta;MU,Mauritius;MV,Maldives;MW,Malawi;MX,Mexico;MY,Malaysia;MZ,Mozambique;NA,Namibia;NE,Niger;NG,Nigeria;NI,Nicaragua;NL,Netherlands;NO,Norway;NP,Nepal;NR,Nauru;NZ,New Zealand;OM,Oman;PA,Panama;PE,Peru;PG,Papua New Guinea;PH,Philippines;PK,Pakistan;PL,Poland;PT,Portugal;PW,Palau;PY,Paraguay;QA,Qatar;RO,Romania;RS,Serbia;RU,Russia;RW,Rwanda;SA,Saudi Arabia;SB,Solomon Islands;SC,Seychelles;SD,Sudan;SE,Sweden;SG,Singapore;SI,Slovenia;SK,Slovakia;SL,Sierra Leone;SM,San Marino;SN,Senegal;SO,Somalia;SR,Suriname;SS,South Sudan;ST,Sao Tome and Principe;SV,El Salvador;SY,Syria;SZ,Eswatini;TD,Chad;TH,Thailand;TJ,Tajikistan;TM,Turkmenistan;TN,Tunisia;TR,Turkey;TT,Trinidad and Tobago;TV,Tuvalu;TW,Taiwan;TZ,Tanzania;UA,Ukraine;UG,Uganda;US,United States;UY,Uruguay;UZ,Uzbekistan;VA,Vatican City;VE,Venezuela;VN,Vietnam;VU,Vanuatu;XK,Kosovo;YE,Yemen;ZA,South Africa;ZM,Zambia;ZW,Zimbabwe'.split(';').map(function(r){var p=r.split(',');return {c:p[0],n:p[1]};});
+function flag(c){var A=127397;if(!String.fromCodePoint)return c;
+ return String.fromCodePoint(A+c.charCodeAt(0),A+c.charCodeAt(1));}
+var cur=null,okIdx=0,answered=false,made=0,score=0;
+function others(except){var out=[],g=0;
+ while(out.length<3&&g<300){var x=LIST[Math.floor(Math.random()*LIST.length)];g++;
+  if(x.c!==except.c&&out.indexOf(x)<0)out.push(x);}
+ return out;}
+function shuf(a){var i,j,t;for(i=a.length-1;i>0;i--){j=Math.floor(Math.random()*(i+1));t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function newQ(){answered=false;cur=LIST[Math.floor(Math.random()*LIST.length)];
+ var mode=$('fl-mode').value,all=others(cur);all.push(cur);all=shuf(all);okIdx=all.indexOf(cur);
+ for(var i=0;i<4;i++){var b=$('fl-a'+i);b.hidden=false;
+  b.textContent=mode==='flag'?flag(all[i].c)+' \u00b7 '+all[i].c:all[i].n;}
+ $('fl-out').innerHTML='<div class="tl-big">'+(mode==='flag'?cur.n:flag(cur.c))+'</div><p class="meta">'
+  +(mode==='flag'?'Tap the flag this country flies — the ISO letter pair shows through on platforms without flag art.':'Which country flies that flag?')
+  +' Made '+made+' \u00b7 score '+score+'.</p>';}
+function answer(i){if(answered)return;answered=true;made++;
+ var ok=i===okIdx;if(ok)score++;
+ $('fl-out').innerHTML='<span class="tl-badge '+(ok?'tl-ok':'tl-no')+'">'+(ok?'correct':'missed')+'</span> It was <b>'+cur.n+'</b> '+(flag(cur.c)!==cur.c?'· '+flag(cur.c):'')+'. Made '+made+' · score '+score+'. Press New question to keep going.';}
+$('fl-go').onclick=newQ;$('fl-mode').onchange=newQ;
+function bind(i){$('fl-a'+i).onclick=function(){answer(i);};}
+bind(0);bind(1);bind(2);bind(3);
+newQ();`,
+  seo: `<h2 class="section-title">Why emoji flags look different everywhere</h2>
+  <p>An emoji flag is not a picture — it is a two-letter ISO country code wearing a costume: each letter is a regional-indicator symbol, and platforms that draw flags pair them into artwork at render time. That is why the same question shows Nepal as a flag on a phone and as the letters NP on a desktop browser without flag fonts (Windows never drew flag glyphs at all). The quiz degrades honestly: when your platform will not paint the flag, the letter pair still identifies the country, and the answer text always names it either way.</p>`,
+});
+
+// ── 78. /alat/word-scramble — unscramble puzzles ────────────────────────
+TOOLKIT.push({
+  slug: 'word-scramble', ic: '🔤', name: 'Word Scramble',
+  title: 'Word Scramble — Unjumble Letters Into Words | Tukuk-OS',
+  desc: 'Unscramble jumbled words from four themed banks — animals, countries, food, sports — with letter hints and a running score. A classroom classic, in-browser.',
+  hero: 'Word Scramble', sub: 'four word banks · letter hints · solved / tried score · endless rounds',
+  navBlurb: 'Jumbled letters from themed word banks with progressive hints and a score — a warm-up game for spelling and vocabulary lessons.',
+  hubBlurb: 'unjumble letters from animal, country, food or sport word banks, with hints that reveal one letter at a time',
+  lead: 'The scramble is a true shuffle of the word (re-rolled until it differs from the answer), so every puzzle is solvable and none is accidentally pre-solved. Hint does what a teacher does: hands back one letter at a time, never more than all but the last, so the win still belongs to the player.',
+  form: `<div class="tl-form">
+  ${field('Word bank', '<select id="ws-cat"><option value="animals" selected>animals</option><option value="countries">countries</option><option value="food">food and drink</option><option value="sports">sports</option></select>')}
+  ${field('Your guess', '<input id="ws-ans" type="text" autocomplete="off" spellcheck="false">')}
+  <button class="tl-btn primary" id="ws-go" type="button">Check ✓</button>
+  <button class="tl-btn" id="ws-hint" type="button">Hint: one letter</button>
+  <button class="tl-btn" id="ws-new" type="button">New word ↷</button>
+</div>
+<div class="tl-res" id="ws-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var CATS={animals:'elephant,giraffe,zebra,penguin,dolphin,leopard,hamster,octopus,kangaroo,butterfly,crocodile,squirrel,flamingo,hedgehog,pelican,rabbit,turtle,panther',
+ countries:'malaysia,indonesia,thailand,brazil,canada,france,germany,egypt,kenya,spain,italy,norway,peru,chile,morocco,vietnam,portugal,iceland,turkey,japan',
+ food:'pineapple,dumpling,sandwich,spaghetti,avocado,burrito,pancake,noodles,cinnamon,chocolate,blueberry,omelette,pretzel,lasagna,papaya,hummus,risotto,tortilla',
+ sports:'badminton,volleyball,cricket,surfing,cycling,archery,karate,sailing,skiing,rugby,boxing,fencing,rowing,tennis,climbing,skating,marathon,squash,judo,polo'};
+var word='',scr='',hint=0,made=0,score=0;
+function maskWord(){var i,out='';for(i=0;i<word.length;i++)out+=(i<hint?word.charAt(i):'_')+' ';return out.trim();}
+function render(){ $('ws-out').innerHTML='<div class="tl-big">'+scr.split('').join(' ')+'</div>'
+ +'<p class="meta">Progress: '+maskWord()+' · tried '+made+' · solved '+score+'. Type your guess and press Check, or take a hint.</p>';}
+function pick(){var list=CATS[$('ws-cat').value].split(','),i,j,t,ch;
+ word=list[Math.floor(Math.random()*list.length)];hint=0;
+ ch=word.split('');
+ for(i=0;i<20;i++){for(j=ch.length-1;j>0;j--){t=Math.floor(Math.random()*(j+1));var s2=ch[j];ch[j]=ch[t];ch[t]=s2;}
+  scr=ch.join('');if(scr!==word||word.length<3)break;}
+ $('ws-ans').value='';render();}
+function check(){var v=$('ws-ans').value.trim().toLowerCase();
+ if(!v){$('ws-out').innerHTML='<span class="tl-badge tl-no">empty</span> Type what the letters spell first.';return;}
+ made++;
+ if(v===word){score++;$('ws-out').innerHTML='<span class="tl-badge tl-ok">solved</span> <b>'+word+'</b> — that is the word. Tried '+made+' · solved '+score+'. Press New word for another.';}
+ else{hint=Math.min(hint+1,word.length-1);
+  $('ws-out').innerHTML='<span class="tl-badge tl-no">'+v+' is not it</span> A letter came back for free: '+maskWord()+' — tried '+made+' · solved '+score+'.';}
+ $('ws-ans').value='';}
+$('ws-go').onclick=check;
+$('ws-hint').onclick=function(){hint=Math.min(hint+1,word.length-1);render();};
+$('ws-new').onclick=pick;$('ws-cat').onchange=pick;
+$('ws-ans').onkeydown=function(e){if(e&&e.key==='Enter')check();};
+pick();`,
+  seo: `<h2 class="section-title">Why the hint never gives the last letter</h2>
+  <p>A puzzle solved by the machine teaches nothing and a puzzle surrendered to frustration teaches less; the useful edge is one letter short of the answer, which is where the rest of the word snaps into place on its own. That is why Hint caps at length minus one, and why wrong guesses reveal a letter too — the game is built to keep the player in the almost-solved zone rather than the solved-or-stuck binary.</p>`,
+});
+
+// ── 79. /alat/worksheet — printable practice sheets ────────────────────
+TOOLKIT.push({
+  slug: 'worksheet', ic: '📝', name: 'Worksheet Generator',
+  title: 'Math Worksheet Generator — Printable Practice Sheets | Tukuk-OS',
+  desc: 'Make printable arithmetic worksheets — add, subtract, multiply, divide or mixed — in three difficulty levels, with a toggleable answer key.',
+  hero: 'Worksheet Generator', sub: '4 operations · 3 levels · 4–40 questions · answer key · print-ready',
+  navBlurb: 'Printable arithmetic sheets with an answer key: pick the operation, the level and the count, then hit Print — no account, no watermark.',
+  hubBlurb: 'print-ready arithmetic sheets in three levels with a one-click answer key — subtraction that never goes negative, division that always divides exact',
+  lead: 'Built the way a teacher writes them at 11pm: pick addition, subtraction, times tables or exact division (or all four), choose a level, get a grid of fresh questions that prints cleanly — blank answers on the sheet, the key a click away. Subtractions never go below zero and divisions always come out exact, because a worksheet that produces negative answers at level 1 is not a worksheet but a trap.',
+  form: `<div class="tl-form">
+  ${field('Operation', '<select id="wh-op"><option value="add">addition</option><option value="sub">subtraction</option><option value="mul">multiplication</option><option value="div">division</option><option value="mixed" selected>mixed</option></select>')}
+  ${field('Level', '<select id="wh-lv"><option value="1">1 · early practice</option><option value="2" selected>2 · confident</option><option value="3">3 · stretched</option></select>')}
+  ${field('Questions', '<input id="wh-n" type="number" min="4" max="40" step="1" value="12">')}
+  <button class="tl-btn primary" id="wh-go" type="button">Make worksheet</button>
+  <button class="tl-btn" id="wh-key" type="button">Show answer key</button>
+  <button class="tl-btn" id="wh-print" type="button">Print 🖨</button>
+</div>
+<div class="tl-res" id="wh-out">—</div>`,
+  css: `.wh-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 20px}.wh-item{padding:5px 0;border-bottom:1px dashed var(--line,#2c313c)}@media print{.tl-form,.tl-navchip,footer,.ad{visibility:hidden}.wh-item{border-bottom:1px solid #999}}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var PS=[],key=false;
+function ri(n){return 1+Math.floor(Math.random()*n);}\n
+function make(){var op=$('wh-op').value,lv=parseInt($('wh-lv').value,10)||2,
+  n=Math.min(40,Math.max(4,parseInt($('wh-n').value,10)||12));
+ PS=[];for(var i=0;i<n;i++){
+  var o=(op==='mixed')?['add','sub','mul','div'][i%4]:op,a,b,qv;
+  if(o==='add'){a=ri(lv===1?20:lv===2?100:1000);b=ri(lv===1?20:lv===2?100:1000);PS.push([a+' + '+b,a+b]);}
+  else if(o==='sub'){a=ri(lv===1?20:lv===2?100:1000);b=ri(a);PS.push([a+' \u2212 '+b,a-b]);}
+  else if(o==='mul'){var mx=lv===1?5:lv===2?10:20;a=ri(mx);b=ri(mx);PS.push([a+' \u00d7 '+b,a*b]);}
+  else{b=ri(lv===1?5:lv===2?10:20);qv=ri(lv===1?5:lv===2?10:20);PS.push([b*qv+' \u00f7 '+b,qv]);}}
+ key=false;$('wh-key').textContent='Show answer key';render();}
+function render(){var i;
+ function cell(p,ix){return '<div class="wh-item">'+(ix+1)+'. '+p[0]+' = '+(key?'<b>'+p[1]+'</b>':'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;')+'</div>';}
+ $('wh-out').innerHTML='<div class="wh-grid">'+PS.map(cell).join('')+'</div>'
+  +'<p class="meta">'+PS.length+' questions · level '+$('wh-lv').value+' · '+(key?'answer key shown — press Hide to blank it again':'blank answers — print now or press the key')+'. Subtraction never goes negative; division is always exact.</p>';}
+$('wh-go').onclick=make;
+$('wh-key').onclick=function(){key=!key;$('wh-key').textContent=key?'Hide answer key':'Show answer key';render();};
+$('wh-print').onclick=function(){try{window.print();}catch(e){$('wh-out').innerHTML+='<p class="meta">Printing is not available here — select the sheet and copy it instead.</p>';}};
+make();`,
+  seo: `<h2 class="section-title">Practice works when the answers are checkable</h2>
+  <p>Every question on a sheet has exactly one right answer and the generator knows it the moment it writes the question — the pair is stored, not recomputed — which is why the key can never disagree with the sheet. Mixed sheets round-robin the four operations rather than drawing them at random, so a twenty-question sheet is five of each and no child spends the whole evening on the one thing they already own.</p>`,
+});
+
+// ── 80. /alat/spelling — fill-the-blank spelling ────────────────────
+TOOLKIT.push({
+  slug: 'spelling', ic: '🐝', name: 'Spelling Practice',
+  title: 'Spelling Practice — Fill the Blank in Real Sentences | Tukuk-OS',
+  desc: 'Practise spelling with words hidden inside sentences at three levels, with browser voice read-out, letter hints and instant marking.',
+  hero: 'Spelling Practice', sub: 'sentence blanks · 3 levels · speak-it button · hint letters',
+  navBlurb: 'Words hidden in sentences, spoken aloud by the browser voice when you want a hint by ear instead of by letter — three levels, marked instantly.',
+  hubBlurb: 'fill the blank with the right spelling — sentences at three levels, a speak button, and letter hints that never hand over the whole word',
+  lead: 'Spelling lives in context: the same sound can be written five ways, so the sentence does double duty — it fixes the meaning and forces the letter choice. Pick a level, read the line, type the missing word. The 🔊 button says the word out loud using the browser\u2019s own speech voice (nothing is downloaded), and hints surface one letter at a time.',
+  form: `<div class="tl-form">
+  ${field('Level', '<select id="sp-lv"><option value="easy">everyday (age 7+)</option><option value="mid" selected>tricky (age 10+)</option><option value="hard">commonly misspelt (age 12+)</option></select>')}
+</div>
+<div class="tl-res" id="sp-line">—</div>
+<div class="tl-form">
+  ${field('The missing word', '<input id="sp-in" type="text" autocomplete="off" spellcheck="false">')}
+  <button class="tl-btn primary" id="sp-check" type="button">Check ✓</button>
+  <button class="tl-btn" id="sp-say" type="button">🔊 Hear it</button>
+  <button class="tl-btn" id="sp-hint" type="button">Hint: next letter</button>
+  <button class="tl-btn" id="sp-new" type="button">Next word ▶</button>
+</div>
+<div class="tl-res" id="sp-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var L={easy:'cat|The @@ slept on the sofa.;dog|Our @@ buried a bone.;tree|A nest sat high in the @@.;book|She finished the whole @@.;milk|The @@ went sour.;bread|Torn @@ with butter.;frog|The @@ leapt off the log.;star|We wished on a @@.',
+ mid:'because|We stayed in @@ it rained.;friend|My best @@ visits every summer.;school|The @@ bell rings at eight.;night|We counted stars all @@.;island|A ferry reaches the @@.;travel|We @@ light for the holidays.;weather|The @@ turned cold by noon.;country|Every @@ flies its own flag.',
+ hard:'separate|@@ the eggs from the whites.;receive|You @@ the reply on Tuesday.;definite|She gave a @@ answer.;necessary|A coat is @@ in this weather.;embarrass|The spill @@ the whole class.;occurrence|Each @@ was written down.;rhythm|The @@ stuck in my head all day.;privilege|Reading is a @@, not a right.'};
+var cur=['',''],hintN=0,made=0,score=0;
+function mask(){var i,m='';for(i=0;i<cur[0].length;i++)m+=(i<hintN?cur[0].charAt(i):'_');return '<b>'+m+'</b>';}
+function drawLine(){$('sp-line').innerHTML='<div class="tl-big">'+cur[1].replace('@@',mask())+'</div><p class="meta">The missing word has '+cur[0].length+' letters.</p>';}
+function pick(){var arr=L[$('sp-lv').value].split(';');
+ cur=arr[Math.floor(Math.random()*arr.length)].split('|');hintN=0;$('sp-in').value='';
+ drawLine();$('sp-out').innerHTML='<span class="tl-badge">go</span> Type the word that fills the blank. Tried '+made+' · correct '+score+'.';}
+function wrong(extra){hintN=Math.min(hintN+1,cur[0].length-1);drawLine();
+ $('sp-out').innerHTML='<span class="tl-badge tl-no">not that spelling</span> '+(extra||'')+' A letter was revealed — keep going, or press Next word.';}
+function check(){var v=$('sp-in').value.trim().toLowerCase();
+ if(!v){$('sp-out').innerHTML='<span class="tl-badge tl-no">empty</span> Type the missing word first.';return;}
+ made++;
+ if(v===cur[0]){score++;$('sp-out').innerHTML='<span class="tl-badge tl-ok">spelt right</span> <b>'+cur[0]+'</b> — clean. Tried '+made+' · correct '+score+'. Next word when ready.';}
+ else wrong(v+' is not it —');
+}
+$('sp-check').onclick=check;
+$('sp-hint').onclick=function(){hintN=Math.min(hintN+1,cur[0].length-1);drawLine();};
+$('sp-new').onclick=function(){var w=cur[0];
+ if(w&&hintN>0&&$('sp-out').innerHTML.indexOf('tl-ok')<0){}pick();};
+$('sp-say').onclick=function(){try{var u=new SpeechSynthesisUtterance(cur[0]);u.lang='en-GB';window.speechSynthesis.speak(u);}
+ catch(e){$('sp-out').innerHTML='<span class="tl-badge tl-no">no voice here</span> This browser has no built-in speech — ask someone to read the sentence instead.';}};
+$('sp-lv').onchange=pick;
+$('sp-in').onkeydown=function(e){if(e&&e.key==='Enter')check();};
+pick();`,
+  seo: `<h2 class="section-title">Why the hard list is the right list</h2>
+  <p>The level-three words are the ones large-scale spelling surveys keep finding wrong: separate, receive, definite, necessary — each missed for one specific reason. There is a hidden <i>par</i> in sep-ar-ate that keeps pulling the pen toward <i>-reth</i>; <i>receive</i> breaks the i-before-e rule because it is one of the rule's own exceptions; <i>definite</i> drops the <i>-able</i> people hear at its end; and <i>necessary</i> has exactly one pair (two c's, one s) where everyone feels there should be two pairs. Drilling random hard words spreads attention thin; drilling the champion misspellings concentrates it where the whole language actually trips.</p>`,
+});
+
+// ── 81. /alat/solar-system — planet fact cards ──────────────────────
+TOOLKIT.push({
+  slug: 'solar-system', ic: '🪐', name: 'Solar System Explorer',
+  title: 'Solar System Explorer — Planet Facts and Comparisons | Tukuk-OS',
+  desc: 'Fact cards for every planet, Pluto and the Sun: diameter versus Earth, orbit, day length, moons, gravity and temperature, from NASA figures.',
+  hero: 'Solar System Explorer', sub: '9 planets + Pluto + the Sun · size vs Earth · NASA fact-sheet numbers',
+  navBlurb: 'Every planet, the dwarf Pluto and the Sun itself: size against Earth, orbit, day, moons, gravity and temperature — rounded NASA fact-sheet data.',
+  hubBlurb: 'pick a world and get its real numbers — diameter against Earth, its year and day, moons, gravity and temperature — plus one strange fact',
+  lead: 'A select box of ten worlds and a card of honest numbers for each: diameter in kilometres and as a multiple of Earth, distance in astronomical units, year and day in Earth measures, moons as counted today, surface gravity and mean temperature. The figures are rounded values from the NASA planetary fact sheets, and each body carries the one fact that makes it worth remembering.',
+  form: `<div class="tl-form">
+  ${field('Choose a world', '<select id="so-p"><option value="0">Mercury</option><option value="1">Venus</option><option value="2" selected>Earth</option><option value="3">Mars</option><option value="4">Jupiter</option><option value="5">Saturn</option><option value="6">Uranus</option><option value="7">Neptune</option><option value="8">Pluto (dwarf planet)</option><option value="9">The Sun</option></select>')}
+</div>
+<div class="tl-res" id="so-out">—</div>`,
+  css: `.so-bar{height:10px;border-radius:5px;background:linear-gradient(90deg,#4c8dff,#7fd0ff);margin:2px 0 10px}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var P=[['Mercury',4879,0.39,88,1406,0,0.38,167,'A year takes 88 Earth days and the surface swings some 600 degrees between daylight and dark.'],
+['Venus',12104,0.72,225,5832,0,0.90,464,'Its day is longer than its year, and it turns backwards under clouds of sulphuric acid.'],
+['Earth',12742,1.00,365.25,24,1,1.00,15,'The only world known to carry liquid-water oceans — and, so far, the only one known to carry readers.'],
+['Mars',6779,1.52,687,24.7,2,0.38,-65,'Home to Olympus Mons, a volcano nearly three times the height of Everest, and to dust storms that wrap the whole planet.'],
+['Jupiter',139820,5.20,4333,9.9,95,2.53,-110,'The Great Red Spot is a storm wider than Earth that has outlasted every telescope aimed at it.'],
+['Saturn',116460,9.58,10759,10.7,146,1.07,-140,'Its rings are mostly water ice, and thin: you could stack forty of them through like records.'],
+['Uranus',50724,19.2,30687,17.2,28,0.89,-195,'Tipped on its side by an ancient collision, it rolls around the Sun like a dropped marble.'],
+['Neptune',49244,30.05,60190,16.1,16,1.14,-200,'Winds here top 2,000 km/h — the fastest measured anywhere in the solar system.'],
+['Pluto',2377,39.5,90560,153.3,5,0.07,-229,'Reclassified in 2006, it keeps a heart-shaped glacier of nitrogen ice as its signature.'],
+['The Sun',1392700,0,0,609,0,27.9,5500,'A middle-aged star holding 99.8% of the solar system mass — everything else on this list orbits it.']];
+function fmt(n){return String(n).replace(/\\B(?=(\\d{3})+(?!\\d))/g,',');}
+function render(){var e=P[parseInt($('so-p').value,10)],d=e[1],w=Math.max(3,Math.min(100,Math.round(d/1392700*100)));
+ var h='<div class="tl-big">'+e[0]+'</div>'
+ +'<p class="meta">Diameter, to scale against the Sun: '+w+'%</p><div class="so-bar" style="width:'+w+'%"></div>'
+ +'<table class="tl-tab"><tbody>'
+ +'<tr><td>Diameter</td><td>'+fmt(d)+' km · '+(d/12742).toFixed(2)+'× Earth</td></tr>'
+ +'<tr><td>Distance from the Sun</td><td>'+(e[2]?(e[2]+' AU · about '+fmt(Math.round(e[2]*150))+' million km'):'— it is the Sun')+'</td></tr>'
+ +'<tr><td>Year (Earth days)</td><td>'+(e[3]?fmt(e[3]):'—')+'</td></tr>'
+ +'<tr><td>Day (Earth hours)</td><td>'+(e[4]===5832?'5,832 (= 243 Earth days, retrograde)':e[4])+'</td></tr>'
+ +'<tr><td>Known moons</td><td>'+(e[0]==='The Sun'?'—':e[5])+'</td></tr>'
+ +'<tr><td>Surface gravity</td><td>'+e[6]+'× Earth</td></tr>'
+ +'<tr><td>Mean temperature</td><td>'+e[7]+' °C</td></tr>'
+ +'</tbody></table><p class="meta">'+e[8]+'</p>'
+ +'<p class="meta">Rounded values from the NASA planetary fact sheets; moon counts are the confirmed totals as of 2026. Venus and Uranus rotate backwards — their day figures are still the true spin period.</p>';
+ $('so-out').innerHTML=h;}
+$('so-p').onchange=render;render();`,
+  seo: `<h2 class="section-title">Why the day of Venus is written two ways</h2>
+  <p>Astronomers count a sidereal day (one full spin against the stars) and a solar day (sunrise to sunrise), and near the Sun the two differ by a year's worth of orbital motion. Venus spins so slowly — 243 Earth days sidereal, and a day longer than its 225-day year — that its rotation genuinely loses the race against its orbit, which is the sort of fact a card like this exists to make one click away.</p>`,
+});
+
+// ── 82. /alat/study-planner — spaced revision calendar ────────────────
+TOOLKIT.push({
+  slug: 'study-planner', ic: '📅', name: 'Study Planner',
+  title: 'Spaced Study Planner — Revision Calendar to Your Exam | Tukuk-OS',
+  desc: 'Give it your exam date and get a spaced-repetition revision calendar: sessions at doubling intervals, printed with weekdays and hour totals.',
+  hero: 'Study Planner', sub: 'exam date → doubling-gap revision days · weekday labels · hour budget',
+  navBlurb: 'Type the exam date and get the revision calendar: first pass today, recalls at 1, 2, 4, 8 days, the night before capped — pure spacing maths.',
+  hubBlurb: 'turn any exam date into a spaced-revision calendar — sessions at doubling gaps, weekdays printed, total hours budgeted',
+  lead: 'Spacing is the cheapest grade-raiser in the research: the same hours, spread across doubling gaps (1, 2, 4, 8, 16 days), beat double the hours in one week. This planner takes the exam date, works out how many days of runway there are, and lays the sessions on the doubling schedule — first pass today, final recall the night before, nothing after the deadline.',
+  form: `<div class="tl-form">
+  ${field('Exam / test day', '<input id="pl-exam" type="date">')}
+  ${field('Hours per session', '<input id="pl-hrs" type="number" min="1" max="8" step="1" value="2">')}
+  <button class="tl-btn primary" id="pl-go" type="button">Plan my revision</button>
+</div>
+<div class="tl-res" id="pl-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+var MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function iso(d){var m=d.getMonth()+1,dd=d.getDate();return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(dd<10?'0':'')+dd;}
+function shift(d,n){var x=new Date(d.getTime());x.setDate(x.getDate()+n);return x;}
+function nice(d){return DAYS[d.getDay()]+', '+d.getDate()+' '+MON[d.getMonth()];}
+function plan(){var v=$('pl-exam').value,today=new Date();today.setHours(0,0,0,0);
+ if(!v){var t=shift(today,30);$('pl-exam').value=iso(t);v=iso(t);}
+ var p=v.split('-'),exam=new Date(+p[0],+p[1]-1,+p[2]);
+ var total=Math.round((exam-today)/86400000);
+ if(!(total>0)){$('pl-out').innerHTML='<span class="tl-badge tl-no">not enough runway</span> Pick a date from tomorrow onward — spacing needs days to work with.';return;}
+ var offs=[0,1,2,4,8,16,32,64],use=[],i;
+ for(i=0;i<offs.length&&offs[i]<total;i++)use.push(offs[i]);
+ if(use[use.length-1]!==total-1)use.push(total-1);
+ var hrs=parseInt($('pl-hrs').value,10)||2,rows='';
+ for(i=0;i<use.length;i++){var d=shift(today,use[i]),label;
+  if(i===0)label='First pass — read, summarise, make the cards';
+  else if(use[i]===total-1)label='Final recall — cards only, no new material';
+  else label='Recall pass '+(i+1)+' — active recall before any re-reading';
+  rows+='<tr><td>'+nice(d)+'</td><td>'+label+'</td><td>'+hrs+' h</td></tr>';}
+ $('pl-out').innerHTML='<div class="tl-big">'+use.length+' sessions · '+nice(today)+' → '+nice(exam)+'</div>'
+  +'<table class="tl-tab"><thead><tr><th>Day</th><th>What to do</th><th>Time</th></tr></thead><tbody>'+rows+'</tbody></table>'
+  +'<p class="meta">The gaps double (1, 2, 4, 8 days…) so each recall lands just as forgetting starts — that is where repetition earns its keep. Total budget: '+(hrs*use.length)+' hours. If that beats your free time, cut hours per session, never the spacing.</p>';}
+$('pl-go').onclick=plan;$('pl-exam').onchange=plan;$('pl-hrs').onchange=plan;plan();`,
+  seo: `<h2 class="section-title">What the research actually found</h2>
+  <p>Distributed practice — the same material met across spread-out days — is among the most replicated effects in learning research, and it holds even when the total study time is cut. The doubling schedule is not a rule from one paper; it is the shape most spaced-repetition systems converge on, because memory decays roughly exponentially and gaps that double stay one step ahead of the curve. A planner cannot make anyone study; it only decides whether the hours they spend are worth double.</p>`,
+});
+
+// ── 83. /alat/word-guess — hangman without the gallows ───────────────
+TOOLKIT.push({
+  slug: 'word-guess', ic: '🎯', name: 'Word Guess',
+  title: 'Word Guess — Hangman-Style Letter Game | Tukuk-OS',
+  desc: 'Guess the hidden word one letter at a time from themed banks, six lives, no gallows. Keeps a running win-loss score. One screen, in-browser.',
+  hero: 'Word Guess', sub: '3 word banks · 26 letter keys · six lives · win-loss tally',
+  navBlurb: 'The classroom hangman with the gallows taken out: themed word banks, six lives, a full keyboard of letter keys and a running score.',
+  hubBlurb: 'guess the hidden word letter by letter — six lives, themed banks and a full alphabet of keys, score kept across rounds',
+  lead: 'The same game every teacher runs on the whiteboard, with the rope-and-stick part removed: a hidden word from a themed bank, twenty-six letter keys that grey out once used, six lives, and a win-loss tally that keeps the class honest about the streak. Every word in the banks is lowercase, singular and unhyphenated.',
+  form: `<div class="tl-form">
+  ${field('Word bank', '<select id="wg-cat"><option value="animals" selected>animals</option><option value="countries">countries</option><option value="food">food and drink</option></select>')}
+</div>
+<div class="tl-keys">${'abcdefghijklmnopqrstuvwxyz'.split('').map(function(c){return '<button type="button" class="tl-btn tl-key" id="wg-'+c+'">'+c+'</button>';}).join('')}</div>
+<div class="tl-form">
+  <button class="tl-btn primary" id="wg-new" type="button">New word ↷</button>
+</div>
+<div class="tl-res" id="wg-out">—</div>`,
+  css: `.tl-keys{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}.tl-key{min-width:36px;padding:8px 10px;text-transform:uppercase;font-size:.95rem}.tl-key[disabled]{opacity:.3;cursor:default}`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+var CATS={animals:'elephant giraffe zebra penguin dolphin leopard hamster octopus kangaroo butterfly crocodile squirrel flamingo hedgehog pelican rabbit turtle panther'.split(' '),
+ countries:'malaysia indonesia thailand brazil canada france germany egypt kenya spain italy norway peru chile morocco vietnam portugal iceland turkey japan'.split(' '),
+ food:'pineapple dumpling sandwich spaghetti avocado burrito pancake noodles cinnamon chocolate blueberry omelette pretzel lasagna papaya hummus risotto tortilla'.split(' ')};
+var word='',guessed='',misses=[],wins=0,losses=0;
+function isWon(){var i;for(i=0;i<word.length;i++)if(guessed.indexOf(word.charAt(i))<0)return false;return true;}
+function display(){var i,out='';for(i=0;i<word.length;i++)out+=(guessed.indexOf(word.charAt(i))>=0?word.charAt(i):'_')+' ';return out.trim();}
+function hearts(){var i,s='';for(i=0;i<6-misses.length;i++)s+='♥';for(i=0;i<misses.length;i++)s+='·';return s;}
+function render(){var dead=misses.length>=6;
+ var h='<div class="tl-big">'+display()+'</div><p class="meta">'+hearts()+' · '+Math.max(0,6-misses.length)+' lives left';
+ if(misses.length)h+=' · wrong: '+misses.join(' ');
+ h+=' · wins '+wins+' · losses '+losses+'</p>';
+ if(dead)h+='<p class="meta"><span class="tl-badge tl-no">lost it</span> The word was <b>'+word+'</b>. Press New word for the next round.</p>';
+ else if(isWon())h+='<p class="meta"><span class="tl-badge tl-ok">solved</span> <b>'+word+'</b> with '+(6-misses.length)+' lives to spare. Press New word.</p>';
+ $('wg-out').innerHTML=h;}
+function pick(){var list=CATS[$('wg-cat').value];
+ word=list[Math.floor(Math.random()*list.length)];guessed='';misses=[];
+ var i;for(i=0;i<26;i++){var b=document.getElementById('wg-'+String.fromCharCode(97+i));if(b)b.disabled=false;}
+ render();}
+function hit(ch){if(misses.length>=6||isWon())return;
+ if(guessed.indexOf(ch)>=0||misses.indexOf(ch)>=0)return;
+ if(word.indexOf(ch)>=0)guessed+=ch;else misses.push(ch);
+ var b=document.getElementById('wg-'+ch);if(b)b.disabled=true;
+ if(misses.length>=6)losses++;else if(isWon())wins++;
+ render();}
+var AZ='abcdefghijklmnopqrstuvwxyz',i0;
+for(i0=0;i0<26;i0++){(function(ch){var b=document.getElementById('wg-'+ch);if(b)b.onclick=function(){hit(ch);};})(AZ.charAt(i0));}
+$('wg-new').onclick=pick;$('wg-cat').onchange=pick;pick();`,
+  seo: `<h2 class="section-title">Why letter frequency is a real strategy</h2>
+  <p>E, T, A, O, I, N — in English text the eight most common letters cover roughly two thirds of all occurrences, which is why the player who opens with them wins more than the one hunting for favourite letters. Against this game's banks the same advice holds with one tweak: every word is lowercase, singular and unhyphenated, so vowels-first openings are almost always right, and a first guess of Q or Z is a life spent shopping.</p>`,
+});
+
 module.exports = { TOOLKIT, toolkitPage, navItems, hubLines, sitemapPaths };

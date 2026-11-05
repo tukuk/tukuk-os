@@ -112,7 +112,20 @@ const PAGES = [
   { path: '/alat/pomodoro', marker: 'Pomodoro Timer', ids: ['pm-clock', 'pm-work', 'pm-short', 'pm-long', 'pm-cycle', 'pm-go', 'pm-rs', 'pm-out'] },
   { path: '/alat/reading-time', marker: 'Reading Time', ids: ['rt-in', 'rt-wpm', 'rt-out'] },
   { path: '/alat/ean13', marker: 'EAN-13 Barcode', ids: ['ea-in', 'ea-go', 'ea-rnd', 'ea-cv', 'ea-out'] },
-  { path: '/alat/slug', marker: 'Slug Generator', ids: ['sl-in', 'sl-sep', 'sl-max', 'sl-copy', 'sl-out'] }
+  { path: '/alat/slug', marker: 'Slug Generator', ids: ['sl-in', 'sl-sep', 'sl-max', 'sl-copy', 'sl-out'] },
+  // ── eighth wave (Nov 2026 — learning tools batch) ──
+  { path: '/alat/flashcards', marker: 'Flashcards', ids: ['fc-in', 'fc-go', 'fc-reveal', 'fc-next', 'fc-shuffle', 'fc-know', 'fc-later', 'fc-out'] },
+  { path: '/alat/quiz-maker', marker: 'Quiz Maker', ids: ['qz-in', 'qz-go', 'qz-a0', 'qz-a1', 'qz-a2', 'qz-a3', 'qz-next', 'qz-fb', 'qz-out'] },
+  { path: '/alat/times-tables', marker: 'Times Tables Trainer', ids: ['tt-tab', 'tt-len', 'tt-q', 'tt-ans', 'tt-go', 'tt-new', 'tt-out'] },
+  { path: '/alat/clock-reading', marker: 'Clock Reading', ids: ['cr-lv', 'cr-face', 'cr-ans', 'cr-go', 'cr-new', 'cr-out'] },
+  { path: '/alat/periodic-table', marker: 'Periodic Table Explorer', ids: ['el-q', 'el-rand', 'el-all', 'el-out'] },
+  { path: '/alat/flags-quiz', marker: 'Flags Quiz', ids: ['fl-mode', 'fl-go', 'fl-a0', 'fl-a1', 'fl-a2', 'fl-a3', 'fl-out'] },
+  { path: '/alat/word-scramble', marker: 'Word Scramble', ids: ['ws-cat', 'ws-ans', 'ws-go', 'ws-hint', 'ws-new', 'ws-out'] },
+  { path: '/alat/worksheet', marker: 'Worksheet Generator', ids: ['wh-op', 'wh-lv', 'wh-n', 'wh-go', 'wh-key', 'wh-print', 'wh-out'] },
+  { path: '/alat/spelling', marker: 'Spelling Practice', ids: ['sp-lv', 'sp-line', 'sp-in', 'sp-check', 'sp-say', 'sp-hint', 'sp-new', 'sp-out'] },
+  { path: '/alat/solar-system', marker: 'Solar System Explorer', ids: ['so-p', 'so-out'] },
+  { path: '/alat/study-planner', marker: 'Study Planner', ids: ['pl-exam', 'pl-hrs', 'pl-go', 'pl-out'] },
+  { path: '/alat/word-guess', marker: 'Word Guess', ids: ['wg-cat', 'wg-a', 'wg-z', 'wg-new', 'wg-out'] }
 ];
 
 for (const page of PAGES) {

@@ -750,6 +750,140 @@ function bySlug(slug) {
   return t;
 }
 
+// ── learning batch (Nov 2026) — the drills get the same hand-checked standard ──
+test('flashcards: the default deck parses eight cards and the tally moves', () => {
+  const { dom } = runTool(bySlug('flashcards'));
+  let out = dom.get('fc-out')._html;
+  assert.ok(out.includes('capital of Japan'), 'front of deck card 1 must show');
+  assert.ok(out.includes('Card 1 of 8'), 'all eight well-formed lines must parse');
+  dom.get('fc-reveal').click();
+  out = dom.get('fc-out')._html;
+  assert.ok(out.includes('Tokyo'), 'answer appears after reveal');
+  assert.ok(out.includes('The question was: capital of Japan'), 'question restated under the answer');
+  dom.get('fc-know').click();
+  assert.ok(dom.get('fc-out')._html.includes('knew it 1'), 'knew-it tally increments and the deck advances');
+});
+
+test('quiz-maker: five defaults start the quiz and Paris marks correct', () => {
+  const { dom } = runTool(bySlug('quiz-maker'));
+  assert.ok(dom.get('qz-out')._html.includes('<b>5</b> questions parsed'), dom.get('qz-out')._html.slice(0, 160));
+  dom.get('qz-go').click();
+  assert.ok(dom.get('qz-out')._html.includes('Question 1 of 5'), 'quiz starts at question one');
+  const names = [0, 1, 2, 3].map((i) => dom.get('qz-a' + i).textContent);
+  assert.ok(new Set(names).size === 4, 'options must be distinct');
+  const paris = names.findIndex((n) => n === 'Paris');
+  assert.ok(paris >= 0, 'the correct option must be among the four');
+  dom.get('qz-a' + paris).click();
+  assert.ok(dom.get('qz-fb')._html.includes('tl-ok') && dom.get('qz-fb')._html.includes('Paris'), 'correct pick marked');
+});
+
+test('times-tables: answering the drawn question correctly scores 1/1', () => {
+  const { dom } = runTool(bySlug('times-tables'));
+  const q = /(\d+) \u00d7 (\d+)/.exec(dom.get('tt-q')._html);
+  assert.ok(q, 'a question must be on the board on load');
+  dom.get('tt-ans').value = String(Number(q[1]) * Number(q[2]));
+  dom.get('tt-go').click();
+  const out = dom.get('tt-out')._html;
+  assert.ok(out.includes('tl-ok') && out.includes('score 1/1'), out.slice(0, 160));
+});
+
+test('clock-reading: the drawn face has twelve numerals and the minute hand on 12 at o\u2019clock', () => {
+  const { dom } = runTool(bySlug('clock-reading'));
+  const face = dom.get('cr-face')._html;
+  for (let n = 1; n <= 12; n++) assert.ok(face.includes('>' + n + '</text>'), 'numeral ' + n + ' missing');
+  // default level is o'clock → minutes = 0 → the long hand points straight up (50, 50−33)
+  assert.ok(face.includes('x2="50.0" y2="17.0"'), 'minute hand must sit on 12');
+  assert.ok(dom.get('cr-out')._html.includes('read the face'), 'instruction renders on load');
+});
+
+test('periodic-table: hydrogen greets and "Oxy" resolves to 15.999 u', () => {
+  const { dom } = runTool(bySlug('periodic-table'));
+  assert.ok(dom.get('el-out')._html.includes('1.008'), 'hydrogen card on empty search');
+  const oxy = runTool(bySlug('periodic-table'), { 'el-q': 'Oxy' });
+  const out = oxy.dom.get('el-out')._html;
+  assert.ok(out.includes('Oxygen') && out.includes('15.999'), out.slice(0, 160));
+  assert.ok(out.includes('reactive nonmetal'), 'family spelled out for learners');
+});
+
+test('flags-quiz: four distinct country options and the tally counts the sit', () => {
+  const { dom } = runTool(bySlug('flags-quiz'));
+  assert.ok(dom.get('fl-out')._html.includes('Made 0 \u00b7 score 0'), 'tally on load');
+  const names = [0, 1, 2, 3].map((i) => dom.get('fl-a' + i).textContent);
+  assert.ok(new Set(names).size === 4 && names.every((n) => n && n.length > 2), 'four real option labels');
+  dom.get('fl-a0').click();
+  const out = dom.get('fl-out')._html;
+  assert.ok(out.includes('It was <b>') && out.includes('Made 1'), out.slice(0, 160));
+});
+
+test('word-scramble: the jumble is a true anagram of a bank word and solves', () => {
+  const { dom } = runTool(bySlug('word-scramble'));
+  const scr = /<div class="tl-big">([^<]+)<\/div>/.exec(dom.get('ws-out')._html);
+  assert.ok(scr, 'scrambled letters must render on load');
+  const key = (s) => s.split('').sort().join('');
+  const BANK = 'elephant giraffe zebra penguin dolphin leopard hamster octopus kangaroo butterfly crocodile squirrel flamingo hedgehog pelican rabbit turtle panther'.split(' ');
+  const word = BANK.find((w) => key(w) === key(scr[1].replace(/ /g, '')));
+  assert.ok(word, 'the jumble must be a permutation of an animals-bank word');
+  dom.get('ws-ans').value = word.toUpperCase(); // guesses are case-insensitive
+  dom.get('ws-go').click();
+  assert.ok(dom.get('ws-out')._html.includes('solved'), 'the real word must be accepted');
+});
+
+test('worksheet: all twelve answers match hand-recomputed maths and the guards hold', () => {
+  const { dom } = runTool(bySlug('worksheet'));
+  assert.ok(dom.get('wh-out')._html.includes('12 questions \u00b7 level 2'), 'defaults make a level-2 mixed sheet');
+  dom.get('wh-key').click();
+  const cells = [...dom.get('wh-out')._html.matchAll(/\. (\d+) ([+\u2212\u00d7\u00f7]) (\d+) = <b>(\d+)<\/b>/g)];
+  assert.equal(cells.length, 12, 'every question must carry a key answer');
+  for (const c of cells) {
+    const a = +c[1], op = c[2], b = +c[3], ans = +c[4];
+    const want = op === '+' ? a + b : op === '\u2212' ? a - b : op === '\u00d7' ? a * b : a / b;
+    assert.equal(ans, want, `${a} ${op} ${b} should be ${want}, key says ${ans}`);
+    if (op === '\u2212') assert.ok(a >= b, 'subtraction must never go negative');
+    if (op === '\u00f7') assert.equal(a % b, 0, 'division must come out exact');
+  }
+});
+
+test('spelling: the blank hides the whole word and a miss reveals exactly one letter', () => {
+  const { dom } = runTool(bySlug('spelling'));
+  const mask = () => /<b>([^<]*)<\/b>/.exec(dom.get('sp-line')._html)[1];
+  const m0 = mask();
+  assert.match(m0, /^_+$/, 'on load the whole word is hidden');
+  assert.ok(dom.get('sp-line')._html.includes('has ' + m0.length + ' letters'), 'letter count matches the blank');
+  dom.get('sp-in').value = 'zzz';
+  dom.get('sp-check').click();
+  assert.ok(dom.get('sp-out')._html.includes('not that spelling'), 'wrong guess marked');
+  assert.match(mask(), /^[a-z]_+$/, 'one letter came back for free, no more');
+});
+
+test('solar-system: Earth and Jupiter cards carry the right NASA numbers', () => {
+  const { dom } = runTool(bySlug('solar-system'));
+  const earth = dom.get('so-out')._html;
+  assert.ok(earth.includes('12,742 km'), 'Earth diameter with the thousands comma');
+  assert.ok(earth.includes('1.00\u00d7 Earth'), 'Earth is its own baseline');
+  const jup = runTool(bySlug('solar-system'), { 'so-p': '4' });
+  const out = jup.dom.get('so-out')._html;
+  assert.ok(out.includes('139,820 km'), 'Jupiter diameter');
+  assert.ok(out.includes('<td>95</td>'), 'confirmed moon count');
+});
+
+test('study-planner: an empty date plans thirty days out as seven spaced sessions', () => {
+  const { dom } = runTool(bySlug('study-planner'));
+  const out = dom.get('pl-out')._html;
+  // 30 days of runway → offsets 0,1,2,4,8,16 all < 30, plus the eve (29) = 7 sessions
+  assert.ok(out.includes('7 sessions'), out.slice(0, 160));
+  assert.ok(out.includes('First pass') && out.includes('Final recall'), 'bookend session labels');
+  assert.ok(out.includes('14 hours'), '2 h \u00d7 7 sessions budget');
+});
+
+test('word-guess: Q appears in no bank word, so pressing it always costs a life', () => {
+  const { dom } = runTool(bySlug('word-guess'));
+  assert.ok(dom.get('wg-out')._html.includes('6 lives left'), 'full hearts on load');
+  dom.get('wg-q').click();
+  const out = dom.get('wg-out')._html;
+  assert.ok(out.includes('wrong: q') && out.includes('5 lives left'), out.slice(0, 200));
+  assert.equal(dom.get('wg-q').disabled, true, 'used keys must grey out');
+});
+
 // The registry itself is the contract the second wave depends on: duplicate
 // slugs would silently shadow a route, a missing script would render a dead
 // form, and a tool with no hub/nav presence is invisible to readers.
