@@ -2539,7 +2539,7 @@ toolbox.TOOLKIT.forEach(function (t) {
   app.get('/alat/' + t.slug, function (req, res) {
     try {
       res.status(200).type('html').send(toolbox.toolkitPage(t, {
-        worldDoc, TOOLS_CSS, toolsNav, toolRobots: clusterItemRobots(toolbox.TOOLKIT.length),
+        worldDoc, TOOLS_CSS, toolsNav, toolRobots: alatItemRobots(toolbox.TOOLKIT.length),
       }));
     } catch (e) {
       console.warn('[alat/' + t.slug + '] render failed:', e.message);
@@ -4713,16 +4713,17 @@ app.get('/sitemap.xml', async (req, res) => {
 // Over a thousand tools do not belong in the master sitemap. That file is the one
 // every crawler reads first, and burying the site's own pages under a thousand
 // <url> entries is how a cluster stops being manageable in search console. So the
-// cluster declares its own file in robots.txt — and it obeys the same crawl-budget
-// rule as the geo clusters: past CRAWL_INDEX_MAX_ITEMS the tool URLs drop out of
-// the sitemap and the tool pages switch to noindex,follow in the same breath,
-// because advertising a URL the response tells Google to drop is a wasted crawl.
+// cluster declares its own file in robots.txt — and it obeys a crawl-budget rule of its own:
+// past ALAT_INDEX_MAX_ITEMS the tool URLs drop out of the sitemap and the tool pages switch to
+// noindex,follow in the same breath, because advertising a URL the response tells Google to drop
+// is a wasted crawl. It is NOT the geo threshold on purpose (see ALAT_INDEX_MAX_ITEMS): the box
+// runs the encyclopaedia clusters at 250, which would silently hide the whole tool registry.
 // The twenty-nine hand-written first-wave pages stay indexable either way; they
 // are the reference shelf, not the long tail the budget exists to hold back.
 app.get('/sitemap-alat.xml', (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
   const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
-  const tools = clusterIsIndexable(toolbox.TOOLKIT.length) ? toolbox.sitemapPaths() : [];
+  const tools = alatIsIndexable(toolbox.TOOLKIT.length) ? toolbox.sitemapPaths() : [];
   // The hand-written first-wave pages are not registry entries, so the line above cannot
   // advertise them and the master sitemap no longer has room for ninety of them: they are
   // the cluster's reference shelf and belong in this file. Deduplicated against the
@@ -5267,6 +5268,22 @@ function clusterIsIndexable(itemCount) {
 }
 function clusterItemRobots(itemCount) {
   return clusterIsIndexable(itemCount) ? 'index,follow' : 'noindex,follow';
+}
+// The toolbox gets its own ceiling, and it is deliberately not the geo one.
+// CRAWL_INDEX_MAX_ITEMS exists because a settlement page is one encyclopaedia extract in a
+// repeated layout, and 254,000 of those read as thin content; production runs it at 250 for
+// exactly that reason. A tool page is a different piece of work — its own maths, its own copy,
+// its own form — so the same number applied to /alat would noindex an entire content wave that
+// was added to be found. Shared knob, wrong shape: two knobs, and each cluster keeps its own
+// threshold. Lower ALAT_INDEX_MAX_ITEMS to shrink the indexed tool surface without a deploy.
+const ALAT_INDEX_MAX_ITEMS = Number.isFinite(Number(process.env.ALAT_INDEX_MAX_ITEMS))
+  ? Math.max(0, Number(process.env.ALAT_INDEX_MAX_ITEMS))
+  : 1500;
+function alatIsIndexable(itemCount) {
+  return itemCount <= ALAT_INDEX_MAX_ITEMS;
+}
+function alatItemRobots(itemCount) {
+  return alatIsIndexable(itemCount) ? 'index,follow' : 'noindex,follow';
 }
 function geoSitemap(base, mod, listKey) {
   GEO_SITEMAP_BASES.push(base);
@@ -24073,6 +24090,7 @@ module.exports = { app, TCHAT_HOST, TCHAT_ALLOWED, CSP_TCHAT, geoClusters, isOwn
   // The crawl-budget rule is a policy, not a template detail: a test has to be able to pin it
   // so the 816k thin URLs cannot quietly come back into the index or the sitemaps.
   CRAWL_INDEX_MAX_ITEMS, clusterIsIndexable, clusterItemRobots,
+  ALAT_INDEX_MAX_ITEMS, alatIsIndexable, alatItemRobots,
   // The site chrome is exported so the footer contract can be tested against the HTML a visitor
   // actually receives. Tests that grep the template text are why header and footer were able to
   // drift into two different sites for so long: they were asserting that the source still looked
