@@ -9267,8 +9267,9 @@ const WIKI_CSS = `
   @media(max-width:860px){.wiki-body{flex-direction:column}.wiki-side{position:static;flex-basis:auto;width:100%}.infobox{float:none;width:100%;margin:0 0 16px}.wiki-sections{grid-template-columns:1fr}}
 `;
 
-function wikiHead(title, selfUrl, desc, jsonLd, robots) {
+function wikiHead(title, selfUrl, desc, jsonLd, robots, ogImg) {
   const rb = robots || 'index,follow';
+  const og = ogImg || 'https://tukuk.org/og.png';
   const d = escapeHtml(metaDesc(desc, title));
   const ld = jsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : '';
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
@@ -9276,7 +9277,7 @@ function wikiHead(title, selfUrl, desc, jsonLd, robots) {
     `<meta name="robots" content="${rb}">` +
     `<meta property="og:type" content="article"><meta property="og:site_name" content="Tukuk-OS Wiki">` +
     `<meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${d}">` +
-    `<meta property="og:url" content="${selfUrl}"><meta property="og:image" content="https://tukuk.org/og.png">` +
+    `<meta property="og:url" content="${selfUrl}"><meta property="og:image" content="${escapeHtml(og)}">` +
     `<link rel="canonical" href="${selfUrl}">` +
     `<link rel="icon" href="/icon.svg" type="image/svg+xml">` +
     `<link rel="alternate" type="application/rss+xml" title="Tukuk-OS Blog" href="/blog/rss.xml">` +
@@ -9373,6 +9374,11 @@ function wikiArticlePage(req, post) {
   const dateLabel = new Date(post.createdAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
   const revised = post.updatedAt ? new Date(post.updatedAt).toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
   const t = wikiTocify(renderMarkdown(post.content));
+  // The same per-article branded card the blog serves as og:image — shown as the
+  // article's hero so wiki pages are never text-only shells (public/og/<slug>.png).
+  const ogImage = fs.existsSync(path.join(PUBLIC_DIR, 'og', post.slug + '.png'))
+    ? `https://tukuk.org/og/${encodeURIComponent(post.slug)}.png`
+    : '';
   const infobox = `<table class="infobox"><caption>${escapeHtml(post.title)}</caption>` +
     `<tr><th>Type</th><td>Encyclopedia article</td></tr>` +
     `<tr><th>Subject</th><td>${tags.length ? escapeHtml(tags[0]) : 'General knowledge'}</td></tr>` +
@@ -9390,12 +9396,14 @@ function wikiArticlePage(req, post) {
     'author': { '@type': 'Person', 'name': post.author || 'Fevian Donald' }, 'datePublished': post.createdAt,
     'dateModified': post.updatedAt || post.createdAt, 'inLanguage': 'en',
     'publisher': { '@type': 'Organization', 'name': 'Tukuk-OS Wiki', 'url': 'https://tukuk.org' },
-    'mainEntityOfPage': url, 'isPartOf': { '@type': 'WebSite', 'name': 'Tukuk-OS Wiki', 'url': 'https://tukuk.org/wiki' }
+    'mainEntityOfPage': url, 'isPartOf': { '@type': 'WebSite', 'name': 'Tukuk-OS Wiki', 'url': 'https://tukuk.org/wiki' },
+    ...(ogImage ? { 'image': ogImage } : {})
   }).replace(/</g, '&lt;');
-  return wikiHead(post.title + ' \u2014 Tukuk-OS Wiki', url, post.excerpt || post.title, jsonLd)
+  return wikiHead(post.title + ' \u2014 Tukuk-OS Wiki', url, post.excerpt || post.title, jsonLd, null, ogImage || undefined)
     + wikiTopbar() + `<div class="wrap"><div class="wiki-body">${wikiSidebar()}<main class="wiki-content">` +
     `<h1>${escapeHtml(post.title)}</h1>` +
     `<p class="wiki-from">From <a href="/wiki">Tukuk-OS Wiki</a>, the free knowledge base.</p>` +
+    (ogImage ? `<figure style="margin:18px 0"><img src="${ogImage}" alt="${escapeHtml(post.title)} — article card" width="1200" height="630" loading="lazy" style="width:100%;height:auto;border-radius:12px;border:1px solid #c8ccd1"></figure>` : '') +
     infobox + `<p>${escapeHtml(post.excerpt || '')}</p>${t.toc}` +
     `${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}` +
     t.html +
@@ -20999,6 +21007,7 @@ ${siteHeader('blog')}
   </header>
     ${adUnitGuarded(config.adsense.slotTop, 'top')}${msAdUnit('top')}
     <article>
+      ${ogImage !== 'https://tukuk.org/og.png' ? `<figure style="margin:0 0 22px"><img src="${ogImage}" alt="${eTitleAttr} — article card" width="1200" height="630" loading="eager" style="width:100%;height:auto;border-radius:12px;border:1px solid var(--line,#d0d7de)"></figure>` : ''}
       ${renderedContent}
       ${adUnitGuarded(config.adsense.slotInArticle, 'in-article')}${msAdUnit('in-article')}
       ${post.tags && post.tags.length ? `<div class="tags" style="margin-top:28px; padding-top:16px; border-top:1px solid var(--line);">${post.tags.map(t => `<span class="tag">#${escapeHtml(t)}</span>`).join('')}</div>` : ''}

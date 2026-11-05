@@ -59,3 +59,23 @@ test('/about declares the Person entity that posts point at', () => {
   assert.ok(aboutHtml.includes('Fevian Donald'), '/about names the author');
   assert.ok(aboutHtml.includes('https://tukuk.org/about#author'), '/about gives the author a stable @id');
 });
+
+test('every article in content/blog has a committed OG card (no image-less pages)', () => {
+  const dir = path.join(__dirname, '..', 'content', 'blog');
+  const missing = [];
+  for (const f of fs.readdirSync(dir)) {
+    const raw = fs.readFileSync(path.join(dir, f), 'utf8');
+    const m = raw.match(/^SLUG:\s*(.*)$/m);
+    const slug = m ? m[1].trim() : f.replace(/\.md$/, '');
+    if (!fs.existsSync(path.join(__dirname, '..', 'public', 'og', slug + '.png'))) missing.push(slug);
+  }
+  assert.deepStrictEqual(missing, [], 'run scripts/gen-og-images.js and commit the cards: ' + missing.join(', '));
+});
+
+test('blog and wiki article pages both show the card as an in-body hero image', () => {
+  // Blog: the <article> opens with the figure when a per-slug card exists.
+  assert.ok(serverSrc.includes('— article card" width="1200" height="630"'), 'an article hero figure is rendered');
+  // Wiki: wikiHead takes the per-article image instead of the hard-coded generic one.
+  assert.ok(serverSrc.includes('function wikiHead(title, selfUrl, desc, jsonLd, robots, ogImg)'), 'wikiHead accepts a per-article og:image');
+  assert.ok(/const og = ogImg \|\| 'https:\/\/tukuk\.org\/og\.png'/.test(serverSrc), 'wiki falls back to the generic graphic');
+});
