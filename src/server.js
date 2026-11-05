@@ -9558,6 +9558,24 @@ const LEARN_STAGES = [
       'tukuk-os-bug-retrospective',
     ],
   },
+  {
+    n: '6',
+    title: 'Learn — Study Skills That Make Everything Else Stick',
+    blurb: 'The meta layer: memory, retrieval, planning and citation craft — useful for every subject in every stage above.',
+    slugs: [
+      'active-recall-why-testing-yourself-beats-re-reading',
+      'spaced-repetition-forgetting-curve-how-to-beat-it',
+      'how-to-plan-a-study-week-that-survives-real-life',
+      'cornell-notes-and-mind-maps-the-layouts-do-half-the-studying',
+      'apa-vs-mla-vs-chicago-citations-explained',
+      'typing-speed-is-a-study-skill-heres-how-to-fix-it',
+      'memory-tricks-acronyms-chunking-and-why-they-work',
+      'how-many-pages-a-day-reading-list-that-gets-finished',
+      'what-is-the-pomodoro-technique',
+      'leitner-system-flashcard-boxes-explained',
+      'spaced-repetition-algorithms-sm2-and-anki-explained',
+    ],
+  },
 ];
 
 app.get('/learn', (req, res) => {
@@ -9567,18 +9585,18 @@ app.get('/learn', (req, res) => {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tukuk-OS Academy: Zero to Hero Learning Path</title>
-<meta name="description" content="A free six-stage curriculum: from your first terminal command to running, defending and growing your own search engine.">
+<meta name="description" content="A free seven-stage curriculum: from your first terminal command to running, defending and growing your own search engine — and the study skills that make all of it stick.">
 <link rel="canonical" href="https://tukuk.org/learn">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tukuk-OS">
 <meta property="og:title" content="Tukuk-OS Academy: Zero to Hero Learning Path">
-<meta property="og:description" content="A free six-stage curriculum: from your first terminal command to running, defending and growing your own search engine.">
+<meta property="og:description" content="A free seven-stage curriculum: from your first terminal command to running, defending and growing your own search engine — and the study skills that make all of it stick.">
 <meta property="og:url" content="https://tukuk.org/learn">
 <meta property="og:image" content="https://tukuk.org/og.png">
 <meta property="og:locale" content="en_US">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Tukuk-OS Academy: Zero to Hero Learning Path">
-<meta name="twitter:description" content="A free six-stage curriculum: from your first terminal command to running, defending and growing your own search engine.">
+<meta name="twitter:description" content="A free seven-stage curriculum: from your first terminal command to running, defending and growing your own search engine — and the study skills that make all of it stick.">
 <meta name="twitter:image" content="https://tukuk.org/og.png">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
