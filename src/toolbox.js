@@ -20,6 +20,9 @@
 // Script strings are plain ES5 concatenation — no backticks, no ${ — because
 // they are embedded inside JS template literals by the builder below.
 
+const FAMILIES = require('./toolkit-families');
+const CATS = require('./tool-categories');
+
 // ── shared builders ──────────────────────────────────────────────────────────
 function field(label, inner) {
   return `<label>${label} ${inner}</label>`;
@@ -38,6 +41,10 @@ function toolkitPage(t, ctx) {
   return worldDoc({
     title: t.title,
     desc: t.desc,
+    // The crawl-budget rule is passed in, not decided here: server.js owns the
+    // threshold, and a registry that grows past it must take its tool pages and
+    // its sitemap entries out of the index in the same move.
+    robots: ctx.toolRobots || 'index,follow',
     selfUrl: 'https://tukuk.org/alat/' + t.slug,
     heroTitle: t.ic + ' ' + t.hero,
     heroSub: t.sub,
@@ -50,11 +57,13 @@ function toolkitPage(t, ctx) {
       url: 'https://tukuk.org/alat/' + t.slug,
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     }).replace(/</g, '\\u003c'),
-  }, toolsNav());
+  }, toolsNav({ href: '/alat/' + t.slug, cat: t.cat, name: t.name }));
 }
 
 function navItems() {
-  return TOOLKIT.map((t) => ({ href: '/alat/' + t.slug, icon: t.ic, name: t.name, blurb: t.navBlurb }));
+  return TOOLKIT.map((t) => ({
+    href: '/alat/' + t.slug, icon: t.ic, name: t.name, blurb: t.navBlurb, cat: t.cat,
+  }));
 }
 
 function hubLines() {
@@ -4958,4 +4967,20 @@ run();`,
   <p>A planned hour of study stretches to forty honest minutes once the phone is counted out and the hard paragraph is counted in — which is why this page sums what happened instead of promising what will. Keep the log in the notes app, the desk pad, anywhere it survives the week; come Sunday, paste and total. Two people keeping a log for a term reliably change one thing: where the first session of the week goes.</p>`,
 });
 
-module.exports = { TOOLKIT, toolkitPage, navItems, hubLines, sitemapPaths };
+// ── third wave (Nov 2026): generated families + the shared taxonomy ─────────────────
+// The family members are appended to the SAME array the hand-written entries live in, so
+// the single forEach in server.js wires their routes, sitemapPaths() advertises them and
+// the smoke test executes their scripts — a generated tool is held to exactly the same
+// contract as a hand-written one, and cannot be quietly less tested.
+//
+// Category assignment: family entries declare their own; a hand-written entry falls back to
+// the slug map in tool-categories.js. An unknown id resolves to the default category rather
+// than throwing, because a typo in a taxonomy must not 503 the whole toolbox — the
+// test/tool-categories.test.js invariant is what catches the typo instead.
+TOOLKIT.push.apply(TOOLKIT, FAMILIES.FAMILY_ENTRIES);
+TOOLKIT.forEach(function (t) {
+  if (!t.cat) t.cat = CATS.catOf(t.slug);
+  if (!CATS.byId[t.cat]) t.cat = CATS.DEFAULT_CAT;
+});
+
+module.exports = { TOOLKIT, toolkitPage, navItems, hubLines, sitemapPaths, FAMILY_COUNTS: FAMILIES.COUNTS };

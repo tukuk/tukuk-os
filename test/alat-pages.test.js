@@ -8,6 +8,8 @@ const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 
 const { app } = require('../src/server');
+const CATS = require('../src/tool-categories');
+const toolbox = require('../src/toolbox');
 
 const server = app.listen(0);
 const base = `http://127.0.0.1:${server.address().port}`;
@@ -157,27 +159,64 @@ for (const page of PAGES) {
   });
 }
 
-test('every new tool is reachable from the hub and the cross-tool nav', async () => {
-  const res = await fetch(base + '/alat');
-  const html = await res.text();
-  for (const page of PAGES) {
-    assert.ok(html.includes(`href="${page.path}"`), `hub does not link ${page.path}`);
+// The hub is no longer a wall of a thousand chips, and a tool page no longer advertises
+// every tool ever written: the hub indexes twelve shelves plus the classics, everything
+// else is reached through the paginated /alat/all, and the sitemap is split the same way.
+// These three tests are the contract that keeps that structure honest — nothing here
+// asserts a page count, only that the links a crawler needs are actually present.
+test('the hub links every shelf, and walking /alat/all reaches every tool', async () => {
+  const hub = await (await fetch(base + '/alat')).text();
+  for (const c of CATS.CATEGORIES) {
+    assert.ok(hub.includes(`href="/alat/c/${c.id}"`), `the hub does not link the ${c.id} shelf`);
   }
-  // toolsNav() is rendered on every tool page — the network of internal links
-  // is what lets a visitor discover the rest without returning to the hub.
-  const tool = await (await fetch(base + '/alat/percentage')).text();
-  for (const page of PAGES) {
-    assert.ok(tool.includes(`href="${page.path}"`), `tool nav misses ${page.path}`);
+  assert.ok(hub.includes('href="/alat/all"'), 'the hub must link the complete list');
+  // Walk the list page by page. The walk has to terminate on its own (a missing last page
+  // would quietly orphan the tail of the registry) and inside a sane number of hops.
+  const seen = new Set();
+  let page = 0;
+  for (; page < 40; page += 1) {
+    const html = await (await fetch(`${base}/alat/all?page=${page + 1}`)).text();
+    for (const m of html.matchAll(/href="(\/alat\/[a-z0-9-]+)"/g)) seen.add(m[1]);
+    if (!html.includes('rel="next"')) break;
+  }
+  assert.ok(page < 40, 'the /alat/all walk never ended — pagination is looping');
+  for (const p of PAGES) assert.ok(seen.has(p.path), `/alat/all never lists ${p.path}`);
+  const regFound = toolbox.TOOLKIT.filter((t) => seen.has(`/alat/${t.slug}`)).length;
+  assert.equal(regFound, toolbox.TOOLKIT.length, 'every registry tool must be listed exactly once in the walk');
+});
+
+test('a tool page ships a bounded chip row instead of the whole registry', async () => {
+  // One curated hand-written page and one registry page: they get the nav from different
+  // call sites, so both shapes have to stay small.
+  for (const path of ['/alat/percentage', '/alat/distance-lagos-abuja']) {
+    const html = await (await fetch(base + path)).text();
+    const nav = html.match(/<nav aria-label="Everyday Tools[\s\S]*?<\/nav>/);
+    assert.ok(nav, `${path}: the tools nav is missing`);
+    const chips = (nav[0].match(/class="tl-chip/g) || []).length;
+    assert.ok(chips > 1 && chips <= 20, `${path}: ${chips} nav chips — the row is meant to be bounded`);
+    assert.ok(nav[0].includes('href="/alat"'), `${path}: the nav must lead back to the hub`);
+    assert.ok(nav[0].includes('href="/alat/c/'), `${path}: the nav must link shelves, not just the hub`);
   }
 });
 
-test('sitemap.xml lists every tool', async () => {
-  const xml = await (await fetch(base + '/sitemap.xml')).text();
-  // The <loc> host follows the request host (tukuk.org in production, the test
-  // listener here), so assert on the path only.
+test('the cluster sitemap lists every tool and the master sitemap lists the shelves', async () => {
+  const alat = await (await fetch(base + '/sitemap-alat.xml')).text();
+  // The <loc> host is the canonical tukuk.org in both files, so paths alone are enough.
+  const listed = new Set([...alat.matchAll(/<loc>https:\/\/tukuk\.org(\/[^<]*)<\/loc>/g)].map((m) => m[1]));
   for (const page of PAGES) {
-    assert.ok(xml.includes(`${page.path}</loc>`), `sitemap misses ${page.path}`);
+    assert.ok(listed.has(page.path), `sitemap-alat.xml misses ${page.path}`);
   }
+  for (const t of toolbox.TOOLKIT) {
+    assert.ok(listed.has(`/alat/${t.slug}`), `sitemap-alat.xml misses the registry tool ${t.slug}`);
+  }
+  const master = await (await fetch(base + '/sitemap.xml')).text();
+  assert.ok(master.includes('/alat</loc>'), 'the master sitemap must carry the hub');
+  assert.ok(master.includes('/alat/all</loc>'), 'the master sitemap must carry the complete list');
+  for (const c of CATS.CATEGORIES) {
+    assert.ok(master.includes(`/alat/c/${c.id}</loc>`), `the master sitemap misses the ${c.id} shelf`);
+  }
+  const alatLinks = (master.match(/<loc>[^<]*\/alat[^<]*<\/loc>/g) || []).length;
+  assert.ok(alatLinks <= 20, `the master sitemap carries ${alatLinks} /alat URLs — the thousand-tool list belongs in sitemap-alat.xml`);
 });
 
 // A tool is only as good as the code it loads. The PDF page is the first one in the

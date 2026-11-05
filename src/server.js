@@ -85,6 +85,7 @@ const books = require('./books');
 const rcp = require('./recipes');
 const kamus = require('./kamus');
 const toolbox = require('./toolbox'); // the /alat second wave registry (one object per tool)
+const CATS = require('./tool-categories'); // the /alat taxonomy: hub sections, category pages, bounded nav
 const today = require('./today'); // the /today cuaca+harga daily feed and its RSS companion
 const st = require('./statistik');
 const bc = require('./bencana');
@@ -1987,6 +1988,30 @@ app.get('/alat', (req, res) => {
     res.status(503).type('html').send(toolsBusy());
   }
 });
+// ── /alat/all and /alat/c/:shelf — the paginated face of a thousand-tool hub ──
+// A hub that lists every tool is a hub nobody reads, and a nav that links every
+// tool is page weight rather than navigation. The shelf pages list their own tools
+// sixty at a time with rel prev/next, and /alat/all is the complete list plus a
+// GET search that needs no JavaScript — a no-JS visitor and a crawler see exactly
+// the same pages, which is the point of doing the filter on the server.
+app.get('/alat/all', (req, res) => {
+  try {
+    res.status(200).type('html').send(alatAllPage(toolPageNo(req), String(req.query.q || '').slice(0, 80)));
+  } catch (e) {
+    console.warn('[alat/all] render failed:', e.message);
+    res.status(503).type('html').send(toolsBusy());
+  }
+});
+app.get('/alat/c/:shelf', (req, res) => {
+  try {
+    const html = alatShelfPage(req.params.shelf, toolPageNo(req));
+    if (!html) return res.redirect('/alat'); // an unknown shelf is the hub's problem, not a 500
+    res.status(200).type('html').send(html);
+  } catch (e) {
+    console.warn('[alat/c] shelf render failed:', e.message);
+    res.status(503).type('html').send(toolsBusy());
+  }
+});
 app.get('/alat/unit', (req, res) => {
   try {
     res.status(200).type('html').send(unitPage());
@@ -2513,7 +2538,9 @@ app.get('/alat/dictionary', (req, res) => {
 toolbox.TOOLKIT.forEach(function (t) {
   app.get('/alat/' + t.slug, function (req, res) {
     try {
-      res.status(200).type('html').send(toolbox.toolkitPage(t, { worldDoc, TOOLS_CSS, toolsNav }));
+      res.status(200).type('html').send(toolbox.toolkitPage(t, {
+        worldDoc, TOOLS_CSS, toolsNav, toolRobots: clusterItemRobots(toolbox.TOOLKIT.length),
+      }));
     } catch (e) {
       console.warn('[alat/' + t.slug + '] render failed:', e.message);
       res.status(503).type('html').send(toolsBusy());
@@ -2534,7 +2561,7 @@ app.get('/today', async function (req, res) {
     res.status(200).type('html').send(today.todayPage(b, { worldDoc, TOOLS_CSS, navHtml: worldNav('Daily briefing', [
       { href: '/weather', icon: '🌦️', name: 'Full weather', blurb: 'Forecasts, air quality and radar for your own city — not just the eight on this page.' },
       { href: '/money', icon: '💱', name: 'World Money', blurb: 'The whole ECB table, the converter, and the history behind the numbers above.' },
-      { href: '/alat', icon: '🧰', name: 'Everyday Tools', blurb: 'Over a hundred browser-local tools: converters, calculators, learning drills, a design studio, PDF, JSON and more.' },
+      { href: '/alat', icon: '🧰', name: 'Everyday Tools', blurb: 'Over a thousand browser-local tools: converters, calculators, learning drills, a design studio, PDF, JSON and more.' },
     ]) }));
   } catch (e) {
     console.warn('[today] render failed:', e.message);
@@ -4648,7 +4675,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Only LIVE pages (those replying 200) — drop the ones already removed (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) so the sitemap is not stuffed with 404s.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/weather', '/weather/map', '/weather/extremes', '/weather/codes', '/weather/clouds', '/weather/wind', '/earthquakes', '/earthquakes/explained', '/holidays', '/holidays/world/asia', '/holidays/world/europe', '/holidays/world/americas', '/holidays/world/africa', '/holidays/world/oceania', '/holidays/2026', '/holidays/2027', '/holidays/long-weekends', '/holidays/explained', '/countries', '/countries/asia', '/countries/europe', '/countries/africa', '/statistics', '/disasters', '/wiki', '/traffic', '/today', '/maps', '/maps/distance', '/maps/sun', '/maps/clock', '/maps/sky', '/maps/live', '/maps/storm', '/alat', '/alat/unit', '/alat/date', '/alat/color', '/alat/password', '/alat/text', '/alat/bmi', '/alat/image', '/alat/dictionary', '/alat/percentage', '/alat/loan', '/alat/qr', '/alat/ip', '/alat/epoch', '/alat/random', '/alat/pdf', '/alat/json', '/alat/hash', '/alat/base64', '/alat/timezone', '/alat/uuid', '/alat/cron', '/alat/regex', '/alat/csv', '/alat/diff', '/alat/url', '/alat/char', '/alat/compass', '/alat/convert', '/alat/image-to-pdf', ...toolbox.sitemapPaths(), '/flags', '/flags/quiz', '/flags/studio', '/flags/united-states', '/flags/united-kingdom', '/flags/japan', '/flags/brazil', '/flags/india', '/flags/nigeria', '/flags/germany', '/flags/france', '/flags/malaysia', '/flags/singapore', '/flags/australia', '/flags/netherlands', '/flags/south-korea', '/flags/mexico', '/flags/saudi-arabia', '/social', '/technology', '/technology/new', '/technology/show', '/technology/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/air-quality', '/air-quality/oxygen', '/air-quality/breath', '/air-quality/carbon', '/academy', '/academy/sky', '/academy/weather', '/academy/earth', '/academy/air', '/academy/body', '/academy/life', '/academy/numbers', '/academy/internet', '/academy/things', '/academy/thinking', '/money', '/money/rates', '/art', '/life', '/elements', '/constellations', '/messier', '/proverbs', '/records', '/history', '/cities', '/heritage', '/conservation-areas', '/mountains', '/lakes', '/islands', '/rivers', '/waterfalls', '/caves', '/glaciers', '/bays', '/valleys', '/peninsulas', '/volcanoes', '/straits', '/archipelagos', '/gorges', '/hills', '/mountain-gaps', '/capes', '/lagoons', '/salt-lakes', '/seas', '/reservoirs', '/fjord', '/wetlands', '/hot-springs', '/coral-reefs', '/calderas', '/dams', '/skyscrapers', '/bridges', '/lighthouses', '/canals', '/towers', '/ports', '/tunnels', '/churches', '/museums', '/archaeological-sites', '/universities', '/stadiums', '/mosques', '/monuments', '/cathedrals', '/hospitals', '/hotels', '/palaces', '/botanical-gardens', '/parks', '/synagogues', '/libraries', '/zoo', '/fortifications', '/astronomical-observatories', '/aquariums', '/mountain-ranges', '/cemeteries', '/airports', '/monasteries', '/statues', '/opera-houses', '/deserts', '/aqueducts', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/grammar-schools', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat', '/build'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/iss', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/weather', '/weather/map', '/weather/extremes', '/weather/codes', '/weather/clouds', '/weather/wind', '/earthquakes', '/earthquakes/explained', '/holidays', '/holidays/world/asia', '/holidays/world/europe', '/holidays/world/americas', '/holidays/world/africa', '/holidays/world/oceania', '/holidays/2026', '/holidays/2027', '/holidays/long-weekends', '/holidays/explained', '/countries', '/countries/asia', '/countries/europe', '/countries/africa', '/statistics', '/disasters', '/wiki', '/traffic', '/today', '/maps', '/maps/distance', '/maps/sun', '/maps/clock', '/maps/sky', '/maps/live', '/maps/storm', '/alat', '/alat/all', ...CATS.CATEGORIES.map((c) => `/alat/c/${c.id}`), '/flags', '/flags/quiz', '/flags/studio', '/flags/united-states', '/flags/united-kingdom', '/flags/japan', '/flags/brazil', '/flags/india', '/flags/nigeria', '/flags/germany', '/flags/france', '/flags/malaysia', '/flags/singapore', '/flags/australia', '/flags/netherlands', '/flags/south-korea', '/flags/mexico', '/flags/saudi-arabia', '/social', '/technology', '/technology/new', '/technology/show', '/technology/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/air-quality', '/air-quality/oxygen', '/air-quality/breath', '/air-quality/carbon', '/academy', '/academy/sky', '/academy/weather', '/academy/earth', '/academy/air', '/academy/body', '/academy/life', '/academy/numbers', '/academy/internet', '/academy/things', '/academy/thinking', '/money', '/money/rates', '/art', '/life', '/elements', '/constellations', '/messier', '/proverbs', '/records', '/history', '/cities', '/heritage', '/conservation-areas', '/mountains', '/lakes', '/islands', '/rivers', '/waterfalls', '/caves', '/glaciers', '/bays', '/valleys', '/peninsulas', '/volcanoes', '/straits', '/archipelagos', '/gorges', '/hills', '/mountain-gaps', '/capes', '/lagoons', '/salt-lakes', '/seas', '/reservoirs', '/fjord', '/wetlands', '/hot-springs', '/coral-reefs', '/calderas', '/dams', '/skyscrapers', '/bridges', '/lighthouses', '/canals', '/towers', '/ports', '/tunnels', '/churches', '/museums', '/archaeological-sites', '/universities', '/stadiums', '/mosques', '/monuments', '/cathedrals', '/hospitals', '/hotels', '/palaces', '/botanical-gardens', '/parks', '/synagogues', '/libraries', '/zoo', '/fortifications', '/astronomical-observatories', '/aquariums', '/mountain-ranges', '/cemeteries', '/airports', '/monasteries', '/statues', '/opera-houses', '/deserts', '/aqueducts', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/grammar-schools', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat', '/build'];
   // The reading lists are live pages as well, and typing twenty-seven slugs into the array
   // above is how a page and its sitemap entry drift apart. Generated from the subject
   // table, so adding a subject to src/books.js publishes it here too.
@@ -4679,6 +4706,37 @@ app.get('/sitemap.xml', async (req, res) => {
     `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
     urls.join('\n') +
     `\n</urlset>\n`
+  );
+});
+
+// ── SITEMAP ALAT — the toolbox, in a file of its own ──────────────────────
+// Over a thousand tools do not belong in the master sitemap. That file is the one
+// every crawler reads first, and burying the site's own pages under a thousand
+// <url> entries is how a cluster stops being manageable in search console. So the
+// cluster declares its own file in robots.txt — and it obeys the same crawl-budget
+// rule as the geo clusters: past CRAWL_INDEX_MAX_ITEMS the tool URLs drop out of
+// the sitemap and the tool pages switch to noindex,follow in the same breath,
+// because advertising a URL the response tells Google to drop is a wasted crawl.
+// The twenty-nine hand-written first-wave pages stay indexable either way; they
+// are the reference shelf, not the long tail the budget exists to hold back.
+app.get('/sitemap-alat.xml', (req, res) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const one = (p, prio) => `  <url>\n    <loc>https://tukuk.org${p}</loc>\n    <lastmod>${today}</lastmod>\n    <changefreq>monthly</changefreq>\n    <priority>${prio}</priority>\n  </url>`;
+  const tools = clusterIsIndexable(toolbox.TOOLKIT.length) ? toolbox.sitemapPaths() : [];
+  // The hand-written first-wave pages are not registry entries, so the line above cannot
+  // advertise them and the master sitemap no longer has room for ninety of them: they are
+  // the cluster's reference shelf and belong in this file. Deduplicated against the
+  // registry so a slug never appears twice in one <urlset>.
+  const toolSet = new Set(tools);
+  const classics = TOOL_HUB_FEATURED.map((f) => f.href).filter((p) => !toolSet.has(p));
+  const urls = [one('/alat', '0.9')]
+    .concat(CATS.CATEGORIES.map((c) => one(`/alat/c/${c.id}`, '0.8')))
+    .concat([one('/alat/all', '0.7')])
+    .concat(classics.map((p) => one(p, '0.7')))
+    .concat(tools.map((p) => one(p, '0.6')))
+    .join('\n');
+  res.type('application/xml').send(
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`
   );
 });
 
@@ -12411,7 +12469,12 @@ main header h1{letter-spacing:-.015em;line-height:1.15}
 .tl-card:hover{border-color:var(--accent,#4c8dff);transform:translateY(-2px);box-shadow:0 6px 16px rgba(76,141,255,.22)}
 .tl-card b{font-size:.95rem;display:flex;align-items:center;gap:8px}
 .tl-card .tl-ic{font-size:1.25rem;line-height:1}
-.tl-card .tl-bl{font-size:.8rem;color:var(--muted,#9aa3b2);line-height:1.45}`;
+.tl-card .tl-bl{font-size:.8rem;color:var(--muted,#9aa3b2);line-height:1.45}
+.tl-card .tl-n{margin-left:auto;font-size:.75rem;font-weight:700;color:var(--muted,#9aa3b2);background:rgba(148,163,184,.14);border-radius:999px;padding:1px 9px;font-variant-numeric:tabular-nums}
+.tl-chip.tl-on{border-color:var(--accent,#4c8dff);background:rgba(76,141,255,.16);font-weight:700}
+.tl-pages{margin-top:6px}
+.tl-searchwrap{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:14px 0}
+.tl-searchwrap .tl-search{flex:1 1 260px}`;
 
 // The shared enhancement layer, injected by worldDoc only when selfUrl is an
 // /alat tool page — three quiet touches every tool gets at once: Enter runs the
@@ -12453,14 +12516,23 @@ qs('.tl-res').forEach(function(r){
 // Focus mode (Nov 2026): tool pages end with one quiet row of chips, not a
 // 100-card wall of blurbs. Same links, same crawl graph — just no prose between
 // the tool and the footer. The hub keeps its full descriptions in its own body.
-// One source for every tool the hub and the chip-nav know about: the hand-
-// written first-wave entries plus the whole TOOLKIT registry. toolHubItems()
-// feeds BOTH the chip row at the bottom of every tool page and the card grid
-// on the hub itself, so a new tool can never appear in one and be missing
-// from the other.
-function toolHubItems() {
-  return [
-    { href: '/alat', icon: '🧰', name: 'Everyday Tools', blurb: 'The whole toolbox at a glance — converters, calculators, colour checkers and generators that run entirely in your browser.' },
+//
+// One source for every tool the hub and the chip-nav know about: the hand-written
+// first-wave pages that live in this file (TOOL_HUB_FEATURED) plus the whole TOOLKIT
+// registry. toolHubItems() feeds the hub, the category shelves, the search and the
+// chip row, so a new tool can never appear in one and be missing from the other.
+//
+// The chip row used to be the entire list on every page. That was right at
+// twenty-nine tools and is a liability at a thousand: ~1,100 internal links on
+// every page, most of the crawl graph pointing at whatever was pushed last, and a
+// hub nobody scrolled to the end of. The navigation model is now the category —
+// /alat indexes the twelve shelves, a shelf lists its own tools sixty at a time,
+// and a tool page links the hub, every shelf and a few of its neighbours. Smaller
+// graph, and a better one, because the neighbours are topically related.
+const TL_PAGE_SIZE = 60;
+const TL_SIBLING_LIMIT = 6;
+
+const TOOL_HUB_FEATURED = [
     { href: '/alat/unit', icon: '📐', name: 'Unit Converter', blurb: 'Length, weight, volume, area, speed, temperature, time and digital storage — exact factors, every unit at once, nothing uploaded.' },
     { href: '/alat/date', icon: '📅', name: 'Date & Age Calculator', blurb: 'Days between any two dates, add or subtract days, exact age in years-months-days, working days and days to your next birthday.' },
     { href: '/alat/color', icon: '🎨', name: 'Colour & Contrast Checker', blurb: 'WCAG contrast ratio between any two colours with AA/AAA verdicts, the nearest accessible colour, and tints & shades palettes.' },
@@ -12490,50 +12562,226 @@ function toolHubItems() {
     { href: '/alat/compass', icon: '🧭', name: 'Compass & Bearing', blurb: 'A live on-screen compass from your device’s magnetometer, plus the true-north bearing and great-circle distance to 46 world cities (a qibla pointer, the way home, the next town).' },
     { href: '/alat/convert', icon: '🔄', name: 'Image Converter', blurb: 'Convert between PNG, JPEG, WebP, BMP and ICO, and rasterise an SVG — resize, pick a quality, keep or replace transparency, download. The file never leaves your browser.' },
     { href: '/alat/image-to-pdf', icon: '🖼️', name: 'Images to PDF', blurb: 'Put photos, scans or screenshots into one PDF — A4, US Letter or a page sized to each image — without uploading. JPEG and PNG files are embedded byte-for-byte, untouched.' },
-    ...toolbox.navItems(),
-  ];
+];
+
+// Memoised on purpose: TOOLKIT is fixed once required, and this used to rebuild a
+// 1,107-element list on every page render — on the 2 GB box with a crawler on the
+// hub that is pure waste, and a hub request touched the list three times.
+let TL_ITEMS_CACHE = null;
+let TL_SHELF_CACHE = null;
+
+function toolHubItems() {
+  if (TL_ITEMS_CACHE) return TL_ITEMS_CACHE;
+  TL_ITEMS_CACHE = TOOL_HUB_FEATURED
+    .map((s) => ({ href: s.href, icon: s.icon, name: s.name, blurb: s.blurb, cat: CATS.catOf(s.href) }))
+    .concat(toolbox.navItems());
+  return TL_ITEMS_CACHE;
 }
 
-function toolsNav() {
-  return `<nav aria-label="Everyday Tools — tukuk.org/alat" class="tl-nav">`
-    + toolHubItems().map((s) => `<a class="tl-chip" href="${s.href}">${s.icon} ${escapeHtml(s.name)}</a>`).join('')
-    + `</nav>`;
+// slug → the twelve shelves, in the order CATEGORIES declares them.
+function toolHubShelves() {
+  if (TL_SHELF_CACHE) return TL_SHELF_CACHE;
+  TL_SHELF_CACHE = {};
+  CATS.CATEGORIES.forEach((c) => { TL_SHELF_CACHE[c.id] = []; });
+  toolHubItems().forEach((s) => {
+    TL_SHELF_CACHE[CATS.byId[s.cat] ? s.cat : CATS.DEFAULT_CAT].push(s);
+  });
+  return TL_SHELF_CACHE;
+}
+
+function toolCards(items) {
+  return items.map((s) => `<a class="tl-card" href="${s.href}"><b><span class="tl-ic">${s.icon}</span>${escapeHtml(s.name)}</b><span class="tl-bl">${escapeHtml(s.blurb || '')}</span></a>`).join('\n  ');
+}
+
+function toolQuery(page, extra) {
+  const parts = [];
+  if (extra) parts.push(extra);
+  if (page > 1) parts.push('page=' + page);
+  return parts.length ? '?' + parts.join('&') : '';
+}
+
+function toolPageNo(req) {
+  const n = Number.parseInt(String(req.query.page || '1'), 10);
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 1000) : 1;
+}
+
+// Prev/next plus a windowed row of numbers that always keeps page 1 and the last
+// page reachable — a crawler that lands on page 9 must still find its way back.
+function toolPager(base, page, pages, extra) {
+  if (pages <= 1) return '';
+  const num = (n) => (n === page
+    ? `<span class="tl-chip tl-on" aria-current="page">${n}</span>`
+    : `<a class="tl-chip" href="${base}${toolQuery(n, extra)}">${n}</a>`);
+  const lo = Math.max(1, Math.min(page - 2, pages - 4));
+  const hi = Math.min(pages, Math.max(page + 2, Math.min(5, pages)));
+  const parts = [];
+  if (page > 1) parts.push(`<a class="tl-chip" href="${base}${toolQuery(page - 1, extra)}" rel="prev">← Previous</a>`);
+  if (lo > 1) parts.push(num(1), '<span class="tl-chip">…</span>');
+  for (let n = lo; n <= hi; n += 1) parts.push(num(n));
+  if (hi < pages) parts.push('<span class="tl-chip">…</span>', num(pages));
+  if (page < pages) parts.push(`<a class="tl-chip" href="${base}${toolQuery(page + 1, extra)}" rel="next">Next →</a>`);
+  return `<nav class="tl-nav tl-pages" aria-label="Pages of this shelf">${parts.join('')}</nav>`;
+}
+
+function toolPagerHead(base, page, pages, extra) {
+  if (pages <= 1) return '';
+  let head = '';
+  if (page > 1) head += `\n<link rel="prev" href="${base}${toolQuery(page - 1, extra)}">`;
+  if (page < pages) head += `\n<link rel="next" href="${base}${toolQuery(page + 1, extra)}">`;
+  return head;
+}
+
+// AND over whitespace-separated terms, matched against the name, the blurb and the
+// slug, so "city distance" narrows instead of widening. Server-side on purpose: a
+// thousand tools do not fit in a page of markup to filter client-side, and the
+// result must be reachable by someone with no JavaScript.
+function toolSearchItems(q) {
+  const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean).slice(0, 6);
+  if (!words.length) return toolHubItems();
+  return toolHubItems().filter((s) => {
+    const hay = `${s.name} ${s.blurb || ''} ${s.href} ${s.cat}`.toLowerCase();
+    return words.every((w) => hay.includes(w));
+  });
+}
+
+function toolShelfLinks() {
+  return CATS.CATEGORIES.map((c) => `<a href="/alat/c/${c.id}">${escapeHtml(c.name)}</a>`).join(', ');
+}
+
+function toolsNav(current) {
+  const cur = current && typeof current === 'object' ? current : {};
+  const shelf = CATS.byId[cur.cat] ? cur.cat : '';
+  const chips = ['<a class="tl-chip" href="/alat">🧰 All tools</a>'];
+  CATS.CATEGORIES.forEach((c) => {
+    const on = c.id === shelf;
+    chips.push(`<a class="tl-chip${on ? ' tl-on' : ''}" href="/alat/c/${c.id}"${on ? ' aria-current="true"' : ''}>${c.ic} ${escapeHtml(c.name)}</a>`);
+  });
+  // A short run of neighbours from the same shelf, centred on this tool, so the
+  // graph stays walkable without every page advertising the whole registry.
+  const list = toolHubShelves()[shelf] || [];
+  const at = shelf ? list.findIndex((s) => s.href === cur.href) : -1;
+  if (at >= 0) {
+    const from = Math.max(0, Math.min(at - 1, list.length - TL_SIBLING_LIMIT));
+    list.slice(from, from + TL_SIBLING_LIMIT).forEach((s) => {
+      if (s.href === cur.href) return;
+      chips.push(`<a class="tl-chip" href="${s.href}">${s.icon} ${escapeHtml(s.name)}</a>`);
+    });
+  }
+  return `<nav aria-label="Everyday Tools — tukuk.org/alat" class="tl-nav">${chips.join('')}</nav>`;
+}
+
+// ── /alat/c/:shelf — one category of the toolbox ──────────────────────────────
+function alatShelfPage(catId, page) {
+  const cat = CATS.byId[catId];
+  if (!cat) return null;
+  const items = toolHubShelves()[cat.id] || [];
+  const pages = Math.max(1, Math.ceil(items.length / TL_PAGE_SIZE));
+  // A URL asking for page 99 of 6 is page 6, not an empty shelf — and it must not
+  // canonicalise itself as a page that has nothing on it.
+  page = Math.min(page, pages);
+  const here = items.slice((page - 1) * TL_PAGE_SIZE, page * TL_PAGE_SIZE);
+  const base = `https://tukuk.org/alat/c/${cat.id}`;
+  const body = `<p><b>${escapeHtml(cat.name)}.</b> ${cat.about[0]}</p>
+  <p class="meta" id="tg-count">${items.length} tools on this shelf${pages > 1 ? ` · page ${page} of ${pages}` : ''} · ${here.length} listed below</p>
+  <div class="tl-grid" id="tg-grid">
+  ${toolCards(here)}
+  </div>
+  ${toolPager(`/alat/c/${cat.id}`, page, pages, '')}
+  <h2 class="section-title">How these tools work</h2>
+  <p>${cat.about[1]}</p>
+  <p class="meta">Part of <a href="/alat">Everyday Tools</a> — ${items.length} of ${toolHubItems().length} tools sit here. Other shelves: ${toolShelfLinks()}. Looking for something specific? <a href="/alat/all">Search the whole toolbox</a>.</p>`;
+  const suffix = page > 1 ? ` — page ${page}` : '';
+  return worldDoc({
+    title: `${cat.name}${suffix} — Everyday Tools | Tukuk-OS`,
+    desc: cat.blurb,
+    selfUrl: base + (page > 1 ? `?page=${page}` : ''),
+    heroTitle: `${cat.ic} ${cat.name}${suffix}`,
+    heroSub: `${items.length} browser-local tools · page ${page} of ${pages}`,
+    css: TOOLS_CSS, body,
+    head: toolPagerHead(`/alat/c/${cat.id}`, page, pages, ''),
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'CollectionPage', name: `${cat.name} — Everyday Tools`,
+      description: cat.blurb, url: base,
+      isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
+}
+
+// ── /alat/all — every tool, sixty to a page, with a real search ───────────────
+function alatAllPage(page, q) {
+  const query = String(q || '').slice(0, 80);
+  const items = query ? toolSearchItems(query) : toolHubItems();
+  const pages = Math.max(1, Math.ceil(items.length / TL_PAGE_SIZE));
+  page = Math.min(page, pages); // same rule as the shelves: never an empty page 200
+  const here = items.slice((page - 1) * TL_PAGE_SIZE, page * TL_PAGE_SIZE);
+  const extra = query ? `q=${encodeURIComponent(query)}` : '';
+  const total = toolHubItems().length;
+  const body = `<p><b>${query ? `${items.length} of ${total} tools match “${escapeHtml(query)}”.` : `The whole toolbox — ${total} tools, sixty to a page.`}</b> ${query ? 'Clear the box to browse everything again.' : 'Browse it in order, or use the box to jump straight to the one you came for; the shelves under <a href="/alat">Everyday Tools</a> group the same list by subject.'}</p>
+  <form class="tl-searchwrap" action="/alat/all" method="get" role="search">
+    <input class="tl-search" id="tg-q" name="q" type="search" value="${escapeHtml(query)}" placeholder="Search the toolbox — try qr, json, bmi, lagos…" autocomplete="off" aria-label="Search the toolbox">
+    <button class="tl-btn primary" type="submit">Search</button>
+  </form>
+  <p class="meta" id="tg-count">${items.length} match${items.length === 1 ? 'es' : ''} · ${here.length} listed below${pages > 1 ? ` · page ${page} of ${pages}` : ''}</p>
+  <div class="tl-grid" id="tg-grid">
+  ${here.length ? toolCards(here) : '<p>No tool matches that. Try a shorter word — <a href="/alat/all">the full list</a> is one click away.</p>'}
+  </div>
+  ${toolPager('/alat/all', page, pages, extra)}
+  <h2 class="section-title">Shelves instead of a wall</h2>
+  <p>${toolShelfLinks()}. Every tool on tukuk.org belongs to exactly one of them, and each shelf lists its tools sixty at a time — the same links the hub would have carried all at once, in pieces a person can actually read.</p>`;
+  const suffix = query ? ` — search: ${query}` : (page > 1 ? ` — page ${page}` : '');
+  return worldDoc({
+    title: query ? `Search the toolbox: ${query} | Tukuk-OS` : `All ${total} Everyday Tools, Listed A–Z | Tukuk-OS`,
+    desc: query ? `Results for “${query}” in the tukuk.org toolbox of ${total} browser-local converters, calculators, checkers and generators.` : `Every one of the ${total} browser-local tools on tukuk.org in one paginated list — converters, calculators, checkers and generators, with a search box.`,
+    selfUrl: `https://tukuk.org/alat/all${toolQuery(page, extra)}`,
+    robots: query ? 'noindex,follow' : 'index,follow',
+    heroTitle: query ? '🔎 ' + query : '🧰 Every Tool',
+    heroSub: `${items.length} tools · ${page} of ${pages} pages`,
+    css: TOOLS_CSS, body,
+    head: toolPagerHead('/alat/all', page, pages, extra),
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Everyday Tools — complete list',
+      description: `The complete paginated list of ${total} browser-local tools on tukuk.org.`,
+      url: 'https://tukuk.org/alat/all',
+      isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+    }).replace(/</g, '\\u003c'),
+  }, toolsNav());
 }
 
 function alatHubPage() {
-  // The hub is a shop window, not a phone directory: one card per tool with
-  // icon and blurb, plus a search box that filters the grid as you type
-  // (Nov 2026 — visitors kept scrolling the prose wall and asking "where are
-  // the tools?"). Same hundred links, same crawl graph, now glanceable.
-  const hubCards = toolHubItems().filter((s) => s.href !== '/alat');
-  const cards = hubCards.map((s) =>
-    `<a class="tl-card" href="${s.href}"><b><span class="tl-ic">${s.icon}</span>${escapeHtml(s.name)}</b><span class="tl-bl">${escapeHtml(s.blurb)}</span></a>`).join('\n  ');
-  const body = `<p><b>The honest kind of useful.</b> Over a hundred small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your files, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
-  <h2 class="section-title">In the toolbox</h2>
-  <input class="tl-search" id="tg-q" type="search" placeholder="Search the toolbox — try qr, json, bmi, design… (press / to jump here)" autocomplete="off" aria-label="Search the toolbox">
-  <p class="meta" id="tg-count">${hubCards.length} tools · start typing to filter the grid</p>
+  // The hub is a shop window, not a phone directory. It used to print a card for
+  // every tool the registry knew — at a thousand of them that is a thousand cards
+  // nobody scrolls to the end of, so the hub indexes the twelve shelves instead,
+  // keeps the genuinely popular shelf visible, and sends the rest of the surface
+  // to /alat/all, which is paginated and searched server-side (so it also works
+  // with JavaScript switched off, and a crawler can walk every tool in twenty
+  // requests instead of drowning in one 1,100-card page).
+  const shelves = toolHubShelves();
+  const shelfCards = CATS.CATEGORIES.map((c) =>
+    `<a class="tl-card" href="/alat/c/${c.id}"><b><span class="tl-ic">${c.ic}</span>${escapeHtml(c.name)}<span class="tl-n">${shelves[c.id].length}</span></b><span class="tl-bl">${escapeHtml(c.blurb)}</span></a>`).join('\n  ');
+  const total = toolHubItems().length;
+  const body = `<p><b>The honest kind of useful.</b> Over a thousand small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your files, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
+  <h2 class="section-title">Browse by shelf</h2>
+  <div class="tl-grid">
+  ${shelfCards}
+  </div>
+  <form class="tl-searchwrap" action="/alat/all" method="get" role="search">
+    <input class="tl-search" id="tg-q" name="q" type="search" value="" placeholder="Search all ${total} tools — try qr, json, bmi, lagos… (press / to jump here)" autocomplete="off" aria-label="Search the toolbox">
+    <button class="tl-btn primary" type="submit">Search</button>
+  </form>
+  <h2 class="section-title">The classics</h2>
+  <p class="meta" id="tg-count">${total} tools on ${CATS.CATEGORIES.length} shelves · the ones people come back for, and <a href="/alat/all">the complete list</a> for everything else</p>
   <div class="tl-grid" id="tg-grid">
-  ${cards}
+  ${toolCards(TOOL_HUB_FEATURED)}
   </div>
   <h2 class="section-title">Why browser-local, and why it matters to you</h2>
   <p>Most “free tool” sites ship your input to a server, paste eight ads around it and remember nothing about how the maths works. Here every answer comes from arithmetic your browser can verify: unit factors from international definitions, date counts from the Gregorian calendar itself, contrast ratios from the published WCAG formula, passwords from the operating system’s random source. That makes them <b>private by construction</b> — a password page that runs locally is not a promise, it is a fact you can check in your network tab.</p>
   <p class="meta">Prefer maps and time? The neighbouring <a href="/maps">Maps &amp; Navigation</a> cluster adds routing, distances, sun times and world clocks — and <a href="/today">📰 Today</a> turns weather and currency rates into a one-screen daily briefing with an <a href="/today.xml">RSS feed</a>. Everything on tukuk.org is free without an account.</p>
-  <script>(function(){try{
-var q=document.getElementById('tg-q'),c=document.getElementById('tg-count'),g=document.getElementById('tg-grid');
-if(!q||!c||!g)return;
-var cards=[].slice.call(g.querySelectorAll('.tl-card')),total=cards.length,base=c.textContent;
-function filt(){var words=q.value.toLowerCase().split(/\\s+/),i,j,ok,n=0;
- for(i=words.length-1;i>=0;i--)if(!words[i])words.splice(i,1);
- for(i=0;i<total;i++){var t=cards[i].textContent.toLowerCase();ok=true;
-  for(j=0;j<words.length;j++)if(t.indexOf(words[j])<0){ok=false;break;}
-  cards[i].style.display=ok?'':'none';if(ok)n++;}
- c.textContent=n===total?base:(n+' of '+total+' tools match — clear the box to see them all');}
-q.addEventListener('input',filt);
+  <script>(function(){try{var q=document.getElementById('tg-q');if(!q)return;
 document.addEventListener('keydown',function(e){if(e.key==='/'&&!e.ctrlKey&&!e.metaKey&&!e.altKey){var tag=(document.activeElement||{}).tagName||'';if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT')return;q.focus();e.preventDefault();}});
 }catch(e){}})();</script>`;
   return worldDoc({
-    title: 'Everyday Tools — Converters, Calculators, PDF, JSON, Hashing & Generators | Tukuk-OS',
-    desc: 'Over a hundred useful tools that run entirely in your browser: unit conversion, date and age maths, base and fraction converters, prime checks, statistics, salary and tip calculators, countdowns, JWT and HTML-entity decoding, Roman numerals, number-to-words, combinations, triangle solver, readability scores, calorie needs, inflation maths, ciphers, recipe and paint scalers, dice odds, a daily water target, guided breathing pacer, compound interest, GST/VAT add-and-remove, Morse and NATO phonetic, ISO week numbers, Markdown to HTML, programmer case converter, coordinate distance, printable month grid, typing speed, GPA and shoe-size converters, screen PPI comparison, a Web Audio metronome, lap stopwatch, blood-type Punnett square, DNA translator, subnet calculator, heart-rate zones, caffeine half-life, moon phase and Easter computus, weekday finder, days-between dates, KB-vs-KiB bytes, password entropy, repeating decimals, a keyboard tester, pomodoro timer, reading-time estimator, EAN-13 barcodes and slug maker, a canvas design studio, and for learning: flashcards, a quiz maker, times-tables and clock-reading trainers, periodic table, flags quiz, word scramble and guess, spelling practice, printable worksheets, planet fact cards, a spaced study planner and study aids from citations to Cornell notes and mind maps — private, free, no account.',
+    title: 'Everyday Tools — Over a Thousand Converters, Calculators, PDF, JSON & Generators | Tukuk-OS',
+    desc: 'Over a thousand free tools that run entirely in your browser — unit and date maths, colour contrast, JSON, hashes, PDF, images, money and health calculators. No account, no uploads.',
     selfUrl: 'https://tukuk.org/alat',
     heroTitle: '🧰 Everyday Tools', heroSub: 'Converters · calculators · checkers · generators — all computed on your device',
     css: TOOLS_CSS, body,
@@ -22974,7 +23222,7 @@ $('bd-idea').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preven
   }, worldNav('Keep going', [
     { href: '/games', icon: '🕹️', name: 'Game Arcade', blurb: 'Ready-to-play 3D and HTML5 games — the same templates the Builder publishes from.' },
     { href: '/a', icon: '🧩', name: 'Community apps', blurb: 'Everything our visitors have published through the Builder, in one index.' },
-    { href: '/alat', icon: '🧰', name: 'Everyday Tools', blurb: 'Over a hundred browser-local tools: converters, calculators, learning drills, a design studio, PDF, JSON and more.' },
+    { href: '/alat', icon: '🧰', name: 'Everyday Tools', blurb: 'Over a thousand browser-local tools: converters, calculators, learning drills, a design studio, PDF, JSON and more.' },
   ]));
 }
 
