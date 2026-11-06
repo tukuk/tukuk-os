@@ -1,7 +1,7 @@
 'use strict';
 // ── TUKUK-OS /health — everyday-body explainers ──
-// Deliberately modest: six topics about ordinary human physiology (sleep, water, steps, pulse,
-// breathing, temperature), each written to one rule — state only numbers that established health
+// Deliberately modest: a dozen topics about ordinary human physiology (sleep, water, steps, pulse,
+// breathing, temperature, eyes, teeth, headaches, allergies, sitting, colds), each written to one rule — state only numbers that established health
 // authorities publish, name the authority on every figure, and send the reader to a doctor the
 // moment a fact stops being general. This is education about the body, not advice about anyone's
 // body; the disclaimer appears on every page and the "see a doctor" block is never optional.
@@ -240,6 +240,234 @@ const TOPICS = [
       { t: 'JAMA Internal Medicine 2023 — “A History of the Normal Human Body Temperature”', u: 'https://jamanetwork.com/journals/jamainternalmedicine/fullarticle/2800862' },
       { t: 'NHS — Temperature, high temperature and fever in adults', u: 'https://www.nhs.uk/symptoms/fever-in-adults/' },
       { t: 'MedlinePlus — Fever', u: 'https://medlineplus.gov/ency/article/003090.htm' },
+    ],
+  },
+  {
+    slug: 'eyes',
+    icon: '👁️',
+    title: 'Eyes & Screens',
+    blurb: 'Why screens make eyes tired, what the 20-20-20 rule is for, the myopia surge, and which eye symptoms are emergencies.',
+    lead: 'Screens have not created an epidemic of damaged eyes — they have created an epidemic of tired ones. The difference matters, because the fix for fatigue is cheap and the warning signs of real eye disease are unmistakable.',
+    facts: [
+      ['Digital eye strain', 'survey estimates run as high as ~90% of heavy screen users, symptoms are temporary', 'optometric surveys; American Academy of Ophthalmology commentary'],
+      ['The 20-20-20 rule', 'every 20 minutes, look 20 feet (6 m) away for 20 seconds', 'American Academy of Ophthalmology recommendation'],
+      ['Myopia (nearsightedness) rise', 'projected to affect ~half the world by 2050', 'Holden et al., Optometry and Vision Science, 2016 global projection'],
+      ['Childhood outdoor time', '2+ hours of daylight outdoors a week is associated with fewer children becoming nearsighted', 'cohort studies (e.g. Guangzhou outdoor trial); evidence still accumulating'],
+      ['Blue-light glasses', 'no good evidence they prevent eye disease or strain', 'AAO position statement — the discomfort is reduced blinking, not blue light'],
+    ],
+    body: [
+      {
+        h: 'What screen fatigue actually is',
+        ps: [
+          'Staring at a close target for hours does two things: the focusing muscle holds one length and gets cramped, and blink rate falls by roughly half or more, so the tear film dries. The result — sore, gritty, blurry-but-transient eyes — is digital eye strain, and it is uncomfortable rather than damaging. The AAO is blunt that blue light from screens is not the culprit and blue-blocking glasses are unnecessary; the 20-20-20 rule works precisely because it interrupts both mechanisms at once: distance relaxes the focus, and the pause lets blinks happen.',
+        ],
+      },
+      {
+        h: 'The myopia question is different — and real',
+        ps: [
+          'Nearsightedness is genuinely rising, fastest in East Asian cities, and the leading environmental candidate is not screens per se but time outdoors: bright daylight appears to trigger retinal dopamine release that keeps the growing eyeball from lengthening (excess length is myopia). Studies randomising children to extra outdoor hours found fewer new cases, while reading near-work shows a weaker association than folklore assumes. The practical advice stacks up to the same place: hard breaks from close work for everyone, and real outdoor daylight for growing eyes.',
+        ],
+      },
+    ],
+    urgent: [
+      'Sudden loss of vision, a curtain across the view, or a shower of new floaters with flashes (retinal tear/detachment — same-day emergency)',
+      'Severe eye pain, a fixed dilated pupil with halos and nausea (acute glaucoma — emergency)',
+      'Any chemical splash — irrigate immediately with water on the way to care, never wait',
+    ],
+    sources: [
+      { t: 'American Academy of Ophthalmology — Computer eyes / myopia', u: 'https://www.aao.org/eye-health' },
+      { t: 'Holden et al. 2016 — Global myopia projections, Optometry and Vision Science', u: 'https://pubmed.ncbi.nlm.nih.gov/27479290/' },
+      { t: 'CDC — Healthy vision', u: 'https://www.cdc.gov/healthy-vision/' },
+    ],
+  },
+  {
+    slug: 'teeth',
+    icon: '🦷',
+    title: 'Teeth & Gums',
+    blurb: 'Why brushing twice beats brushing hard, where fluoride earns its place, the sugar-frequency effect, and the dental signs that mean today, not next month.',
+    lead: 'Tooth decay is the most common disease humans get, and almost all of its prevention fits on a toothpaste tube: fluoride, twice a day, and a dentist before anything hurts.',
+    facts: [
+      ['Brushing', 'twice a day with fluoride toothpaste', 'NHS & American Dental Association'],
+      ['Spit, do not rinse', 'the NHS’s deliberate oddity: rinsing washes the fluoride away', 'NHS oral-health guidance'],
+      ['Untreated decay worldwide', 'affects roughly half of all people (carries and gum disease combined)', 'WHO global oral-health estimates / Global Burden of Disease'],
+      ['Sugar timing', 'how often sugar appears matters more than the total amount', 'standard dental-carious biology (NHS/ADA)'],
+      ['Interdental cleaning', 'once a day between the teeth — brush misses ~40% of tooth surfaces', 'ADA; NHS'],
+    ],
+    body: [
+      {
+        h: 'The mechanics of a quiet miracle',
+        ps: [
+          'Cavity formation is a race between acid (made by plaque bacteria feeding on free sugars) and repair (saliva, helped by fluoride, re-hardening the softened enamel). Fluoride wins the race unfairly well — it incorporates into the reforming crystal and makes it more acid-resistant than the original — which is why health agencies from the NHS to the WHO count community water fluoridation and fluoride toothpaste among the most effective public-health measures ever deployed. The spitting-not-rinsing advice follows the same logic: leave the toothpaste’s fluoride on the surface instead of washing it down the sink.',
+          'Frequency beats quantity with sugar because every exposure starts another acid attack that saliva needs 20-30 minutes to neutralise; sipping a soft drink all afternoon keeps the enamel under continuous siege in a way one sit-down dessert does not. The same is true of snacking, which is one real argument for the three-meals-and-water-between shape of traditional advice.',
+        ],
+      },
+      {
+        h: 'What a dentist catches that you cannot feel',
+        ps: [
+          'Enamel has no nerves, so decay is painless until it is deep — by the time a tooth hurts, the cavity has usually reached the pulp, and the treatment ladder jumps from filling to root canal to extraction. Gum disease creeps the same way: bleeding gums are the classic early sign and respond to cleaning, while the advanced form quietly destroys the bone that holds teeth in the jaw, and population studies link it to higher risks elsewhere. A routine check-up exists to find both while they are still boring.',
+        ],
+      },
+    ],
+    urgent: [
+      'Facial or jaw swelling with fever — a dental infection spreading, dangerous and needs same-day care',
+      'A knocked-out permanent tooth: find it, hold it by the crown, keep it in milk, to a dentist within the hour',
+      'Bleeding after an extraction that will not stop with an hour of firm gauze pressure',
+    ],
+    sources: [
+      { t: 'NHS — Brushing your teeth', u: 'https://www.nhs.uk/live-well/healthy-teeth-and-gums/how-to-keep-your-teeth-clean/' },
+      { t: 'WHO — Oral health fact sheet', u: 'https://www.who.int/news-room/fact-sheets/detail/oral-health' },
+      { t: 'NIDCR (NIH) — Consumer health: tooth decay', u: 'https://www.nidcr.nih.gov/health-info/tooth-decay' },
+    ],
+  },
+  {
+    slug: 'headache',
+    icon: '🤕',
+    title: 'Headaches',
+    blurb: 'Tension, migraine and cluster told apart, the painkiller trap that creates its own headaches, and the sudden-onset headache that is an emergency.',
+    lead: 'Almost everyone gets headaches, and almost all of them are benign — but headache is the one symptom where the story of how it starts tells a clinician everything, so it pays to know which patterns are ordinary and which are not.',
+    facts: [
+      ['Tension-type headache', 'the most common kind: pressing, both sides, not worsened by routine activity', 'International Headache Society / NIH NINDS classification'],
+      ['Migraine', 'throbbing, often one-sided, with light and sound sensitivity; ~1 in 4 US households affected', 'Lipton et al., Neurology 2001 (US prevalence); NINDS'],
+      ['Medication-overuse headache', 'regular painkiller use several days a week can itself cause daily headache', 'IHS classification; NHS guidance'],
+      ['Thunderclap onset', 'a headache peaking within seconds is treated as an emergency until scanned', 'standard clinical guidance (e.g. NHS/AHA)'],
+    ],
+    body: [
+      {
+        h: 'Three ordinary patterns worth recognising',
+        ps: [
+          'Tension headache is the band of pressure after a long day — muscle and stress mechanisms, responsive to water, food, rest and an occasional painkiller. Migraine is a nervous-system event, not merely a strong headache: hours to days of throbbing, nausea, and lights turned uncomfortably bright, sometimes preceded by aura — flickers, zigzags or temporary blind spots that are cortical spreading depression, a wave of electrical change crossing the visual cortex. Cluster headache is the rare, savage one: strictly one-sided, around one eye, in bouts of weekly daily attacks with tearing and a blocked nostril, and it demands a doctor’s eyes because the treatments are specific.',
+          'Caffeine plays a double role that surprises people: it helps some attacks (it is in several combination headache medicines) and its daily use maintains the medication-overuse cycle — headache coming back as the previous dose wears off, answered by another dose. Breaking that loop under medical guidance is one of the most reliably satisfying moves in headache medicine.',
+        ],
+      },
+      {
+        h: 'The part that is genuinely about safety',
+        ps: [
+          'Headache is almost always the body being noisy rather than dangerous, which is exactly why the emergency patterns stand out: maximal intensity in seconds (thunderclap — bleeding around the brain must be excluded), headache with fever and a stiff neck (infection), headache with new weakness, numbness, speech change or vision loss, headache after a head injury, and a brand-new persistent headache starting after about 50 or during pregnancy. Any of these is not a “wait and see” — same-day assessment is the correct move, and people with known headache patterns are advised to learn their usual so that unusual is unmistakable.',
+        ],
+      },
+    ],
+    urgent: [
+      'A thunderclap headache — worst-ever, peaking within seconds (emergency)',
+      'Headache with fever, stiff neck and confusion or light intolerance (emergency)',
+      'Headache with weakness, numbness, slurred speech or vision loss; any head-injury headache that worsens',
+    ],
+    sources: [
+      { t: 'NIH NINDS — Headache information page', u: 'https://www.ninds.nih.gov/health-information/disorders/headache' },
+      { t: 'NHS — Headaches', u: 'https://www.nhs.uk/symptoms/headaches/' },
+      { t: 'Lipton et al. 2001 — Migraine prevalence, Neurology (via PubMed)', u: 'https://pubmed.ncbi.nlm.nih.gov/11756683/' },
+    ],
+  },
+  {
+    slug: 'allergies',
+    icon: '🤧',
+    title: 'Allergies',
+    blurb: 'What the immune system is doing when it sneezes at pollen, why antihistamines make some people sleepy, and the one allergic reaction that outranks the pharmacy.',
+    lead: 'An allergy is an immune system solving the wrong problem — mounting a defence against pollen, peanut protein or dust mites as though they were parasites. Understanding the mechanism explains both the everyday misery and the rare emergency.',
+    facts: [
+      ['Allergic disease is common', 'roughly one in four people worldwide affected at some time', 'AAFA/CDC; often quoted near 30% (WAO)'],
+      ['Histamine', 'the chemical behind the swelling, itching and mucus; antihistamines block its receptor', 'NIAID — standard mechanism'],
+      ['Hay fever follows the calendar', 'tree, grass and weed pollen seasons drive the symptom calendar in temperate countries', 'NHS; national pollen forecast services'],
+      ['Anaphylaxis', 'whole-body allergic reaction; adrenaline (epinephrine) first, ambulance second', 'NIAID/standard anaphylaxis guidance'],
+    ],
+    body: [
+      {
+        h: 'The misfire, and the medicine that interrupts it',
+        ps: [
+          'In a sensitised person, re-encountering an allergen cross-links IgE antibodies sitting on mast cells, which dump histamine and relatives: blood vessels dilate and leak (the stuffy nose, the swollen lid), itch nerves fire, smooth muscle can tighten. First-generation antihistamines calm all of this and also cross into the brain, which is why they cause drowsiness; the newer ones (cetirizine, loratadine, fexofenadine) largely spare the brain and are why “antihistamine” stopped meaning “sleeping pill”. Nasal steroid sprays work on a slower clock — they quiet the inflammation itself and are the most effective single hay-fever treatment when started early in season, a point repeated by every allergy body.',
+          'The hygiene hypothesis is the interesting open question of why allergies rose as infections fell: the leading versions say a microbiome trained by dirt, animals and older siblings calibrates the immune system’s thresholds. It is genuinely unresolved — but the practical studies of farm exposure and early food introduction keep finding that timing and environment matter more than parents expect.',
+        ],
+      },
+      {
+        h: 'When allergy stops being a sneeze',
+        ps: [
+          'Anaphylaxis is the same misfire aimed at the whole body: throat or tongue swelling, hoarse voice, wheeze, a drop in blood pressure, sometimes after one sting or one bite minutes earlier. It is rare and it is rapidly treatable — adrenaline from an auto-injector works within minutes and every allergy guideline is emphatic that antihistamines are not first-line for it, because they act too slowly on the airway and the blood pressure. Anyone who has ever had a whole-body reaction should have that conversation with a clinician about carrying an injector, not a repeat dose of tablets.',
+        ],
+      },
+    ],
+    urgent: [
+      'Swelling of lips/tongue/throat, hoarse voice, or any breathing or swallowing trouble after exposure — adrenaline and emergency help immediately',
+      'Spread of hives with dizziness or faintness after a sting or food (anaphylaxis pattern)',
+      'Asthma-like wheeze after allergen exposure that does not settle quickly with usual reliever treatment',
+    ],
+    sources: [
+      { t: 'NIAID (NIH) — Allergies', u: 'https://www.niaid.nih.gov/research/allergies' },
+      { t: 'NHS — Allergies', u: 'https://www.nhs.uk/conditions/allergies/' },
+      { t: 'CDC — Fast facts: allergies', u: 'https://www.cdc.gov/nchs/fastats/allergies.htm' },
+    ],
+  },
+  {
+    slug: 'sitting',
+    icon: '🪑',
+    title: 'Sitting & Standing',
+    blurb: 'What “sitting is the new smoking” actually meant, the honest evidence about posture and back pain, and the intervention that does work.',
+    lead: 'The research on sitting got a famous slogan it never wrote, and the posture advice sold in its place got more confidence than the evidence supports. The honest version is less dramatic and more actionable.',
+    facts: [
+      ['The origin of the slogan', 'a 2012 Lancet column quoting observational studies on sitting time and mortality — not a causal proof', 'van der Ploeg et al., Lancet 2012 (the actual quote predates it and is debated)'],
+      ['Long sitting time, observational data', 'high daily sitting associates with modestly higher all-cause mortality in pooled cohorts', 'van Eerdewijk et al. / meta-analyses of sitting-time cohort studies; causation not established'],
+      ['“Perfect posture”', 'no single sitting posture is proven to prevent pain; comfort and movement matter more', 'reviews of posture and low-back pain (e.g. Smith et al., J Orthop Sports Phys Ther 2018)'],
+      ['What does help', 'breaking up sitting with short activity; overall physical activity (see Daily Steps)', 'physical-activity guideline bodies incl. WHO & NHS'],
+    ],
+    body: [
+      {
+        h: 'The slogan, and what the studies actually showed',
+        ps: [
+          'The epidemiology is real but observational: people who report many sitting hours show modestly higher mortality in pooled analyses, and sitting is also a proxy for overall inactivity, poor sleep and snack access — all of which travel together. The strongest honest statement is that long unbroken sitting is worth interrupting, not that a chair causes disease the way a pathogen does. The posture industry then promises that the right alignment prevents pain; the reviews of posture and low-back pain are strikingly lukewarm — habitual slouching correlates weakly at best with aching backs, and the office worker with perfect upright posture is not protected by it.',
+        ],
+      },
+      {
+        h: 'The intervention that survives the debunking',
+        ps: [
+          'Discomfort from a desk day is usually tissue load held static — the same muscles, discs and joints under unchanged low load for hours — and the reliable relief is change: stand, walk, shift, do a different thing, even briefly. Sit-stand reviews find modest comfort and productivity gains at best, but pain specialists and physiotherapists agree on the movement principle because backs are built for varying work, not for any particular position held for eight hours. Layer on the general activity every guideline body recommends — see Daily Steps for what the walking literature actually finds — and the sitting question shrinks into a simple rule: more positions, more movement, less drama.',
+        ],
+      },
+    ],
+    urgent: [
+      'Back or leg pain with new numbness around the saddle area, or trouble controlling bladder/bowels (cauda equina — emergency, same-day surgery assessment)',
+      'Leg weakness or foot drop developing alongside back pain',
+      'Pain after significant trauma, or unexplained back pain with fever and weight loss',
+    ],
+    sources: [
+      { t: 'Lancet 2012 — “Sitting: the new smoking?” correspondence', u: 'https://pubmed.ncbi.nlm.nih.gov/22342219/' },
+      { t: 'WHO — Guidelines on physical activity and sedentary behaviour', u: 'https://www.who.int/publications/i/item/9789240015128' },
+      { t: 'NHS — Back pain (self-care)', u: 'https://www.nhs.uk/conditions/back-pain/' },
+    ],
+  },
+  {
+    slug: 'cold',
+    icon: '🤒',
+    title: 'The Common Cold',
+    blurb: 'Why there are hundreds of colds instead of one, what genuinely shortens one (a little), and the days-of-illness pattern that means it was never a cold.',
+    lead: 'The common cold is the most successful virus family in human history: over 200 strains, immunity to each one partial, transmission on hands and air. Everything about managing it follows from that — including why nothing cures it.',
+    facts: [
+      ['How many colds', 'adults average 2–4 a year, children 6–8; more strains than any single immunity covers', 'NHS / CDC common-cold guidance'],
+      ['Duration', 'typically 7–10 days; the cough can linger 2–3 weeks after the rest fades', 'NHS — common cold'],
+      ['Antibiotics', 'colds are viral — antibiotics do nothing for them and carry real downsides', 'CDC “antibiotics only treat bacteria” campaign'],
+      ['Zinc lozenges', 'started within 24 hours may shave about a day off the duration; pooled trials are mixed and nausea is common', 'Cochrane review 2013 (Singh & Lannon); later updates disputed'],
+      ['Vitamin C', 'regular supplementation does not prevent colds in the general population', 'Cochrane review (Hemilä & Chalker)'],
+    ],
+    body: [
+      {
+        h: 'Why there is no cure and no vaccine',
+        ps: [
+          'Rhinoviruses alone number over 150 types, and the coronaviruses, RSV, adenoviruses and parainfluenzae that also cause “colds” each evade the same trick: immunity to one strain barely covers the next, and the virus replays itself in the nose where antibody levels run thin anyway. That is why a cold vaccine is a math problem with too many variables, and why the honest pharmacy advice is symptom relief: fluids, rest, simple painkillers for the aching days, saline and steam for the blocked nose. Honey calfs the night cough in children over one (an NHS-quoted trial result worth knowing), and the zinc-and-vitamin-C folklore above is precisely that — a day or maybe less, at best, when trials agree at all.',
+        ],
+      },
+      {
+        h: 'The calendar that tells you what this actually is',
+        ps: [
+          'The usual cold asks for about a week and improves on schedule. Symptoms that run past two weeks, or crash and then flare again with new fever and facial pain, are following the classic shape of a bacterial sinus or chest infection layered onto the viral start — that pattern deserves a clinician, and it is the same logic behind “better, then worse” guidance the NHS prints for every respiratory page. Breathing difficulty, chest pain, high sustained fever, ear pain in a child, or a cold that tips into wheeze belong to other conversations with faster appointments, and in infants, the elderly and the immunosuppressed the threshold for calling a doctor is deliberately low.',
+        ],
+      },
+    ],
+    urgent: [
+      'Difficulty breathing, wheeze that does not settle, or chest pain',
+      'Fever lasting beyond three days, or any fever in an infant under 3 months (see Body Temperature)',
+      'Symptoms that improve then return with new fever and facial or ear pain — secondary infection pattern',
+    ],
+    sources: [
+      { t: 'CDC — Common cold', u: 'https://www.cdc.gov/respiratory-infections/about/common-cold/index.html' },
+      { t: 'NHS — Cold, flu and other common infections', u: 'https://www.nhs.uk/conditions/colds-and-flu/' },
+      { t: 'Cochrane 2013 — Zinc for the common cold (via PubMed)', u: 'https://pubmed.ncbi.nlm.nih.gov/23633700/' },
     ],
   },
 ];

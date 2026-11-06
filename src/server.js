@@ -82,6 +82,8 @@ const seni = require('./seni');
 const hidup = require('./hidup');
 const words = require('./words');
 const sihat = require('./sihat');
+const bintang = require('./bintang');
+const diction = require('./diction');
 const bacaan = require('./bacaan');
 const books = require('./books');
 const rcp = require('./recipes');
@@ -4617,18 +4619,19 @@ const HEALTH_DISCLAIMER = '<p class="hl-disc"><b>This is general education, not 
 
 function healthHubPage() {
   const cards = sihat.TOPICS.map((t) => `<div class="world-card"><h3>${t.icon} <a href="/health/${t.slug}">${escapeHtml(t.title)}</a></h3><p>${escapeHtml(t.blurb)}</p></div>`).join('');
-  const body = `<p>Six ordinary numbers about the human body — hours of sleep, litres of water, steps, pulse, breaths, degrees — written to one rule: <b>only figures that established health authorities publish, each named on the page, and a doctor's referral wherever a fact stops being general.</b></p>
+  const n = sihat.TOPICS.length;
+  const body = `<p>${n} ordinary topics about the human body — hours of sleep, litres of water, steps, pulse, breaths, degrees, eyes, teeth, headaches, pollen, a desk chair, a runny nose — written to one rule: <b>only figures that established health authorities publish, each named on the page, and a doctor's referral wherever a fact stops being general.</b></p>
   ${HEALTH_DISCLAIMER}
   <div class="world-grid">${cards}</div>
   <h2 class="section-title">Why so few topics?</h2>
-  <p>Because health pages earn or lose trust on specificity. A site that auto-generates thousands of "benefits of X" pages says nothing a reader can check; these six pages each carry a table of sourced numbers, the primary sources linked at the bottom, and an urgent-signs list written first. The related hands-on tools live next door: <a href="/alat/bmi">BMI calculator</a>, <a href="/nutrition">nutrition facts</a>, and the <a href="/academy/body">Academy body track</a> for the physiology behind it all. For the living planet rather than your own, there is <a href="/life">the Wildlife Atlas</a>.</p>`;
+  <p>Because health pages earn or lose trust on specificity. A site that auto-generates thousands of "benefits of X" pages says nothing a reader can check; these ${n} pages each carry a table of sourced numbers, the primary sources linked at the bottom, and an urgent-signs list written first. The related hands-on tools live next door: <a href="/alat/bmi">BMI calculator</a>, <a href="/nutrition">nutrition facts</a>, and the <a href="/academy/body">Academy body track</a> for the physiology behind it all. For the living planet rather than your own, there is <a href="/life">the Wildlife Atlas</a>.</p>`;
   return worldDoc({
     title: 'Health Basics — Sleep, Water, Steps, Pulse, Breathing & Temperature, With Sources | Tukuk-OS',
-    desc: 'Six everyday-body explainers built only on figures published by CDC, NIH, NHS, AHA and peer-reviewed meta-analyses — each number sourced on the page, each topic ending with the signs that mean see a doctor.',
+    desc: 'Everyday-body explainers built only on figures published by CDC, NIH, NHS, WHO and peer-reviewed meta-analyses — each number sourced on the page, each topic ending with the signs that mean see a doctor.',
     selfUrl: 'https://tukuk.org/health',
     heroTitle: '🩺 Health Basics', heroSub: 'The ordinary numbers of the human body · every figure sourced · no advice, just education',
     css: HEALTH_CSS, body,
-  }, worldNav('The six topics', sihat.TOPICS.map((t) => ({ href: `/health/${t.slug}`, icon: t.icon, name: t.title, blurb: t.blurb }))));
+  }, worldNav('The topics', sihat.TOPICS.map((t) => ({ href: `/health/${t.slug}`, icon: t.icon, name: t.title, blurb: t.blurb }))));
 }
 
 function healthTopicPage(t) {
@@ -4667,6 +4670,227 @@ app.get('/health/:slug', (req, res, next) => {
   } catch (error) {
     res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Health | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>🩺 Health</h1><p>That topic failed to render. Please try again in a moment.</p><p><a href="/health">All topics</a></p>');
     console.error('[health]', safeError(error));
+  }
+});
+
+// ── /dictionary — the browsable shelf of curated words (src/diction.js) ───────
+// /alat/dictionary is the search box; /dictionary is the bookcase: themed
+// collections of real headwords, each with a permanent server-rendered page.
+// Definitions ride the same kamus.define path as Word of the Day — our own
+// local `kata` bank first, the Free Dictionary API as the long-standing
+// fallback — and a word not on the shelf is a normal 404: this is a curated
+// reference section, deliberately not an unbounded mirror of someone else's API.
+const DICT_CSS = `.ds-form{display:flex;gap:8px;max-width:480px;margin:16px 0}
+.ds-form input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel,#171a21);color:inherit;font-size:1rem}
+.ds-chips{margin:14px 0}.ds-chips a{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-size:.85rem;margin:3px 4px 3px 0;text-decoration:none;background:var(--panel,#171a21)}
+.ds-pn{display:flex;gap:14px;flex-wrap:wrap;margin:18px 0;font-size:.92rem}`;
+
+const DICT_SEARCH_FORM = '<form action="/alat/dictionary" method="get" class="ds-form" role="search"><input type="search" name="q" placeholder="Look up any word…" aria-label="Dictionary search"><button class="btn primary" type="submit">Search</button></form>';
+
+function dictCreditHtml() {
+  return `<h2 class="section-title">Where these words come from</h2>
+  <p>Definitions load first from tukuk.org\u2019s own word bank — about 207,000 English word-sense rows built weekly on free GitHub runners from <a href="https://wordnet.princeton.edu" rel="nofollow noopener">Princeton WordNet</a> (redistributed under its free-use notice with attribution) and frequency-ranked by <a href="https://github.com/rspeer/wordfreq" rel="nofollow noopener license">wordfreq</a> (CC-BY-SA 4.0), the same local index that answers <a href="/alat/dictionary">the dictionary tool</a> instantly. Anything the bank does not hold falls back to the free <a href="https://dictionaryapi.dev" rel="nofollow noopener">Free Dictionary API</a>, cached a day like every other lookup.</p>`;
+}
+
+function dictWordPage(word, def) {
+  const cols = diction.collectionsOf(word);
+  const c = cols[0] || null;
+  let pn = '';
+  if (c) {
+    const i = c.words.indexOf(word);
+    const p = c.words[(i - 1 + c.words.length) % c.words.length];
+    const x = c.words[(i + 1) % c.words.length];
+    pn = `<p class="ds-pn"><a href="/dictionary/${p}">&larr; ${p}</a> · <a href="/dictionary/c/${c.slug}">all ${escapeHtml(c.name)} words</a> · <a href="/dictionary/${x}">${x} &rarr;</a></p>`;
+  }
+  const chips = cols.length ? `<p class="ds-chips">${cols.map((x) => `<a href="/dictionary/c/${x.slug}">${x.icon} ${escapeHtml(x.name)}</a>`).join('')}</p>` : '';
+  const body = `${DICT_SEARCH_FORM}
+  ${wordEntryHtml({ word, def })}
+  ${chips}${pn}
+  ${dictCreditHtml()}`;
+  return worldDoc({
+    title: `${word} — Definition, Meaning & Examples | Tukuk-OS Dictionary`,
+    desc: `${word}: meaning, pronunciation and examples from tukuk.org\u2019s own word bank (Princeton WordNet), with synonyms, the word\u2019s collection and a link to look up any other word free.`,
+    selfUrl: `https://tukuk.org/dictionary/${word}`,
+    heroTitle: `\ud83d\udcd6 ${word}`, heroSub: c ? `A ${c.name} word — definition from our own bank` : 'Definition from our own bank',
+    css: `${TOOLS_CSS}${DICT_CSS}${WORD_CSS}`, body,
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'DefinedTerm', name: word,
+      url: `https://tukuk.org/dictionary/${word}`,
+      ...(def && def.phonetic ? { pronunciation: def.phonetic } : {}),
+      description: (def && def.meanings && def.meanings[0] && def.meanings[0].defs[0] && def.meanings[0].defs[0].def) || `Definition of ${word}`,
+      inDefinedTermSet: { '@type': 'DefinedTermSet', name: 'Tukuk-OS Dictionary', url: 'https://tukuk.org/dictionary' },
+    }).replace(/</g, '\\u003c'),
+  }, worldNav('Words & language', [
+    { href: '/dictionary', icon: '\ud83d\udcd6', name: 'Dictionary', blurb: 'Curated word collections with real definitions, served from our own word bank.' },
+    { href: '/word', icon: '\ud83d\udd24', name: 'Word of the Day', blurb: 'A new hand-picked English word every day, each date kept on a permanent page.' },
+    { href: '/alat/dictionary', icon: '\ud83d\udcda', name: 'Dictionary tool', blurb: 'Look up any English word — definitions, phonetics and spoken audio, free.' },
+    { href: '/proverbs', icon: '\ud83d\udcac', name: 'Proverbs of the world', blurb: 'Wisdom sayings from dozens of languages, with their literal and real meanings.' },
+  ]));
+}
+
+function dictHubPage() {
+  const cards = diction.COLLECTIONS.map((c) => `<div class="world-card"><h3>${c.icon} <a href="/dictionary/c/${c.slug}">${escapeHtml(c.name)}</a></h3><p>${escapeHtml(c.blurb)}</p><p class="meta">${c.words.length} words</p></div>`).join('');
+  const body = `<p><b>The interactive dictionary is <a href="/alat/dictionary">the tool at /alat/dictionary</a> — it answers any word on request.</b> This shelf is different: six themed collections of hand-picked headwords, ${diction.ALL_WORDS.length} in all, each one a permanent page rendered from tukuk.org\u2019s own word bank — no account, no ad-gated definition, no AI paraphrase.</p>
+  ${DICT_SEARCH_FORM}
+  <div class="world-grid">${cards}</div>
+  <h2 class="section-title">Why only ${diction.ALL_WORDS.length} words have pages?</h2>
+  <p>Because a dictionary site that mirrors someone else\u2019s API for all 200,000 words is a wall of doorway pages — technically indexed, editorially empty. These are the words chosen on purpose, grouped the way a reader browses: feelings, weather, the mind, the landscape, the office and the kitchen shelf. Every page carries the word\u2019s sound, senses, examples and synonyms, sits in its collection with a neighbour before and after it, and says where its data comes from. New shelves appear when they are actually curated — not scraped.</p>
+  <p>For one word a day with a permanent archive, see <a href="/word">Word of the Day</a>; for playful encoders and dozens of languages, the <a href="/alat/dictionary">dictionary &amp; translator tool</a> covers what this shelf does not.</p>
+  ${dictCreditHtml()}`;
+  return worldDoc({
+    title: 'Dictionary — Curated Word Collections With Real Definitions | Tukuk-OS',
+    desc: 'Browsable dictionary shelves from tukuk.org\u2019s own WordNet-based word bank: feelings, weather, mind, landscape, work and everyday objects, each word a permanent page.',
+    selfUrl: 'https://tukuk.org/dictionary',
+    heroTitle: '\ud83d\udcd6 Tukuk-OS Dictionary', heroSub: 'Curated shelves of real words · definitions from our own bank · the search box never closes',
+    css: `${TOOLS_CSS}${DICT_CSS}`, body,
+  }, worldNav('Words & language', [
+    { href: '/dictionary', icon: '\ud83d\udcd6', name: 'Dictionary', blurb: 'Curated word collections with real definitions, served from our own word bank.' },
+    { href: '/word', icon: '\ud83d\udd24', name: 'Word of the Day', blurb: 'A new hand-picked English word every day, each date kept on a permanent page.' },
+    { href: '/alat/dictionary', icon: '\ud83d\udcda', name: 'Dictionary tool', blurb: 'Look up any English word — definitions, phonetics and spoken audio, free.' },
+    { href: '/proverbs', icon: '\ud83d\udcac', name: 'Proverbs of the world', blurb: 'Wisdom sayings from dozens of languages, with their literal and real meanings.' },
+  ]));
+}
+
+function dictCollectionPage(c) {
+  const strip = c.words.map((w) => `<a href="/dictionary/${w}" title="${escapeHtml(w)}">${escapeHtml(w)}</a>`).join('');
+  const body = `<p>${escapeHtml(c.blurb)}</p>
+  <p class="wd-strip">${strip}</p>
+  ${DICT_SEARCH_FORM}
+  <h2 class="section-title">Browsing the rest of the shelf</h2>
+  <p>${diction.COLLECTIONS.filter((x) => x.slug !== c.slug).map((x) => `<a href="/dictionary/c/${x.slug}">${x.icon} ${escapeHtml(x.name)}</a>`).join(' · ')}. Or jump to <a href="/word">Word of the Day</a> for one word a day, archived forever.</p>
+  ${dictCreditHtml()}`;
+  return worldDoc({
+    title: `${c.name} — Word Collection & Definitions | Tukuk-OS Dictionary`,
+    desc: `${c.blurb} ${c.words.length} curated words, each with a definition page from tukuk.org\u2019s own WordNet-based word bank.`,
+    selfUrl: `https://tukuk.org/dictionary/c/${c.slug}`,
+    heroTitle: `${c.icon} ${c.name}`, heroSub: `${c.words.length} curated words, each with its own definition page`,
+    css: `${TOOLS_CSS}${DICT_CSS}${WORD_CSS}`, body,
+  }, worldNav('The other collections', diction.COLLECTIONS.filter((x) => x.slug !== c.slug).map((x) => ({ href: `/dictionary/c/${x.slug}`, icon: x.icon, name: x.name, blurb: x.blurb }))));
+}
+
+app.get('/dictionary', (req, res) => {
+  try {
+    res.type('html').send(dictHubPage());
+  } catch (error) {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Dictionary | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>\ud83d\udcd6 Dictionary</h1><p>The shelf failed to render. The lookup tool still works at <a href="/alat/dictionary">/alat/dictionary</a>.</p><p><a href="/">Back to Tukuk-OS</a></p>');
+    console.error('[dictionary]', safeError(error));
+  }
+});
+
+app.get('/dictionary/c/:slug', (req, res, next) => {
+  const c = diction.findCollection(req.params.slug);
+  if (!c) return next();
+  try {
+    res.type('html').send(dictCollectionPage(c));
+  } catch (error) {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Dictionary | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>\ud83d\udcd6 Dictionary</h1><p>That collection failed to render. Please try again in a moment.</p><p><a href="/dictionary">All collections</a></p>');
+    console.error('[dictionary]', safeError(error));
+  }
+});
+
+// Only shelf words get pages. Anything else falls through to the normal 404 —
+// the deliberate limit that keeps this a reference section instead of an API proxy.
+app.get('/dictionary/:word', limiter.search, async (req, res, next) => {
+  const raw = String(req.params.word || '');
+  // One canonical spelling per word: the shelf is lowercase, and a page that
+  // answers at both /dictionary/Rain and /dictionary/rain is two pages.
+  if (!/^[a-z][a-z'-]{1,23}$/.test(raw) || !diction.isPublished(raw)) return next();
+  let def = { found: false, word: raw, lang: 'en' };
+  try {
+    def = await kamus.define(raw, 'en');
+  } catch (error) {
+    console.warn('[dictionary] lookup failed:', safeError(error));
+  }
+  try {
+    res.type('html').send(dictWordPage(raw, def));
+  } catch (error) {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Dictionary | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>\ud83d\udcd6 Dictionary</h1><p>That word page failed to render. Please try again in a moment.</p><p><a href="/dictionary">All collections</a></p>');
+    console.error('[dictionary]', safeError(error));
+  }
+});
+
+// ── /horoscope — the zodiac, honestly framed ──────────────────────────────────
+// Twelve pages that split the tradition in two and label both halves: the
+// constellations, myths and calendar history are fact and culture (sourced, said
+// straight); the temperament labels and the daily line are explicitly presented
+// as the fun page they are — a fixed rule picks one line from a hand-written
+// pool per sign per day, so it is stable for every visitor and honest about
+// being entertainment. The site claims no sky causes anything.
+const HORO_CSS = `.hs-frame{border:1px solid var(--line);border-radius:10px;padding:12px 16px;background:var(--panel,#171a21);font-size:.92rem;margin:14px 0}
+.hs-line{border-left:3px solid var(--accent,#4c8dff);padding:14px 18px;margin:16px 0;font-size:1.1rem;font-style:italic;background:var(--panel,#171a21);border-radius:0 12px 12px 0}
+.hs-badge{display:inline-block;background:var(--accent,#4c8dff);color:#fff;border-radius:6px;padding:2px 10px;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle;margin-right:8px}
+.hs-profile{margin:10px 0 0}`;
+
+const HORO_FRAME = '<p class="hs-frame"><b>Read this as a fun page, not a forecast.</b> Astrology is culture — thousands of years of sky-watching and pattern-making — not science: nothing on these pages claims the stars predict anything. What <em>is</em> factual here — the constellations, the myths, the calendar history and the precession that moved the signs off their own stars — is stated as fact.</p>';
+
+function horoHubPage() {
+  const cards = bintang.SIGNS.map((s) => `<div class="world-card"><h3>${s.icon} <a href="/horoscope/${s.slug}">${s.symbol} ${s.name}</a></h3><p>${s.dates} · ${s.element} · ruled by ${escapeHtml(s.ruler)}</p></div>`).join('');
+  const body = `<p>The zodiac in one honest place: every sign\u2019s <b>real constellation, actual mythology and traditional temperament</b>, with the daily line labelled for exactly what it is. Start with the sky itself:</p>
+  ${HORO_FRAME}
+  <div class="world-grid">${cards}</div>
+  <h2 class="section-title">The astronomy the calendar forgot</h2>
+  <p>The twelve signs were fixed in Babylon around the 5th century BC, when the spring equinox rose in Aries and each sign matched the constellation it was named for. Earth\u2019s axis slowly wobbles — a circle in about 26,000 years, called <b>precession of the equinoxes</b> — and the equinox point has since slid almost a full month backwards along the ecliptic. Today the Sun actually sits in Pisces at the start of "Aries season," takes only about six days to cross tiny Scorpius, and spends eighteen days in <b>Ophiuchus, the Serpent-Bearer</b> — a thirteenth constellation the ecliptic crosses that the Babylonians left out to keep their calendar at twelve. The tropical zodiac astrology uses was never meant to track the stars: it marks the seasons, starting at the vernal equinox, and has kept perfect astronomical time on <em>that</em> contract for two millennia — it is simply a different contract from "the sign equals the constellation."</p>
+  <p>Each sign page carries its own piece of this: where the Sun really is, what the ancients saw in the stars, and the traditional attributes stated as tradition. The <a href="/nasa/sky">Sky Tonight</a> pages show the actual sky for tonight.</p>`;
+  return worldDoc({
+    title: 'The Zodiac, Honestly — Signs, Myths & the Real Astronomy | Tukuk-OS',
+    desc: 'All twelve zodiac signs with their true constellations, mythology and traditional traits — plus the astronomy of precession and the thirteenth sign, Ophiuchus. Daily lines are labelled entertainment.',
+    selfUrl: 'https://tukuk.org/horoscope',
+    heroTitle: '✨ The Zodiac, Honestly', heroSub: 'Real constellations, old myths, traditional traits · the daily line is the fun page, said plainly',
+    css: `${TOOLS_CSS}${HORO_CSS}`, body,
+  }, worldNav('The twelve signs', bintang.SIGNS.map((s) => ({ href: `/horoscope/${s.slug}`, icon: s.icon, name: `${s.symbol} ${s.name}`, blurb: `${s.dates} · ${s.element} · ${s.traits[0]}, ${s.traits[1]}` }))));
+}
+
+function horoSignPage(s, dateStr) {
+  const compat = bintang.compatFor(s.slug);
+  const peers = compat.peers.map((p) => { const q = bintang.findSign(p); return `<a href="/horoscope/${p}">${q.symbol} ${q.name}</a>`; }).join(' and ');
+  const opp = bintang.findSign(compat.opposite);
+  const line = bintang.pickLine(s.slug, dateStr);
+  const idx = bintang.signIndex(s.slug);
+  const prev = bintang.SIGNS[(idx + 11) % 12];
+  const nextS = bintang.SIGNS[(idx + 1) % 12];
+  const body = `${HORO_FRAME}
+  <div class="hs-line"><span class="hs-badge">Today\u2019s line · ${dateStr} · entertainment</span><br>${escapeHtml(line)}</div>
+  <p>Chosen by a fixed rule: the day number and the sign\u2019s position pick one line from this page\u2019s hand-written pool — the same line for every visitor all day, and no claim behind it beyond a bit of wordplay.</p>
+  <table class="hs-profile world-table"><tbody>
+    <tr><th>Season</th><td>${s.dates} (tropical)</td></tr>
+    <tr><th>Element</th><td>${s.element}</td></tr>
+    <tr><th>Mode</th><td>${s.modality}</td></tr>
+    <tr><th>Ruler</th><td>${escapeHtml(s.ruler)}</td></tr>
+    <tr><th>Symbol</th><td>${s.symbol} ${s.icon}</td></tr>
+  </tbody></table>
+  <h2 class="section-title">Temperament — as tradition describes it</h2>
+  <p>Two thousand years of astrology literature consistently paints the ${s.slug} temperament as <b>${s.traits.map((t) => escapeHtml(t)).join(', ')}</b>. That is what the tradition says, which is a fact about the tradition — not a finding about anyone born under it.</p>
+  <h2 class="section-title">The constellation and the myth</h2>
+  <p>${escapeHtml(s.lore)}</p>
+  <h2 class="section-title">Compatibility — the traditional pattern</h2>
+  <p>Astrology\u2019s old rulebook pairs ${s.element}s together: ${s.name} is traditionally easiest with ${peers}, and most magnetically opposed to ${opp.symbol} <a href="/horoscope/${opp.slug}">${opp.name}</a>, six signs away across the wheel. None of it has ever survived a controlled test; as folklore about how the ancients ordered their sky, it is genuinely interesting.</p>
+  <p class="wd-nav"><a href="/horoscope/${prev.slug}">&larr; ${prev.name}</a> · <a href="/horoscope">The zodiac, honestly</a> · <a href="/horoscope/${nextS.slug}">${nextS.name} &rarr;</a></p>`;
+  return worldDoc({
+    title: `${s.name} ${s.symbol} — Dates, Myth, Traits & Today\u2019s Line | Tukuk-OS Horoscope`,
+    desc: `${s.name} (${s.dates}): the real constellation and myth, the traditional temperament stated as tradition, compatibility folklore, and a daily line plainly labelled entertainment.`,
+    selfUrl: `https://tukuk.org/horoscope/${s.slug}`,
+    heroTitle: `${s.icon} ${s.symbol} ${s.name}`, heroSub: `${s.dates} · ${s.element} · ${s.modality} · ruled by ${s.ruler}`,
+    css: `${TOOLS_CSS}${HORO_CSS}${WORD_CSS}`, body,
+  }, worldNav('The other signs', bintang.SIGNS.filter((x) => x.slug !== s.slug).map((x) => ({ href: `/horoscope/${x.slug}`, icon: x.icon, name: `${x.symbol} ${x.name}`, blurb: `${x.dates} · ${x.element}` }))));
+}
+
+app.get('/horoscope', (req, res) => {
+  try {
+    res.type('html').send(horoHubPage());
+  } catch (error) {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Horoscope | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>✨ Horoscope</h1><p>The page failed to render. Please try again in a moment.</p><p><a href="/">Back to Tukuk-OS</a></p>');
+    console.error('[horoscope]', safeError(error));
+  }
+});
+
+app.get('/horoscope/:slug', (req, res, next) => {
+  const s = bintang.findSign(req.params.slug);
+  if (!s) return next();
+  try {
+    res.type('html').send(horoSignPage(s, new Date().toISOString().slice(0, 10)));
+  } catch (error) {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Horoscope | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>✨ Horoscope</h1><p>That sign page failed to render. Please try again in a moment.</p><p><a href="/horoscope">All signs</a></p>');
+    console.error('[horoscope]', safeError(error));
   }
 });
 
@@ -4915,7 +5139,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Only LIVE pages (those replying 200) — drop the ones already removed (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) so the sitemap is not stuffed with 404s.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/moon', '/nasa/eclipses', '/nasa/meteor-showers', '/nasa/launches', '/nasa/iss', '/nasa/iss/pass', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/weather', '/weather/map', '/weather/extremes', '/weather/codes', '/weather/clouds', '/weather/wind', '/earthquakes', '/earthquakes/explained', '/holidays', '/holidays/world/asia', '/holidays/world/europe', '/holidays/world/americas', '/holidays/world/africa', '/holidays/world/oceania', '/holidays/2026', '/holidays/2027', '/holidays/long-weekends', '/holidays/explained', '/countries', '/countries/asia', '/countries/europe', '/countries/africa', '/statistics', '/disasters', '/wiki', '/traffic', '/today', '/maps', '/maps/distance', '/maps/sun', '/maps/clock', '/maps/sky', '/maps/live', '/maps/storm', '/alat', '/alat/all', ...CATS.CATEGORIES.map((c) => `/alat/c/${c.id}`), '/flags', '/flags/quiz', '/flags/studio', '/flags/united-states', '/flags/united-kingdom', '/flags/japan', '/flags/brazil', '/flags/india', '/flags/nigeria', '/flags/germany', '/flags/france', '/flags/malaysia', '/flags/singapore', '/flags/australia', '/flags/netherlands', '/flags/south-korea', '/flags/mexico', '/flags/saudi-arabia', '/social', '/technology', '/technology/new', '/technology/show', '/technology/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/air-quality', '/air-quality/oxygen', '/air-quality/breath', '/air-quality/carbon', '/academy', '/academy/sky', '/academy/weather', '/academy/earth', '/academy/air', '/academy/body', '/academy/life', '/academy/numbers', '/academy/internet', '/academy/things', '/academy/thinking', '/money', '/money/rates', '/art', '/life', '/health', '/health/sleep', '/health/hydration', '/health/steps', '/health/heart-rate', '/health/breathing', '/health/temperature', '/elements', '/constellations', '/messier', '/proverbs', '/records', '/history', '/word', '/cities', '/heritage', '/conservation-areas', '/mountains', '/lakes', '/islands', '/rivers', '/waterfalls', '/caves', '/glaciers', '/bays', '/valleys', '/peninsulas', '/volcanoes', '/straits', '/archipelagos', '/gorges', '/hills', '/mountain-gaps', '/capes', '/lagoons', '/salt-lakes', '/seas', '/reservoirs', '/fjord', '/wetlands', '/hot-springs', '/coral-reefs', '/calderas', '/dams', '/skyscrapers', '/bridges', '/lighthouses', '/canals', '/towers', '/ports', '/tunnels', '/churches', '/museums', '/archaeological-sites', '/universities', '/stadiums', '/mosques', '/monuments', '/cathedrals', '/hospitals', '/hotels', '/palaces', '/botanical-gardens', '/parks', '/synagogues', '/libraries', '/zoo', '/fortifications', '/astronomical-observatories', '/aquariums', '/mountain-ranges', '/cemeteries', '/airports', '/monasteries', '/statues', '/opera-houses', '/deserts', '/aqueducts', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/grammar-schools', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat', '/build'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/moon', '/nasa/eclipses', '/nasa/meteor-showers', '/nasa/launches', '/nasa/iss', '/nasa/iss/pass', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/weather', '/weather/map', '/weather/extremes', '/weather/codes', '/weather/clouds', '/weather/wind', '/earthquakes', '/earthquakes/explained', '/holidays', '/holidays/world/asia', '/holidays/world/europe', '/holidays/world/americas', '/holidays/world/africa', '/holidays/world/oceania', '/holidays/2026', '/holidays/2027', '/holidays/long-weekends', '/holidays/explained', '/countries', '/countries/asia', '/countries/europe', '/countries/africa', '/statistics', '/disasters', '/wiki', '/traffic', '/today', '/maps', '/maps/distance', '/maps/sun', '/maps/clock', '/maps/sky', '/maps/live', '/maps/storm', '/alat', '/alat/all', ...CATS.CATEGORIES.map((c) => `/alat/c/${c.id}`), '/flags', '/flags/quiz', '/flags/studio', '/flags/united-states', '/flags/united-kingdom', '/flags/japan', '/flags/brazil', '/flags/india', '/flags/nigeria', '/flags/germany', '/flags/france', '/flags/malaysia', '/flags/singapore', '/flags/australia', '/flags/netherlands', '/flags/south-korea', '/flags/mexico', '/flags/saudi-arabia', '/social', '/technology', '/technology/new', '/technology/show', '/technology/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/air-quality', '/air-quality/oxygen', '/air-quality/breath', '/air-quality/carbon', '/academy', '/academy/sky', '/academy/weather', '/academy/earth', '/academy/air', '/academy/body', '/academy/life', '/academy/numbers', '/academy/internet', '/academy/things', '/academy/thinking', '/money', '/money/rates', '/art', '/life', '/health', '/dictionary', '/horoscope', '/elements', '/constellations', '/messier', '/proverbs', '/records', '/history', '/word', '/cities', '/heritage', '/conservation-areas', '/mountains', '/lakes', '/islands', '/rivers', '/waterfalls', '/caves', '/glaciers', '/bays', '/valleys', '/peninsulas', '/volcanoes', '/straits', '/archipelagos', '/gorges', '/hills', '/mountain-gaps', '/capes', '/lagoons', '/salt-lakes', '/seas', '/reservoirs', '/fjord', '/wetlands', '/hot-springs', '/coral-reefs', '/calderas', '/dams', '/skyscrapers', '/bridges', '/lighthouses', '/canals', '/towers', '/ports', '/tunnels', '/churches', '/museums', '/archaeological-sites', '/universities', '/stadiums', '/mosques', '/monuments', '/cathedrals', '/hospitals', '/hotels', '/palaces', '/botanical-gardens', '/parks', '/synagogues', '/libraries', '/zoo', '/fortifications', '/astronomical-observatories', '/aquariums', '/mountain-ranges', '/cemeteries', '/airports', '/monasteries', '/statues', '/opera-houses', '/deserts', '/aqueducts', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/grammar-schools', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat', '/build'];
   // The reading lists are live pages as well, and typing twenty-seven slugs into the array
   // above is how a page and its sitemap entry drift apart. Generated from the subject
   // table, so adding a subject to src/books.js publishes it here too.
@@ -4931,6 +5155,13 @@ app.get('/sitemap.xml', async (req, res) => {
   // The human-readable table of contents is a live page like any hub, and the
   // same no-drift rule applies: it is declared here, not typed in twice.
   staticPages.push('/index');
+  // Health topics, dictionary shelves and words, and the zodiac signs all follow
+  // the same rule: generated from the modules that serve them, so a topic added
+  // to src/sihat.js or a word added to a collection is indexed without anyone
+  // remembering to edit the giant array above.
+  staticPages.push(...sihat.TOPICS.map((t) => `/health/${t.slug}`));
+  staticPages.push(...diction.COLLECTIONS.map((c) => `/dictionary/c/${c.slug}`), ...diction.ALL_WORDS.map((w) => `/dictionary/${w}`));
+  staticPages.push(...bintang.SIGNS.map((s) => `/horoscope/${s.slug}`));
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -6653,6 +6884,8 @@ const SITE_NAV = [
     { href: '/life', label: 'Wildlife Atlas' },
     { href: '/health', label: 'Health Basics' },
     { href: '/word', label: 'Word of the Day' },
+    { href: '/dictionary', label: 'Dictionary' },
+    { href: '/horoscope', label: 'The Zodiac, Honestly' },
     { href: '/air-quality', label: 'Air & Oxygen' },
   ] },
   { title: 'Sky, weather &amp; Earth', links: [
@@ -6824,13 +7057,10 @@ function siteIndexBody() {
     { href: '/history', label: '📜 On This Day in History' },
     { href: '/proverbs', label: '🗣️ Proverbs of the World' },
     { href: '/word', label: '🔤 Word of the Day — every date kept' },
-    { href: '/health', label: '🩺 Health Basics — six sourced explainers' },
-    { href: '/health/sleep', label: '😴 Sleep' },
-    { href: '/health/hydration', label: '💧 Water & Hydration' },
-    { href: '/health/steps', label: '🚶 Daily Steps' },
-    { href: '/health/heart-rate', label: '❤️ Heart Rate' },
-    { href: '/health/breathing', label: '🌬️ Breathing' },
-    { href: '/health/temperature', label: '🌡️ Body Temperature' },
+    { href: '/dictionary', label: '📖 Dictionary — curated word shelves' },
+    { href: '/horoscope', label: '✨ The Zodiac, Honestly — 12 signs' },
+    { href: '/health', label: '🩺 Health Basics — sourced explainers' },
+    ...sihat.TOPICS.map((t) => ({ href: `/health/${t.slug}`, label: `${t.icon} ${escapeHtml(t.title)}` })),
     { href: '/records', label: '🏅 World Records' },
     { href: '/elements', label: '⚛️ Periodic Table' },
     { href: '/constellations', label: '✨ Constellations' },
