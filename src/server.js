@@ -84,6 +84,9 @@ const words = require('./words');
 const sihat = require('./sihat');
 const bintang = require('./bintang');
 const diction = require('./diction');
+const tesaurus = require('./tesaurus');
+const rima = require('./rima');
+const ungkapan = require('./ungkapan');
 const bacaan = require('./bacaan');
 const books = require('./books');
 const rcp = require('./recipes');
@@ -4894,6 +4897,298 @@ app.get('/horoscope/:slug', (req, res, next) => {
   }
 });
 
+// ── /thesaurus, /rhymes, /idioms — three more curated shelves ───────────────
+// The /dictionary contract again, three times over: hand-chosen entries, real
+// editorial content on every page, and a normal 404 for anything outside the
+// shelf. A thesaurus worth publishing says WHICH synonym to pick (raw WordNet
+// dumps do not); a rhyming dictionary keys families to a sound rather than a
+// spelling because write belongs with night and said does not belong with bead; an idiom site is only as honest
+// as its etymology column, so origins here are dated when they can be and
+// hedged when they cannot. Data: src/tesaurus.js, src/rima.js, src/ungkapan.js.
+const SHELF_CSS = `.sh-chip a,.sh-chip span{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-size:.85rem;margin:3px 4px 3px 0;text-decoration:none;background:var(--panel,#171a21)}
+.sh-chip span{opacity:.72}
+.ts-sense{border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:14px 0;background:var(--panel,#171a21)}
+.ts-sense h3{margin:0 0 8px;font-size:1rem;line-height:1.45}
+.ts-pos{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:1px 10px;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-right:8px;vertical-align:middle}
+.ts-pick{font-size:.9rem;color:var(--muted);margin:10px 0 0;line-height:1.55}
+.ts-ant{margin:14px 0;font-size:.92rem}
+.rm-tip{border-left:3px solid var(--accent,#4c8dff);background:var(--panel,#171a21);border-radius:0 10px 10px 0;padding:12px 15px;margin:16px 0;font-size:.92rem;line-height:1.55}
+.rm-sound{display:inline-block;background:var(--accent-fill,#2a6edb);color:#fff;border-radius:8px;padding:2px 10px;font-size:.84rem;font-weight:700;margin-right:8px;vertical-align:middle}
+.idm-example{border-left:3px solid var(--accent,#4c8dff);padding:10px 16px;margin:14px 0;font-style:italic;background:var(--panel,#171a21);border-radius:0 10px 10px 0;line-height:1.55}`;
+
+// A synonym links to a page only when one exists: our thesaurus shelf first,
+// then the /dictionary shelf, otherwise it stays plain text — no dead chips.
+function shelfChip(w) {
+  const single = /^[a-z][a-z'-]{1,23}$/.test(w);
+  if (single && tesaurus.isPublished(w)) return `<a href="/thesaurus/${w}">${escapeHtml(w)}</a>`;
+  if (single && diction.isPublished(w)) return `<a href="/dictionary/${w}">${escapeHtml(w)}</a>`;
+  return `<span>${escapeHtml(w)}</span>`;
+}
+
+// The five language shelves cross-link through one shared sidebar.
+const langNav = () => worldNav('Words & language', [
+  { href: '/thesaurus', icon: '🧩', name: 'Thesaurus', blurb: 'Chosen synonym rings with notes on when to pick which word.' },
+  { href: '/dictionary', icon: '📖', name: 'Dictionary', blurb: 'Curated word collections with real definitions, served from our own word bank.' },
+  { href: '/rhymes', icon: '🎵', name: 'Rhymes', blurb: 'Rhyme families keyed to sound, not spelling — with the traps each teaches.' },
+  { href: '/idioms', icon: '🗨️', name: 'Idioms', blurb: 'Common idioms with plain meanings and origins dated or hedged honestly.' },
+  { href: '/word', icon: '🔤', name: 'Word of the Day', blurb: 'A new hand-picked English word every day, each date kept on a permanent page.' },
+]);
+
+function thesHubPage() {
+  const blocks = tesaurus.TOPICS.map((t) => `<h2 class="section-title">${t.icon} ${escapeHtml(t.name)}</h2>
+  <p class="meta">${escapeHtml(t.blurb)}</p>
+  <p class="sh-chip">${tesaurus.wordsOfTopic(t.slug).map((w) => `<a href="/thesaurus/${w}">${escapeHtml(w)}</a>`).join('')}</p>`).join('');
+  const body = `<p><b>A thesaurus is only worth publishing if someone chose the words.</b> These ${tesaurus.ALL_WORDS.length} entries are written the way a dictionary editor does it: every sense gets its own synonym ring, a plain gloss, and a note on <em>when to pick which</em> — the part the machine-generated lists never give you. Opposites are listed where English honestly has them.</p>
+  ${DICT_SEARCH_FORM}
+  ${blocks}
+  <h2 class="section-title">Why only ${tesaurus.ALL_WORDS.length} words?</h2>
+  <p>Because synonym dumps are a dime a dozen and judgement is not. Our own WordNet-based bank can list every synonym of every one of its 200,000 words — and the <a href="/alat/dictionary">dictionary tool</a> shows them — but a page that only says \"big: large, huge, vast, great\" has never helped anyone pick. These pages sort the ring by sense and say what each neighbour actually means in use. Anything outside the shelf is a 404 by design; new entries appear when they are written, not scraped.</p>
+  <p>Related shelves: <a href="/dictionary">dictionary</a> (what words mean), <a href="/rhymes">rhymes</a> (what they sound like), <a href="/idioms">idioms</a> (what phrases hide), <a href="/word">Word of the Day</a>.</p>`;
+  return worldDoc({
+    title: 'Thesaurus — Chosen Synonyms & When to Pick Which | Tukuk-OS',
+    desc: `A hand-edited English thesaurus: ${tesaurus.ALL_WORDS.length} words people actually reach for, each sense with its own synonym ring, discriminators and opposites.`,
+    selfUrl: 'https://tukuk.org/thesaurus',
+    heroTitle: '🧩 Tukuk-OS Thesaurus', heroSub: 'Chosen synonym rings · sense by sense · notes on picking the right word',
+    css: `${TOOLS_CSS}${DICT_CSS}${SHELF_CSS}`, body,
+  }, langNav());
+}
+
+function thesWordPage(e) {
+  const t = tesaurus.topicOf(e.topic);
+  const senses = e.senses.map((s) => `<div class="ts-sense"><h3><span class="ts-pos">${escapeHtml(s.pos)}</span>${escapeHtml(s.gloss)}</h3>
+    <p class="sh-chip">${s.syn.map(shelfChip).join('')}</p><p class="ts-pick">${escapeHtml(s.pick)}</p></div>`).join('');
+  const ant = e.ant && e.ant.length ? `<p class="ts-ant"><b>The other end:</b> <span class="sh-chip">${e.ant.map(shelfChip).join('')}</span></p>` : '';
+  const n = tesaurus.ALL_WORDS.length;
+  const li = tesaurus.ALL_WORDS.indexOf(e.word);
+  const prev = tesaurus.ALL_WORDS[(li - 1 + n) % n];
+  const next = tesaurus.ALL_WORDS[(li + 1) % n];
+  const xrefs = [];
+  if (diction.isPublished(e.word)) xrefs.push(`<a href="/dictionary/${e.word}">what ${escapeHtml(e.word)} means</a>`);
+  if (rima.isPublished(e.word)) xrefs.push(`<a href="/rhymes/${e.word}">what it rhymes with</a>`);
+  if (ungkapan.IDIOMS.some((x) => new RegExp(`\\b${e.word}\\b`).test(x.phrase))) xrefs.push('<a href="/idioms">and it appears in our idiom shelf</a>');
+  const body = `${DICT_SEARCH_FORM}
+  ${senses}
+  ${ant}
+  <p class="ds-pn"><a href="/thesaurus/${prev}">&larr; ${prev}</a> · <a href="/thesaurus">the thesaurus shelf</a> · <a href="/thesaurus/${next}">${next} &rarr;</a></p>
+  ${xrefs.length ? `<p class="meta">Elsewhere on the language shelves: ${xrefs.join(' · ')}.</p>` : ''}
+  <h2 class="section-title">How this page was made</h2>
+  <p>The rings above were chosen by hand for tukuk.org, sense by sense, and checked against usage rather than a synonym database dump. The <a href="/alat/dictionary">dictionary tool</a> can list WordNet\u2019s full synonym sets for any of 200,000 words; this shelf keeps the forty words where choosing is genuinely hard and says how.</p>`;
+  return worldDoc({
+    title: `${e.word} — Synonyms, Antonyms & When to Pick Which | Tukuk-OS Thesaurus`,
+    desc: `${e.word}: ${e.senses.length} sense${e.senses.length > 1 ? 's' : ''} with hand-chosen synonym rings, plain glosses, notes on which word to pick, and its opposites where English has them.`,
+    selfUrl: `https://tukuk.org/thesaurus/${e.word}`,
+    heroTitle: `🧩 ${e.word}`, heroSub: `${t.name} · chosen synonyms, sense by sense`,
+    css: `${TOOLS_CSS}${DICT_CSS}${SHELF_CSS}`, body,
+  }, langNav());
+}
+
+app.get('/thesaurus', (req, res) => {
+  try {
+    res.type('html').send(thesHubPage());
+  } catch (error) {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Thesaurus | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>🧩 Thesaurus</h1><p>The shelf failed to render. Please try again in a moment.</p><p><a href="/alat/dictionary">The dictionary tool still works</a></p>');
+    console.error('[thesaurus]', safeError(error));
+  }
+});
+
+// Only shelf words get pages — the same curated limit that keeps /dictionary a
+// reference section instead of an API proxy.
+app.get('/thesaurus/:word', (req, res, next) => {
+  const raw = String(req.params.word || '');
+  if (!/^[a-z][a-z'-]{1,23}$/.test(raw)) return next();
+  const e = tesaurus.findEntry(raw);
+  if (!e) return next();
+  try {
+    res.type('html').send(thesWordPage(e));
+  } catch (error) {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Thesaurus | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>🧩 Thesaurus</h1><p>That word page failed to render. Please try again in a moment.</p><p><a href="/thesaurus">The thesaurus shelf</a></p>');
+    console.error('[thesaurus]', safeError(error));
+  }
+});
+
+// ── /rhymes — families keyed to a sound, not a spelling ───────────────────
+function rhymHubPage() {
+  const cards = rima.FAMILIES.map((f) => `<div class="world-card"><h3><a href="/rhymes/f/${f.slug}">${escapeHtml(f.slug)} rhymes</a></h3><p><span class="rm-sound">${escapeHtml(f.sound)}</span>${f.words.length} words · ${escapeHtml(f.ends)}</p></div>`).join('');
+  const body = `<p><b>Rhyme lives in the sound, not the spelling.</b> Write rhymes with night, said does not rhyme with bead, and love does not rhyme with move. These ${rima.FAMILIES.length} families are each keyed to one real final sound — every member checked by ear — and each family page keeps a note on the traps its spelling hides. ${rima.ALL_WORDS.length} words in all.</p>
+  <div class="world-grid">${cards}</div>
+  <h2 class="section-title">Perfect, slant, and what the poets argue about</h2>
+  <p>A <b>perfect rhyme</b> matches the final stressed vowel and everything after it (sound/ground) while the onset differs — day/day is repetition and rain/reign is a homophone, neither is a rhyme. A <b>slant rhyme</b> keeps the consonant frame but changes the vowel (rain/wren), which is what most pop lyrics lean on without naming it. A <b>masculine rhyme</b> lands on a stressed final syllable (attack/back); a <b>feminine rhyme</b> spills onto an unstressed one (grieving/leaving). Syllable count is no bar either: mistake and wake rhyme perfectly, because only the ending sound counts.</p>
+  <p>Why so few words? The same reason as <a href="/dictionary">the dictionary shelf</a>: our word bank stores no pronunciations, so any \"rhyme any word\" page would be a guess dressed as a lookup. These families are checked by a human ear instead — and words like reign and wren show why the ear wins: one rhymes with rain, the other does not, however similar the spellings look.</p>`;
+  return worldDoc({
+    title: 'Rhymes — Rhyme Families by Sound, Not Spelling | Tukuk-OS',
+    desc: `A hand-checked English rhyming dictionary: ${rima.FAMILIES.length} rhyme families keyed to real final sounds, ${rima.ALL_WORDS.length} words, and notes on the spelling traps (knight/night, brew/few).`,
+    selfUrl: 'https://tukuk.org/rhymes',
+    heroTitle: '🎵 Rhymes', heroSub: 'Rhyme families by sound · checked by ear · the spelling traps named',
+    css: `${TOOLS_CSS}${DICT_CSS}${SHELF_CSS}`, body,
+  }, langNav());
+}
+
+function rhymeFamilyPage(f) {
+  const strip = f.words.map((w) => `<a href="/rhymes/${w}">${escapeHtml(w)}</a>`).join('');
+  const others = rima.FAMILIES.filter((x) => x.slug !== f.slug)
+    .map((x) => `<a class="rc-pill" href="/rhymes/f/${x.slug}">${escapeHtml(x.slug)}</a>`).join('');
+  const body = `<p>Everything here ends in <span class="rm-sound">${escapeHtml(f.sound)}</span> — the sound of <b>${escapeHtml(f.ends)}</b>, whatever the spelling underneath it.</p>
+  <p class="wd-strip">${strip}</p>
+  <div class="rm-tip">👂 ${escapeHtml(f.tip)}</div>
+  <p class="meta">${f.words.length} words in this family, each with its own page of partners. Need the meaning instead? <a href="/dictionary">The dictionary shelf</a> covers some of the same words.</p>
+  <h2 class="section-title">The other families</h2>
+  <p>${others}</p>`;
+  return worldDoc({
+    title: `${f.slug} Rhymes — ${f.words.length} Words That Rhyme | Tukuk-OS Rhymes`,
+    desc: `${f.words.length} words rhyming with ${f.slug} (${f.sound}), checked by ear and grouped by sound rather than spelling, with the traps named.`,
+    selfUrl: `https://tukuk.org/rhymes/f/${f.slug}`,
+    heroTitle: `🎵 Words that rhyme with ${f.slug}`, heroSub: `${f.sound} · ${f.words.length} hand-checked rhymes`,
+    css: `${TOOLS_CSS}${DICT_CSS}${SHELF_CSS}${WORD_CSS}`, body,
+  }, langNav());
+}
+
+function rhymeWordPage(word) {
+  const fams = rima.familiesOf(word);
+  const secs = fams.map((f) => `<h2 class="section-title"><span class="rm-sound">${escapeHtml(f.sound)}</span>${escapeHtml(f.slug)} family (${escapeHtml(f.ends)})</h2>
+  <p class="sh-chip">${f.words.filter((x) => x !== word).map((x) => `<a href="/rhymes/${x}">${escapeHtml(x)}</a>`).join('')}</p>
+  <div class="rm-tip">👂 ${escapeHtml(f.tip)}</div>`).join('');
+  const n = rima.ALL_WORDS.length;
+  const li = rima.ALL_WORDS.indexOf(word);
+  const prev = rima.ALL_WORDS[(li - 1 + n) % n];
+  const next = rima.ALL_WORDS[(li + 1) % n];
+  const xrefs = [];
+  if (tesaurus.isPublished(word)) xrefs.push(`<a href="/thesaurus/${word}">synonyms for ${escapeHtml(word)}</a>`);
+  if (diction.isPublished(word)) xrefs.push(`<a href="/dictionary/${word}">what ${escapeHtml(word)} means</a>`);
+  const body = `<p><b>${escapeHtml(word)}</b> rhymes inside ${fams.length} famil${fams.length > 1 ? 'ies' : 'y'} on this shelf — the partners below share its ending sound exactly (a perfect rhyme), whatever the spelling does.</p>
+  ${secs}
+  <p class="ds-pn"><a href="/rhymes/${prev}">&larr; ${prev}</a> · <a href="/rhymes">all rhyme families</a> · <a href="/rhymes/${next}">${next} &rarr;</a></p>
+  ${xrefs.length ? `<p class="meta">More about this word: ${xrefs.join(' · ')}.</p>` : ''}
+  <p class="meta">Words outside these families have no page here on purpose: the bank stores no pronunciations, so anything else would be a guess dressed as a lookup.</p>`;
+  return worldDoc({
+    title: `${word} Rhymes — ${fams.reduce((a, f) => a + f.words.length - 1, 0)} Perfect Rhymes | Tukuk-OS Rhymes`,
+    desc: `${word}: every word on tukuk.org's hand-checked rhyme shelf that ends in the same sound, grouped by family with the spelling traps named.`,
+    selfUrl: `https://tukuk.org/rhymes/${word}`,
+    heroTitle: `🎵 ${word} rhymes`, heroSub: `Perfect rhymes, grouped by sound · ${fams.length} famil${fams.length > 1 ? 'ies' : 'y'} on the shelf`,
+    css: `${TOOLS_CSS}${DICT_CSS}${SHELF_CSS}`, body,
+  }, langNav());
+}
+
+app.get('/rhymes', (req, res) => {
+  try {
+    res.type('html').send(rhymHubPage());
+  } catch (error) {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Rhymes | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>🎵 Rhymes</h1><p>The shelf failed to render. Please try again in a moment.</p><p><a href="/">Back to Tukuk-OS</a></p>');
+    console.error('[rhymes]', safeError(error));
+  }
+});
+
+app.get('/rhymes/f/:slug', (req, res, next) => {
+  const f = rima.findFamily(req.params.slug);
+  if (!f) return next();
+  try {
+    res.type('html').send(rhymeFamilyPage(f));
+  } catch (error) {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Rhymes | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>🎵 Rhymes</h1><p>That family page failed to render. Please try again in a moment.</p><p><a href="/rhymes">All rhyme families</a></p>');
+    console.error('[rhymes]', safeError(error));
+  }
+});
+
+app.get('/rhymes/:word', (req, res, next) => {
+  const raw = String(req.params.word || '');
+  if (!/^[a-z][a-z'-]{1,23}$/.test(raw) || !rima.isPublished(raw)) return next();
+  try {
+    res.type('html').send(rhymeWordPage(raw));
+  } catch (error) {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Rhymes | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>🎵 Rhymes</h1><p>That word page failed to render. Please try again in a moment.</p><p><a href="/rhymes">All rhyme families</a></p>');
+    console.error('[rhymes]', safeError(error));
+  }
+});
+
+// ── /idioms — thirty phrases with honest histories ─────────────────────
+function idmHubPage() {
+  const cards = ungkapan.THEMES.map((t) => `<div class="world-card"><h3>${t.icon} <a href="/idioms/t/${t.slug}">${escapeHtml(t.name)}</a></h3><p>${escapeHtml(t.blurb)}</p><p class="meta">${ungkapan.idiomsOfTheme(t.slug).length} idioms</p></div>`).join('');
+  const body = `<p><b>An idiom is a small piece of frozen history.</b> You cannot read \"spill the beans\" off its words, and half the pleasure is knowing why the phrase is shaped the way it is. Most idiom sites copy each other's lists and invent etymologies to fill space; these ${ungkapan.IDIOMS.length} are kept by hand — meaning, a real example, and an origin dated where the evidence allows and hedged where it does not.</p>
+  <div class="world-grid">${cards}</div>
+  <h2 class="section-title">The hedging is the point</h2>
+  <p>Where a favourite story about a phrase has no evidence — cats falling off thatched roofs, a Danish nose tax — the page says so and leaves the tale where it belongs, in the folklorists' drawer. Where the print trail is solid (the drawing board is a 1941 New Yorker cartoon; extra miles are Matthew 5:41), the date is given so you can look it up. Related shelves: <a href="/proverbs">proverbs</a> give the whole sayings these phrases live inside; <a href="/dictionary">the dictionary shelf</a> covers the single words.</p>`;
+  return worldDoc({
+    title: 'Idioms — Common English Phrases With Honest Origins | Tukuk-OS',
+    desc: `A hand-kept shelf of ${ungkapan.IDIOMS.length} common English idioms: plain meanings, real example sentences, and etymologies dated where possible and hedged where not.`,
+    selfUrl: 'https://tukuk.org/idioms',
+    heroTitle: '🗨️ Idioms', heroSub: 'Plain meanings · real examples · origins dated or hedged honestly',
+    css: `${TOOLS_CSS}${DICT_CSS}${SHELF_CSS}`, body,
+  }, langNav());
+}
+
+function idmThemePage(t) {
+  const items = ungkapan.idiomsOfTheme(t.slug);
+  const cards = items.map((i) => `<div class="world-card"><h3><a href="/idioms/${i.slug}">“${escapeHtml(i.phrase)}”</a></h3><p>${escapeHtml(i.meaning)}</p></div>`).join('');
+  const others = ungkapan.THEMES.filter((x) => x.slug !== t.slug)
+    .map((x) => `<a class="rc-pill" href="/idioms/t/${x.slug}">${x.icon} ${escapeHtml(x.name)}</a>`).join('');
+  const body = `<p>${escapeHtml(t.blurb)}</p>
+  <div class="world-grid">${cards}</div>
+  <h2 class="section-title">The other themes</h2>
+  <p>${others}</p>`;
+  return worldDoc({
+    title: `${t.name} Idioms — Meanings & Origins | Tukuk-OS Idioms`,
+    desc: `${items.length} ${t.name.toLowerCase()} idioms with plain meanings, example sentences and honest origins — ${t.blurb}`,
+    selfUrl: `https://tukuk.org/idioms/t/${t.slug}`,
+    heroTitle: `${t.icon} ${t.name} idioms`, heroSub: `${items.length} phrases · meanings · examples · origins`,
+    css: `${TOOLS_CSS}${DICT_CSS}${SHELF_CSS}`, body,
+  }, langNav());
+}
+
+function idmPage(i) {
+  const t = ungkapan.findTheme(i.theme);
+  const sibs = ungkapan.idiomsOfTheme(i.theme).filter((x) => x.slug !== i.slug);
+  const arr = ungkapan.idiomsOfTheme(i.theme);
+  const li = arr.findIndex((x) => x.slug === i.slug);
+  const prev = arr[(li - 1 + arr.length) % arr.length];
+  const next = arr[(li + 1) % arr.length];
+  const body = `<p><b>What it means:</b> ${escapeHtml(i.meaning)}</p>
+  <p class="idm-example">“${escapeHtml(i.example)}”</p>
+  <h2 class="section-title">Where it comes from</h2>
+  <p>${escapeHtml(i.origin)}</p>
+  <p class="ds-pn"><a href="/idioms/${prev.slug}">&larr; ${escapeHtml(prev.phrase)}</a> · <a href="/idioms/t/${t.slug}">all ${escapeHtml(t.name.toLowerCase())} idioms</a> · <a href="/idioms/${next.slug}">${escapeHtml(next.phrase)} &rarr;</a></p>
+  <p class="sh-chip">${sibs.map((x) => `<a href="/idioms/${x.slug}">${escapeHtml(x.phrase)}</a>`).join('')}</p>
+  <p class="meta">More phrases, including proverbs from dozens of languages, at <a href="/proverbs">Proverbs of the World</a>.</p>`;
+  return worldDoc({
+    title: `${i.phrase} — Meaning, Example & Origin | Tukuk-OS Idioms`,
+    desc: `${i.phrase}: ${i.meaning} A real example sentence and the origin as far as the evidence goes — dated where possible, hedged where not.`,
+    selfUrl: `https://tukuk.org/idioms/${i.slug}`,
+    heroTitle: `${t.icon} “${i.phrase}”`, heroSub: `${t.name} idiom · meaning, example and a hedged-when-needed origin`,
+    css: `${TOOLS_CSS}${DICT_CSS}${SHELF_CSS}`, body,
+  }, worldNav(`${t.name} idioms`, sibs.slice(0, 8).map((x) => ({ href: `/idioms/${x.slug}`, icon: t.icon, name: x.phrase, blurb: x.meaning }))));
+}
+
+app.get('/idioms', (req, res) => {
+  try {
+    res.type('html').send(idmHubPage());
+  } catch (error) {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Idioms | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>🗨️ Idioms</h1><p>The shelf failed to render. Please try again in a moment.</p><p><a href="/">Back to Tukuk-OS</a></p>');
+    console.error('[idioms]', safeError(error));
+  }
+});
+
+app.get('/idioms/t/:slug', (req, res, next) => {
+  const t = ungkapan.findTheme(req.params.slug);
+  if (!t) return next();
+  try {
+    res.type('html').send(idmThemePage(t));
+  } catch (error) {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Idioms | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>🗨️ Idioms</h1><p>That theme page failed to render. Please try again in a moment.</p><p><a href="/idioms">All idioms</a></p>');
+    console.error('[idioms]', safeError(error));
+  }
+});
+
+app.get('/idioms/:slug', (req, res, next) => {
+  const raw = String(req.params.slug || '');
+  if (!/^[a-z0-9][a-z0-9-]{2,43}$/.test(raw)) return next();
+  const i = ungkapan.findIdiom(raw);
+  if (!i) return next();
+  try {
+    res.type('html').send(idmPage(i));
+  } catch (error) {
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><title>Idioms | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px"><h1>🗨️ Idioms</h1><p>That idiom page failed to render. Please try again in a moment.</p><p><a href="/idioms">All idioms</a></p>');
+    console.error('[idioms]', safeError(error));
+  }
+});
+
 // ── /recipes — a real recipe, from a free cookbook, with the credit kept ────────
 // The Wikibooks Cookbook is written by cooks under CC BY-SA 4.0. Every dish here is read from
 // that wiki, parsed into a list and a method, and published with the licence, the author of
@@ -5139,7 +5434,7 @@ app.get('/sitemap.xml', async (req, res) => {
   // Only LIVE pages (those replying 200) — drop the ones already removed (/store, /explore,
   // /studio, /builder, /editor*, /movie, /design, /3d, /bg-remover, /collage, /converter,
   // /apps→301, /play, /models, /datacenter, /bingbot) so the sitemap is not stuffed with 404s.
-  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/moon', '/nasa/eclipses', '/nasa/meteor-showers', '/nasa/launches', '/nasa/iss', '/nasa/iss/pass', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/weather', '/weather/map', '/weather/extremes', '/weather/codes', '/weather/clouds', '/weather/wind', '/earthquakes', '/earthquakes/explained', '/holidays', '/holidays/world/asia', '/holidays/world/europe', '/holidays/world/americas', '/holidays/world/africa', '/holidays/world/oceania', '/holidays/2026', '/holidays/2027', '/holidays/long-weekends', '/holidays/explained', '/countries', '/countries/asia', '/countries/europe', '/countries/africa', '/statistics', '/disasters', '/wiki', '/traffic', '/today', '/maps', '/maps/distance', '/maps/sun', '/maps/clock', '/maps/sky', '/maps/live', '/maps/storm', '/alat', '/alat/all', ...CATS.CATEGORIES.map((c) => `/alat/c/${c.id}`), '/flags', '/flags/quiz', '/flags/studio', '/flags/united-states', '/flags/united-kingdom', '/flags/japan', '/flags/brazil', '/flags/india', '/flags/nigeria', '/flags/germany', '/flags/france', '/flags/malaysia', '/flags/singapore', '/flags/australia', '/flags/netherlands', '/flags/south-korea', '/flags/mexico', '/flags/saudi-arabia', '/social', '/technology', '/technology/new', '/technology/show', '/technology/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/air-quality', '/air-quality/oxygen', '/air-quality/breath', '/air-quality/carbon', '/academy', '/academy/sky', '/academy/weather', '/academy/earth', '/academy/air', '/academy/body', '/academy/life', '/academy/numbers', '/academy/internet', '/academy/things', '/academy/thinking', '/money', '/money/rates', '/art', '/life', '/health', '/dictionary', '/horoscope', '/elements', '/constellations', '/messier', '/proverbs', '/records', '/history', '/word', '/cities', '/heritage', '/conservation-areas', '/mountains', '/lakes', '/islands', '/rivers', '/waterfalls', '/caves', '/glaciers', '/bays', '/valleys', '/peninsulas', '/volcanoes', '/straits', '/archipelagos', '/gorges', '/hills', '/mountain-gaps', '/capes', '/lagoons', '/salt-lakes', '/seas', '/reservoirs', '/fjord', '/wetlands', '/hot-springs', '/coral-reefs', '/calderas', '/dams', '/skyscrapers', '/bridges', '/lighthouses', '/canals', '/towers', '/ports', '/tunnels', '/churches', '/museums', '/archaeological-sites', '/universities', '/stadiums', '/mosques', '/monuments', '/cathedrals', '/hospitals', '/hotels', '/palaces', '/botanical-gardens', '/parks', '/synagogues', '/libraries', '/zoo', '/fortifications', '/astronomical-observatories', '/aquariums', '/mountain-ranges', '/cemeteries', '/airports', '/monasteries', '/statues', '/opera-houses', '/deserts', '/aqueducts', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/grammar-schools', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat', '/build'];
+  const staticPages = ['', '/nasa', '/nasa/archive', '/nasa/sky', '/nasa/moon', '/nasa/eclipses', '/nasa/meteor-showers', '/nasa/launches', '/nasa/iss', '/nasa/iss/pass', '/nasa/asteroids', '/nasa/space-weather', '/nasa/mars', '/nasa/earth', '/nasa/exoplanets', '/nasa/sounds', '/nasa/satellites', '/weather', '/weather/map', '/weather/extremes', '/weather/codes', '/weather/clouds', '/weather/wind', '/earthquakes', '/earthquakes/explained', '/holidays', '/holidays/world/asia', '/holidays/world/europe', '/holidays/world/americas', '/holidays/world/africa', '/holidays/world/oceania', '/holidays/2026', '/holidays/2027', '/holidays/long-weekends', '/holidays/explained', '/countries', '/countries/asia', '/countries/europe', '/countries/africa', '/statistics', '/disasters', '/wiki', '/traffic', '/today', '/maps', '/maps/distance', '/maps/sun', '/maps/clock', '/maps/sky', '/maps/live', '/maps/storm', '/alat', '/alat/all', ...CATS.CATEGORIES.map((c) => `/alat/c/${c.id}`), '/flags', '/flags/quiz', '/flags/studio', '/flags/united-states', '/flags/united-kingdom', '/flags/japan', '/flags/brazil', '/flags/india', '/flags/nigeria', '/flags/germany', '/flags/france', '/flags/malaysia', '/flags/singapore', '/flags/australia', '/flags/netherlands', '/flags/south-korea', '/flags/mexico', '/flags/saudi-arabia', '/social', '/technology', '/technology/new', '/technology/show', '/technology/ask', '/blog', '/learn', '/study', '/study/science', '/study/geography', '/study/history', '/study/experiments', '/study/riddles', '/study/facts', '/study/math', '/study/alarm', '/air-quality', '/air-quality/oxygen', '/air-quality/breath', '/air-quality/carbon', '/academy', '/academy/sky', '/academy/weather', '/academy/earth', '/academy/air', '/academy/body', '/academy/life', '/academy/numbers', '/academy/internet', '/academy/things', '/academy/thinking', '/money', '/money/rates', '/art', '/life', '/health', '/dictionary', '/horoscope', '/thesaurus', '/rhymes', '/idioms', '/elements', '/constellations', '/messier', '/proverbs', '/records', '/history', '/word', '/cities', '/heritage', '/conservation-areas', '/mountains', '/lakes', '/islands', '/rivers', '/waterfalls', '/caves', '/glaciers', '/bays', '/valleys', '/peninsulas', '/volcanoes', '/straits', '/archipelagos', '/gorges', '/hills', '/mountain-gaps', '/capes', '/lagoons', '/salt-lakes', '/seas', '/reservoirs', '/fjord', '/wetlands', '/hot-springs', '/coral-reefs', '/calderas', '/dams', '/skyscrapers', '/bridges', '/lighthouses', '/canals', '/towers', '/ports', '/tunnels', '/churches', '/museums', '/archaeological-sites', '/universities', '/stadiums', '/mosques', '/monuments', '/cathedrals', '/hospitals', '/hotels', '/palaces', '/botanical-gardens', '/parks', '/synagogues', '/libraries', '/zoo', '/fortifications', '/astronomical-observatories', '/aquariums', '/mountain-ranges', '/cemeteries', '/airports', '/monasteries', '/statues', '/opera-houses', '/deserts', '/aqueducts', '/railway-stations', '/schools', '/settlements', '/national-parks', '/forts', '/prisons', '/courthouses', '/windmills', '/golf-courses', '/theatres', '/shopping-centers', '/arenas', '/farms', '/squares', '/mines', '/nature-reserves', '/beaches', '/amusement-parks', '/ski-resorts', '/memorials', '/ruins', '/wineries', '/town-halls', '/mausoleums', '/breweries', '/watermills', '/distilleries', '/basilicas', '/viaducts', '/geysers', '/ferry-terminals', '/metro-stations', '/cinemas', '/chapels', '/bus-stations', '/manor-houses', '/concert-halls', '/fountains', '/power-stations', '/biosphere-reserves', '/fire-stations', '/nightclubs', '/racecourses', '/wind-farms', '/water-parks', '/triumphal-arches', '/police-stations', '/mountain-passes', '/art-galleries', '/casinos', '/water-towers', '/estuaries', '/velodromes', '/planetariums', '/amphitheatres', '/menhirs', '/protected-areas', '/summits', '/city-gates', '/canal-locks', '/quarries', '/state-forests', '/expressways', '/shipyards', '/obelisks', '/hindu-temples', '/country-houses', '/shinto-shrines', '/plateaus', '/plains', '/stone-circles', '/pagodas', '/dolmens', '/barrows', '/bell-towers', '/pubs', '/war-memorials', '/post-offices', '/springs', '/concentration-camps', '/wadis', '/hillforts', '/cricket-grounds', '/barracks', '/oil-fields', '/heliports', '/gas-fields', '/railway-depots', '/gurdwaras', '/ice-rinks', '/racing-circuits', '/priories', '/baseball-venues', '/madrasas', '/caravanserais', '/almshouses', '/necropolises', '/hammams', '/unincorporated-communities', '/neighborhoods', '/census-designated-places', '/historic-districts', '/suburbs', '/tram-stops', '/convention-centers', '/rock-formations', '/military-air-bases', '/townships', '/solar-power-stations', '/nuclear-power-plants', '/radio-transmitters', '/civil-parishes', '/mounds', '/stupas', '/escarpments', '/impact-craters', '/covered-bridges', '/funiculars', '/aerial-tramways', '/crater-lakes', '/natural-arches', '/river-deltas', '/high-crosses', '/lifeboat-stations', '/city-walls', '/ski-jumping-hills', '/swimming-pools', '/roman-baths', '/sea-stacks', '/dunes', '/sinkholes', '/grain-elevators', '/victory-columns', '/minarets', '/brochs', '/holy-wells', '/bandstands', '/dovecotes', '/mountain-huts', '/spa-towns', '/rapids', '/isthmuses', '/salt-pans', '/causeways', '/signal-boxes', '/kasbahs', '/footbridges', '/tower-houses', '/open-air-museums', '/toll-bridges', '/swing-bridges', '/fish-hatcheries', '/barrier-islands', '/martello-towers', '/nunataks', '/reefs', '/seaplane-bases', '/fire-towers', '/bogs', '/gatehouses', '/watchtowers', '/boathouses', '/stratovolcanoes', '/cotton-mills', '/shield-volcanoes', '/pumping-stations', '/skateparks', '/tram-depots', '/bullrings', '/cinder-cones', '/ghost-towns', '/show-caves', '/market-towns', '/seaside-resorts', '/mining-towns', '/college-towns', '/county-towns', '/redoubts', '/seminaries', '/filling-stations', '/stepwells', '/skerries', '/lava-tubes', '/moraines', '/blockhouses', '/breakwaters', '/suspension-bridges', '/cable-stayed-bridges', '/cantilever-bridges', '/lift-bridges', '/islets', '/heritage-railways', '/narrow-gauge-railways', '/crematoriums', '/hamlets', '/arch-bridges', '/seamounts', '/yacht-clubs', '/spaceports', '/volcanic-fields', '/petroglyphs', '/equestrian-statues', '/oceanic-trenches', '/frazioni', '/localities', '/townlands', '/archives', '/ice-shelves', '/substations', '/fire-temples', '/inselbergs', '/granaries', '/abattoirs', '/canyons', '/market-squares', '/market-crosses', '/blast-furnaces', '/baptisteries', '/sea-caves', '/dry-docks', '/tide-mills', '/sugar-mills', '/marshes', '/orphanages', '/glacial-cirques', '/ringforts', '/lidos', '/ice-caps', '/railway-roundhouses', '/ice-fields', '/adits', '/promontory-forts', '/boundary-markers', '/cairns', '/tithe-barns', '/passage-tombs', '/lime-kilns', '/poljes', '/milestones', '/transmission-towers', '/water-wells', '/shoals', '/drainage-basins', '/dry-lakes', '/floodplains', '/volcanic-craters', '/boat-lifts', '/tidal-flats', '/ksars', '/inlets', '/state-parks', '/kibbutzim', '/national-monuments', '/swamps', '/tidal-creeks', '/levees', '/lava-domes', '/foundries', '/research-stations', '/hill-stations', '/souks', '/oppida', '/submarine-canyons', '/company-towns', '/grabens', '/oceanic-plateaus', '/geoglyphs', '/observatories', '/hydroelectric-plants', '/gun-batteries', '/radio-telescopes', '/radar-stations', '/polders', '/weather-stations', '/paper-mills', '/oil-platforms', '/textile-mills', '/ironworks', '/glacial-erratics', '/steelworks', '/maltings', '/sugar-refineries', '/workhouses', '/sawmills', '/brickworks', '/tower-mills', '/smock-mills', '/post-mills', '/star-forts', '/packhorse-bridges', '/powder-magazines', '/runestones', '/sabkhas', '/orangeries', '/tidal-islands', '/hypogeums', '/steles', '/sanatoriums', '/orchards', '/windpumps', '/oxbow-lakes', '/fish-ponds', '/totem-poles', '/castle-towers', '/mission-stations', '/pumped-storage-plants', '/geothermal-power-plants', '/vineyards', '/wedge-tombs', '/court-cairns', '/motive-power-depots', '/biomass-power-plants', '/psychiatric-hospitals', '/open-pit-mines', '/tidal-power-plants', '/carriage-houses', '/haciendas', '/telegraph-stations', '/rock-cut-tombs', '/poorhouses', '/cave-temples', '/clergy-houses', '/fire-lookout-towers', '/jewish-cemeteries', '/war-cemeteries', '/archaeological-parks', '/customs-houses', '/trading-posts', '/guild-halls', '/filial-churches', '/navigable-aqueducts', '/rock-shelters', '/rack-railways', '/stave-churches', '/greenhouses', '/stone-crosses', '/water-gaps', '/maternity-hospitals', '/community-health-centers', '/colleges', '/grammar-schools', '/warehouses', '/fortified-towers', '/corn-exchanges', '/canal-tunnels', '/research-institutes', '/bank-buildings', '/art-schools', '/campuses', '/prisoner-of-war-camps', '/stock-exchanges', '/detention-centers', '/consulates', '/embassies', '/airfields', '/military-bases', '/factories', '/border-checkpoints', '/naval-bases', '/industrial-buildings', '/military-camps', '/irrigation-canals', '/campsites', '/department-stores', '/community-centers', '/observation-towers', '/landfills', '/shipwrecks', '/leisure-centers', '/wastewater-treatment-plants', '/shopping-arcades', '/pedestrian-tunnels', '/national-wildlife-refuges', '/bus-stops', '/railway-tunnels', '/long-distance-trails', '/ramsar-sites', '/geoparks', '/cycling-routes', '/nuraghi', '/youth-hostels', '/war-museums', '/archaeological-museums', '/road-tunnels', '/railway-bridges', '/natural-history-museums', '/aviation-museums', '/maritime-museums', '/science-museums', '/monastery-ruins', '/historic-house-museums', '/history-museums', '/railway-museums', '/automobile-museums', '/transport-museums', '/childrens-museums', '/mining-museums', '/holocaust-memorials', '/postal-museums', '/art-museums', '/historic-sites', '/cultural-centers', '/tributaries', '/arts-centers', '/regional-parks', '/country-parks', '/oratories', '/distributaries', '/italian-comuni', '/municipalities', '/italian-frazioni', '/french-cantons', '/french-arrondissements', '/french-departments', '/avenues', '/motorway-interchanges', '/italian-provinces', '/french-communes', '/spanish-municipalities', '/brazilian-municipalities', '/mexican-municipalities', '/swiss-communes', '/dutch-municipalities', '/belgian-municipalities', '/norwegian-municipalities', '/indonesian-regencies', '/austrian-municipalities', '/indian-districts', '/japanese-cities', '/japanese-districts', '/finnish-municipalities', '/portuguese-municipalities', '/chilean-communes', '/swedish-municipalities', '/danish-municipalities', '/slovak-municipalities', '/hungarian-municipalities', '/croatian-municipalities', '/venezuelan-municipalities', '/bulgarian-municipalities', '/peruvian-provinces', '/slovenian-municipalities', '/greek-municipalities', '/romanian-municipalities', '/vietnamese-communes', '/colombian-municipalities', '/turkish-districts', '/chinese-counties', '/thai-districts', '/tanzanian-wards', '/latvian-parishes', '/iranian-counties', '/polish-counties', '/bulgarian-villages', '/algerian-communes', '/yemeni-districts', '/ethiopian-districts', '/burkinabe-departments', '/cameroonian-communes', '/ecuadorian-cantons', '/paraguayan-municipalities', '/iraqi-districts', '/malagasy-communes', '/chinese-townships', '/beninese-arrondissements', '/guatemalan-municipalities', '/honduran-municipalities', '/bolivian-municipalities', '/laotian-districts', '/nicaraguan-municipalities', '/australian-lgas', '/thai-subdistricts', '/malian-communes', '/south-african-local-municipalities', '/ghanaian-districts', '/tajik-districts', '/senegalese-arrondissements', '/zambian-districts', '/png-districts', '/rwandan-sectors', '/costarican-cantons', '/senegalese-communes', '/nepali-districts', '/kenyan-counties', '/japanese-prefectures', '/somali-districts', '/colombian-departments', '/mozambican-districts', '/beninese-communes', '/moroccan-communes', '/afghan-districts', '/michigan-townships', '/pennsylvania-boroughs', '/illinois-villages', '/ivorian-communes', '/mauritanian-communes', '/tunisian-municipalities', '/iranian-provinces', '/minnesota-townships', '/illinois-townships', '/missouri-townships', '/ohio-townships', '/indiana-townships', '/new-york-towns', '/ohio-villages', '/wisconsin-villages', '/new-jersey-boroughs', '/kansas-townships', '/wisconsin-towns', '/new-york-villages', '/nebraska-townships', '/new-jersey-townships', '/north-dakota-townships', '/ohio-cities', '/louisiana-parishes', '/pennsylvania-cities', '/iowa-townships', '/texas-counties', '/german-municipalities', '/kansas-counties', '/illinois-counties', '/ohio-counties', '/pennsylvania-counties', '/new-york-counties', '/california-counties', '/georgia-counties', '/kentucky-counties', '/missouri-counties', '/north-carolina-counties', '/virginia-counties', '/tennessee-counties', '/minnesota-counties', '/michigan-counties', '/wisconsin-counties', '/iowa-counties', '/indiana-counties', '/mississippi-counties', '/oklahoma-counties', '/arkansas-counties', '/alabama-counties', '/florida-counties', '/colorado-counties', '/south-carolina-counties', '/nebraska-counties', '/south-dakota-counties', '/montana-counties', '/west-virginia-counties', '/north-dakota-counties', '/idaho-counties', '/washington-counties', '/oregon-counties', '/new-mexico-counties', '/docs', '/about', '/privacy', '/terms', '/contact', '/access', '/download', '/rekomendasi', '/os', '/apps/chat', '/build'];
   // The reading lists are live pages as well, and typing twenty-seven slugs into the array
   // above is how a page and its sitemap entry drift apart. Generated from the subject
   // table, so adding a subject to src/books.js publishes it here too.
@@ -5162,6 +5457,9 @@ app.get('/sitemap.xml', async (req, res) => {
   staticPages.push(...sihat.TOPICS.map((t) => `/health/${t.slug}`));
   staticPages.push(...diction.COLLECTIONS.map((c) => `/dictionary/c/${c.slug}`), ...diction.ALL_WORDS.map((w) => `/dictionary/${w}`));
   staticPages.push(...bintang.SIGNS.map((s) => `/horoscope/${s.slug}`));
+  staticPages.push(...tesaurus.ALL_WORDS.map((w) => `/thesaurus/${w}`));
+  staticPages.push(...rima.FAMILIES.map((f) => `/rhymes/f/${f.slug}`), ...rima.ALL_WORDS.map((w) => `/rhymes/${w}`));
+  staticPages.push(...ungkapan.THEMES.map((t) => `/idioms/t/${t.slug}`), ...ungkapan.ALL_SLUGS.map((s) => `/idioms/${s}`));
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -6886,6 +7184,9 @@ const SITE_NAV = [
     { href: '/word', label: 'Word of the Day' },
     { href: '/dictionary', label: 'Dictionary' },
     { href: '/horoscope', label: 'The Zodiac, Honestly' },
+    { href: '/thesaurus', label: 'Thesaurus' },
+    { href: '/rhymes', label: 'Rhymes' },
+    { href: '/idioms', label: 'Idioms' },
     { href: '/air-quality', label: 'Air & Oxygen' },
   ] },
   { title: 'Sky, weather &amp; Earth', links: [
@@ -7059,6 +7360,9 @@ function siteIndexBody() {
     { href: '/word', label: '🔤 Word of the Day — every date kept' },
     { href: '/dictionary', label: '📖 Dictionary — curated word shelves' },
     { href: '/horoscope', label: '✨ The Zodiac, Honestly — 12 signs' },
+    { href: '/thesaurus', label: '🧩 Thesaurus — chosen synonym rings' },
+    { href: '/rhymes', label: '🎵 Rhymes — twenty sound families' },
+    { href: '/idioms', label: '🗨️ Idioms — thirty phrases, honest origins' },
     { href: '/health', label: '🩺 Health Basics — sourced explainers' },
     ...sihat.TOPICS.map((t) => ({ href: `/health/${t.slug}`, label: `${t.icon} ${escapeHtml(t.title)}` })),
     { href: '/records', label: '🏅 World Records' },
