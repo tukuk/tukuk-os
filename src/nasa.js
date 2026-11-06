@@ -1414,7 +1414,182 @@ async function getSatellites({ group = 'stations' } = {}) {
 }
 
 /**
- * 15. Archive backfill — gather NASA data into the local database periodically.
+ * 15. 🚀 Launch Schedule — Launch Library 2 (thespacedevs.com), keyless & anonymous.
+ *     Cached 2 hours; when the feed refuses (anonymous quota is tight), the last good
+ *     copy is served labelled as stale rather than an error page. Attribution kept.
+ */
+let lastGoodLaunches = null;
+
+async function getLaunches() {
+  const cacheKey = 'launches:upcoming';
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+  try {
+    const res = await http.get('https://ll.thespacedevs.com/2.2.0/launch/upcoming/', {
+      params: { limit: 30 },
+      timeout: 15000,
+      headers: { Accept: 'application/json' },
+    });
+    const rows = Array.isArray(res.data && res.data.results) ? res.data.results : [];
+    const launches = rows.map((l) => {
+      const pad = l.pad || {};
+      const loc = pad.location || {};
+      const agencies = (l.mission && Array.isArray(l.mission.agencies)) ? l.mission.agencies : [];
+      return {
+        name: String(l.name || '').slice(0, 160),
+        net: String(l.net || ''),
+        probability: Number.isFinite(Number(l.probability)) ? Number(l.probability) : null,
+        status: String((l.status && l.status.name) || ''),
+        statusDesc: String((l.status && l.status.description) || ''),
+        mission: String((l.mission && l.mission.name) || '').slice(0, 160),
+        missionDesc: String((l.mission && l.mission.description) || '').slice(0, 500),
+        agency: String(agencies.length ? agencies[0].name : ''),
+        location: String(loc.name || (l.country && l.country.name) || '').slice(0, 120),
+        pad: String(pad.name || '').slice(0, 120),
+        trajectory: String((l.trajectory && l.trajectory.name) || '').slice(0, 120),
+        image: String((l.image && l.image.url) || '').slice(0, 300),
+        web: String((l.url || (l.mission && l.mission.web_url)) || ''),
+      };
+    }).filter((l) => l.net);
+    if (!launches.length) throw new Error('empty launch feed');
+    const result = {
+      count: launches.length,
+      generatedAt: new Date().toISOString(),
+      source: 'Launch Library 2 (thespacedevs.com)',
+      sourceUrl: 'https://thespacedevs.com',
+      launches,
+    };
+    lastGoodLaunches = result;
+    setCache(cacheKey, result, 2 * 60 * 60 * 1000);
+    return result;
+  } catch (err) {
+    if (lastGoodLaunches) {
+      const stale = { ...lastGoodLaunches, stale: true };
+      setCache(cacheKey, stale, 10 * 60 * 1000); // ten minutes' grace before re-trying live
+      return stale;
+    }
+    throw err;
+  }
+}
+
+/**
+ * 16. 🛰 ISS Pass Predictions — SGP4 on our own box, no third-party pass API.
+ *     The ISS TLE comes from CelesTrak (six-hour cache, last-good kept in memory),
+ *     is propagated with satellite.js for the next 36 hours, and every window with
+ *     elevation ≥ 10° becomes a pass. A pass is called visible only when the Sun is
+ *     a few degrees below the horizon while the station is above it — dark sky is
+ *     the whole trick to seeing the ISS, so the solar position is computed here with
+ *     the standard low-precision formula (~0.01°, noise beside TLE uncertainty).
+ */
+const SATJS = require('satellite.js');
+let lastGoodIssTle = null;
+
+async function getISSTle() {
+  const cacheKey = 'iss:tle';
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+  try {
+    const res = await http.get('https://celestrak.org/NORAD/elements/gp.php', {
+      params: { CATNR: '25544', FORMAT: 'tle' },
+      timeout: 15000,
+    });
+    const sats = parseTleBlocks(res.data, 1);
+    const lines = String(res.data || '').split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    const l1 = lines.find((l) => l.startsWith('1 '));
+    const l2 = lines.find((l) => l.startsWith('2 '));
+    if (!sats.length || !l1 || !l2) throw new Error('no ISS TLE');
+    const tle = { name: sats[0].name, l1, l2, epoch: new Date().toISOString() };
+    lastGoodIssTle = tle;
+    setCache(cacheKey, tle, 6 * 60 * 60 * 1000);
+    return tle;
+  } catch (err) {
+    if (lastGoodIssTle) return lastGoodIssTle; // old elements still propagate for hours
+    throw err;
+  }
+}
+
+// Low-precision solar right ascension/declination + elevation for an observer.
+function sunPosition(dateMs, latDeg, lonDeg) {
+  const n = (dateMs - Date.UTC(2000, 0, 1, 12)) / 86400000;
+  const d = (x) => (x * Math.PI) / 180;
+  const L = d(280.46 + 0.9856474 * n);
+  const g = d(357.528 + 0.9856003 * n);
+  const lambda = L + d(1.915) * Math.sin(g) + d(0.02) * Math.sin(2 * g);
+  const eps = d(23.439 - 0.0000004 * n);
+  const dec = Math.asin(Math.sin(eps) * Math.sin(lambda));
+  const ra = Math.atan2(Math.cos(eps) * Math.sin(lambda), Math.cos(lambda));
+  const gst = SATJS.gstime(new Date(dateMs)) * (180 / Math.PI);
+  const lst = ((gst + lonDeg) % 360 + 360) % 360;
+  const H = d(lst - ra * (180 / Math.PI));
+  const alt = Math.asin(Math.sin(d(latDeg)) * Math.sin(dec) + Math.cos(d(latDeg)) * Math.cos(dec) * Math.cos(H));
+  return { altDeg: alt * (180 / Math.PI) };
+}
+
+const COMPASS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+function compass(azDeg) { return COMPASS[Math.round((((azDeg % 360) + 360) % 360) / 22.5) % 16]; }
+
+async function getISSPasses({ lat, lng } = {}) {
+  const la = Number(lat); const lo = Number(lng);
+  if (!Number.isFinite(la) || !Number.isFinite(lo) || Math.abs(la) > 90 || Math.abs(lo) > 180) {
+    throw new Error('bad coordinates');
+  }
+  const cacheKey = `iss:pass:${la.toFixed(2)},${lo.toFixed(2)}`;
+  const cached = getCache(cacheKey);
+  if (cached) return cached;
+  const tle = await getISSTle();
+  const satrec = SATJS.twoline2satrec(tle.l1, tle.l2);
+  // satellite.js v7 names the field `height` (km) — passing `altitude` silently
+  // produces null look angles, which is how this whole function once returned 0 passes.
+  const obs = { latitude: (la * Math.PI) / 180, longitude: (lo * Math.PI) / 180, height: 0.05 };
+  const STEP = 20000; const HOURS = 36;
+  const t0 = Date.now(); const t1 = t0 + HOURS * 3600000;
+  const passes = [];
+  let cur = null;
+  for (let t = t0; t <= t1; t += STEP) {
+    const date = new Date(t);
+    const pv = SATJS.propagate(satrec, date);
+    if (!pv || !pv.position) continue;
+    const gmst = SATJS.gstime(date);
+    const ecf = SATJS.eciToEcf(pv.position, gmst);
+    const look = SATJS.ecfToLookAngles(obs, ecf);
+    const el = look.elevation * (180 / Math.PI);
+    const az = look.azimuth * (180 / Math.PI);
+    const sunAlt = sunPosition(t, la, lo).altDeg;
+    if (el >= 10) {
+      if (!cur) cur = { start: t, end: t, peak: t, maxEl: el, azIn: az, azOut: az, darkSec: sunAlt <= -3 ? STEP : 0 };
+      else {
+        cur.end = t;
+        cur.azOut = az;
+        if (el > cur.maxEl) { cur.maxEl = el; cur.peak = t; }
+        if (sunAlt <= -3) cur.darkSec += STEP;
+      }
+    } else if (cur) {
+      // A pass counts as visually promising only if a decent dark slice overlaps it.
+      passes.push({
+        start: new Date(cur.start).toISOString(),
+        peak: new Date(cur.peak).toISOString(),
+        end: new Date(cur.end).toISOString(),
+        maxEl: Math.round(cur.maxEl),
+        durMin: Math.max(1, Math.round((cur.end - cur.start) / 60000)),
+        azIn: compass(cur.azIn), azOut: compass(cur.azOut),
+        visible: cur.darkSec >= 120000,
+      });
+      cur = null;
+    }
+  }
+  const result = {
+    lat: Math.round(la * 100) / 100, lng: Math.round(lo * 100) / 100,
+    generatedAt: new Date(t0).toISOString(), windowHours: HOURS,
+    tleEpoch: tle.epoch,
+    source: 'CelesTrak TLE + SGP4 (satellite.js), computed on our server',
+    passes: passes.slice(0, 12),
+  };
+  setCache(cacheKey, result, 30 * 60 * 1000);
+  return result;
+}
+
+/**
+ * 17. Archive backfill — gather NASA data into the local database periodically.
  *     APOD: seven single-date pulls through getAPOD (retry + archive fallback are already
  *     built in; the `count` path often serves the broken "NASA Science" page).
  *     One NEO day + EPIC contribute the rest of the collection. A one-day error is ignored.
@@ -1480,5 +1655,7 @@ module.exports = {
   getSkyTonight,
   getExoplanets,
   getSentryRisk,
-  getSatellites
+  getSatellites,
+  getLaunches,
+  getISSPasses
 };
