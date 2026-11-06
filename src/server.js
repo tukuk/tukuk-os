@@ -11956,6 +11956,106 @@ function deepskyNav() {
     { href: '/messier', icon: '🔭', name: 'The 110 Messier objects', blurb: 'The full Messier catalogue of galaxies, nebulae and star clusters — the fuzzy things that kept Charles Messier from finding comets — grouped by type and mapped to their constellation.' },
   ]);
 }
+
+// ── BATCH 4: deep-sky enrichment — arithmetic over the static catalogue only ──
+// Constellations ranked by area once at startup, so every page can state its
+// true rank, sky share and neighbours without inventing anything.
+const CONS_BY_AREA = [...sky.CONSTELLATIONS].filter((c) => c.area).sort((a, b) => b.area - a.area);
+const consRank = (c) => CONS_BY_AREA.findIndex((x) => x.name === c.name) + 0;
+const SKY_DEG2 = 41252.96; // the whole celestial sphere in square degrees
+function constellationSizeHtml(c) {
+  if (!c.area) return '';
+  const rank = consRank(c);
+  const biggest = CONS_BY_AREA[0];
+  const smallest = CONS_BY_AREA[CONS_BY_AREA.length - 1];
+  const share = (c.area / SKY_DEG2) * 100;
+  const moons = c.area / 0.2; // a full moon disc covers about 0.2 square degrees
+  const above = rank - 1 >= 0 ? CONS_BY_AREA[rank - 1] : null;
+  const below = rank + 1 < CONS_BY_AREA.length ? CONS_BY_AREA[rank + 1] : null;
+  const around = [above, below].filter(Boolean)
+    .map((x) => `<a href="/constellations/${x.slug}">${escapeHtml(x.name)}</a> (${x.area.toLocaleString('en-US')}\u00b0)`).join(' and ');
+  return `<h2 class="section-title">How big is ${escapeHtml(c.name)} on the sky?</h2>
+  <p>With an area of <b>${c.area.toLocaleString('en-US')} square degrees</b>, ${escapeHtml(c.name)} is number <b>${rank + 1} of ${CONS_BY_AREA.length}</b> constellations by size — ${share.toFixed(1)}% of the whole celestial sphere. That is roughly <b>${Math.round(moons).toLocaleString('en-US')} full moons</b> of sky side by side (the Moon’s disc covers about 0.2 square degrees). The ranking runs from <a href="/constellations/${biggest.slug}">${escapeHtml(biggest.name)}</a>, the largest at ${biggest.area.toLocaleString('en-US')}\u00b0, down to <a href="/constellations/${smallest.slug}">${escapeHtml(smallest.name)}</a>, the smallest at ${smallest.area.toLocaleString('en-US')}\u00b0${around ? `; ${escapeHtml(c.name)} sits between neighbours ${around}` : ''}.</p>
+  <p>It is worth remembering what those borders are: since 1922 the IAU has drawn the 88 constellations as precise regions tiling the entire sky, so every star, every galaxy and every empty patch belongs to exactly one of them — ancient figures, modern surveying.</p>`;
+}
+function constellationGenitiveHtml(c) {
+  if (!c.genitive) return '';
+  return `<h2 class="section-title">The name in use</h2>
+  <p>Stars and variable objects inside ${escapeHtml(c.name)} are labelled with its <b>genitive</b> (possessive) form, <em>${escapeHtml(c.genitive)}</em>: the Bayer designations run Alpha, Beta, Gamma… ${escapeHtml(c.genitive)}, and deep-sky objects are often called “of ${escapeHtml(c.genitive)}” in catalogues and papers. The Greek letters roughly follow brightness but do not always obey it — history, not rules, decided which star got Alpha. The Latin meaning of the name is ${escapeHtml(c.meaning || 'not given')}; ${escapeHtml(c.hemisphere).toLowerCase()} skies carry its brightest members, of which ${escapeHtml(c.brightest || 'the chief star')}${c.brightestMag != null ? ` shines at apparent magnitude ${c.brightestMag}` : ''}.</p>`;
+}
+function skyHalfnessHtml(c) {
+  const hem = String(c.hemisphere || '').toLowerCase();
+  const north = hem.includes('north');
+  const south = hem.includes('south');
+  let who;
+  if (north && south) who = 'straddling the celestial equator, this one is reachable from both halves of the world';
+  else if (north) who = 'a northern-sky constellation: from mid-northern latitudes it rides high, and from far south of the equator it never properly rises';
+  else if (south) who = 'a southern-sky constellation: from mid-southern latitudes it rides high, and from far north of the equator it never properly rises';
+  else who = 'a sky constellation of the whole sphere, visible from both hemispheres at the right time of year';
+  return `<p><b>Who can see it:</b> ${who}. From the equator, in the course of a year, well-nigh every constellation in the catalogue crosses the sky — the further you travel from it, the more of the opposite hemisphere you permanently leave behind.</p>`;
+}
+// Distance honesty: every comparison is arithmetic on the catalogue’s own
+// distance figure against fixed, checkable spans of deep time.
+const DEEP_TIME_ANCHORS = [
+  [2000, 'the start of the Common Era'],
+  [4500, 'the first pyramids were built at Giza'],
+  [10000, 'farming began in the Near East'],
+  [20000, 'the last ice age reached its peak'],
+  [65000, 'the first humans reached Australia'],
+  [300000, 'the earliest Homo sapiens fossils'],
+  [66000000, 'the asteroid that ended the dinosaurs struck'],
+  [4.54e9, 'the Earth formed'],
+  [1.38e10, 'the big bang'],
+];
+function messierDistanceHtml(m) {
+  if (m.distance == null) return '';
+  const ly = Math.round(m.distance * 1000);
+  const pc = Math.round(m.distance * 306.61);
+  let scale = '';
+  if (ly <= 2000) {
+    scale = `The light arriving from it tonight left home around the year ${Math.round(2026 - ly)} CE — within ordinary human history.`;
+  } else {
+    let a = DEEP_TIME_ANCHORS[0];
+    for (const cand of DEEP_TIME_ANCHORS) if (cand[0] <= ly) a = cand;
+    const ratio = ly / a[0];
+    const rf = ratio < 10 ? ratio.toFixed(1) : Math.round(ratio).toLocaleString('en-US');
+    scale = `For scale: ${ratio < 1.3 ? 'slightly more than the time since' : `about ${rf} times the span since`} ${a[1]}.`;
+  }
+  return `<h2 class="section-title">How far is ${escapeHtml(m.id)}, really?</h2>
+  <p>The catalogue puts ${escapeHtml(m.id)} at roughly <b>${m.distance.toLocaleString('en-US')} thousand light-years</b> away — about ${pc.toLocaleString('en-US')} parsecs. A light-year is the distance light covers in one year, some 9.46 trillion kilometres, so this is how long the light now entering your eyes has been travelling. ${scale} A message sent there today would need to wait twice that many years for a reply, which is why astronomers always look backwards: every telescope is a time machine with the dial set by distance.</p>`;
+}
+// The magnitude ladder, honestly stated: number → what shows it to you.
+function messierVisibilityHtml(m) {
+  if (m.mag == null) return '';
+  const g = Number(m.mag);
+  let tier;
+  if (g <= 6) tier = 'bright enough for the <b>naked eye from a genuinely dark site</b> — look for it on a moonless night far from town lights';
+  else if (g <= 8) tier = 'just past the naked-eye limit: <b>large binoculars or a small telescope</b> bring it in comfortably';
+  else if (g <= 11) tier = '<b>telescope territory</b> — a small instrument at low power should show its shape';
+  else if (g <= 14) tier = 'needs a <b>medium telescope and a dark sky</b> to catch as a faint grey smudge';
+  else tier = 'a prize for <b>larger apertures</b> under very dark skies — or a long-exposure photograph';
+  const spread = /Galaxy|nebula/i.test(String(m.type))
+    ? ' One caution the number hides: this is a diffuse object, its light spread over a patch of sky rather than concentrated in a point, so it always looks fainter than a star of the same magnitude.'
+    : '';
+  return `<h2 class="section-title">What will show it to you?</h2>
+  <p>${escapeHtml(m.id)} carries an apparent magnitude of about <b>${m.mag}</b>. ${tier}.${spread} The magnitude scale runs backwards — smaller is brighter, and each whole step is a factor of about 2.5 in light — so 6 is the traditional naked-eye ceiling on a good night, and every number below it is progressively easier.</p>`;
+}
+function messierHomeHtml(m) {
+  const cons = m.cSlug ? sky.findConstellation(m.cSlug) : null;
+  if (!cons) return '';
+  return `<h2 class="section-title">Finding its home constellation</h2>
+  <p>${escapeHtml(m.id)} lies inside the official borders of <a href="/constellations/${cons.slug}">${escapeHtml(cons.name)}</a>${cons.meaning ? `, whose name means “${escapeHtml(cons.meaning)}”` : ''}${cons.area ? `, a region of ${cons.area.toLocaleString('en-US')} square degrees` : ''}. Practical way to find it: learn ${escapeHtml(cons.name)}’s pattern first${cons.brightest ? ` — its brightest star, ${escapeHtml(cons.brightest)}, is the anchor point` : ''}, then star-hop from there. The constellation’s own page lists every other Messier object that shares its borders, which usually means a night’s hunting is hiding in one patch of sky.</p>`;
+}
+// Type names end in consonants except “Galaxy” — which pluralises to -ies.
+const pluralType = (t) => (/y$/i.test(String(t)) ? String(t).replace(/y$/i, 'ies') : `${t}s`);
+function messierSameTypeHtml(m) {
+  if (!m.type) return '';
+  const same = sky.messierByType(m.type).filter((x) => x.id !== m.id).sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)));
+  if (same.length < 2) return '';
+  const chips = same.slice(0, 10).map((x) => `<a href="/messier/${x.slug}">${escapeHtml(x.id)}</a>`).join(' · ');
+  return `<p><b>More ${escapeHtml(pluralType(String(m.type).toLowerCase()))} in the catalogue:</b> ${chips}${same.length > 10 ? ` … and ${same.length - 10} more on the <a href="/messier">Messier hub</a>` : ''}. The <a href="/messier">full catalogue</a> groups all 110 the same way.</p>`;
+}
+
 const byName = (a, b) => a.name.localeCompare(b.name);
 
 function burujHubPage() {
@@ -11991,6 +12091,9 @@ function constellationPage(c) {
   const body = `<p class="back-link"><a href="/constellations">&larr; All 88 constellations</a></p>
   <p><b>${escapeHtml(c.name)}</b> is one of the 88 modern constellations defined by the International Astronomical Union. Its name is Latin${c.meaning ? `, meaning <em>${escapeHtml(c.meaning)}</em>` : ''}${c.genitive ? `; stars within it are named in the genitive form <em>${escapeHtml(c.genitive)}</em>` : ''}.</p>
   <h2 class="section-title">Facts about ${escapeHtml(c.name)}</h2><table class="world-table">${rows}</table>
+  ${constellationSizeHtml(c)}
+  ${constellationGenitiveHtml(c)}
+  ${skyHalfnessHtml(c)}
   <h2 class="section-title">Deep-sky objects in ${escapeHtml(c.name)}</h2>${objList}
   <p class="meta">Data: IAU-designated constellations & the Messier catalogue, via English Wikipedia (CC BY-SA 3.0) · stored statically.</p>`;
   const ld = JSON.stringify({
@@ -12012,7 +12115,7 @@ function messierHubPage() {
     const items = sky.messierByType(t).sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)));
     if (!items.length) return '';
     const links = items.map((m) => `<a href="/messier/${m.slug}">${escapeHtml(m.id)}</a>${m.name ? ` <span class="meta">${escapeHtml(m.name)}</span>` : ''}`).join(' · ');
-    return `<h2 class="section-title">${t}s <span class="meta">(${items.length})</span></h2><p>${escapeHtml(sky.TYPE_INFO[t] || '')}</p><p>${links}</p>`;
+    return `<h2 class="section-title">${pluralType(t)} <span class="meta">(${items.length})</span></h2><p>${escapeHtml(sky.TYPE_INFO[t] || '')}</p><p>${links}</p>`;
   }).join('');
   const body = `<p>In the 1770s the French comet-hunter <b>Charles Messier</b> compiled a list of the fuzzy, comet-like objects that kept interrupting his searches — 110 of them in the final, expanded catalogue. Today they are the <b>Messier objects</b>: the brightest galaxies, nebulae and star clusters in the sky, and the backbone of every amateur astronomer’s “Messier marathon”. Every object is below, grouped by what it actually is, each linked to its own page and its home constellation.</p>
   ${sections}
@@ -12045,7 +12148,11 @@ function messierPage(m) {
   <p><b>${escapeHtml(m.id)}${m.name ? `, ${escapeHtml(m.name)}` : ''}</b> is a ${escapeHtml(String(m.type).toLowerCase())} in the constellation ${consLink}${m.mag != null ? `, with an apparent magnitude of about ${m.mag}` : ''}${m.distance != null ? `, roughly ${m.distance.toLocaleString('en-US')} thousand light-years away` : ''}.</p>
   <h2 class="section-title">Data</h2><table class="world-table">${rows}</table>
   <h2 class="section-title">What a ${escapeHtml(String(m.type).toLowerCase())} is</h2><p>${escapeHtml(typeInfo)}</p>
+  ${messierDistanceHtml(m)}
+  ${messierVisibilityHtml(m)}
+  ${messierHomeHtml(m)}
   ${siblingHtml}
+  ${messierSameTypeHtml(m)}
   <p class="meta">Data: Messier catalogue & IAU constellations, via English Wikipedia (CC BY-SA 3.0) · stored statically.</p>`;
   const ld = JSON.stringify([
     { '@context': 'https://schema.org', '@type': 'Place', name: `${m.id}${m.name ? ` — ${m.name}` : ''}`, description: `${m.type} in ${m.constellation || 'the night sky'}.`, url: `https://tukuk.org/messier/${m.slug}` },
@@ -17071,6 +17178,69 @@ function kotaRegionPage(region) {
   }, kotaNav());
 }
 
+// ── BATCH 4: thin-page enrichment — deterministic Earth-math over stored data ──
+// Every number below is pure spherical geometry on coordinates we already keep.
+// The compass tool’s toRad/havKm/brg live inside its client <script> string, so
+// the server gets its own module-level copies (same formulas, R = 6371 km).
+// Nothing is invented and nothing is fetched: same latitude in, same sentences out.
+const earthRad = (x) => (x * Math.PI) / 180;
+function earthHavKm(a, b, c, d) {
+  const R = 6371;
+  const x = Math.sin(earthRad(c - a) / 2), y = Math.sin(earthRad(d - b) / 2);
+  const s = x * x + Math.cos(earthRad(a)) * Math.cos(earthRad(c)) * y * y;
+  return 2 * R * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+}
+function earthBrg(a, b, c, d) {
+  const y = Math.sin(earthRad(d - b)) * Math.cos(earthRad(c));
+  const x = Math.cos(earthRad(a)) * Math.sin(earthRad(c)) - Math.sin(earthRad(a)) * Math.cos(earthRad(c)) * Math.cos(earthRad(d - b));
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+const COMPASS16 = ['north', 'north-northeast', 'northeast', 'east-northeast', 'east', 'east-southeast', 'southeast', 'south-southeast', 'south', 'south-southwest', 'southwest', 'west-southwest', 'west', 'west-northwest', 'northwest', 'north-northwest'];
+const compass16 = (deg) => COMPASS16[Math.round(((((deg % 360) + 360) % 360) / 22.5)) % 16];
+// Hours of daylight at the local summer solstice; the shortest day is the
+// mirror image, 24 − this. Obliquity 23.44° is fixed astronomy.
+function dayLengthHours(absLat) {
+  const t = -Math.tan(earthRad(absLat)) * Math.tan(earthRad(23.44));
+  if (t <= -1) return 24;
+  if (t >= 1) return 0;
+  return (2 * Math.acos(t) * 180) / (15 * Math.PI);
+}
+const earthKm = (n) => (n >= 1000 ? Math.round(n).toLocaleString('en-US') : String(Math.round(n * 10) / 10));
+function latitudeBandHtml(absLat) {
+  if (absLat <= 23.44) return ['the tropics', 'that puts it inside the tropics, where the sun passes directly overhead twice a year and the yearly swing in day length stays small'];
+  if (absLat <= 35) return ['the subtropics', 'that puts it in the subtropics, where summers run hot and how mild the winter feels depends heavily on the nearest sea'];
+  if (absLat <= 55) return ['the temperate zone', 'that puts it in the temperate zone, where the four seasons and a long summer day versus a short winter day are the defining rhythm'];
+  if (absLat <= 66.56) return ['the boreal zone', 'that puts it in the boreal zone, where winter days are brief and summer light lingers late, though the true midnight sun starts a little further north'];
+  return ['the polar region', 'that puts it beyond the polar circle, where the sun does not set at the summer solstice and does not rise at the winter one'];
+}
+// The block itself. Comparators are places on OUR OWN city list, so every
+// distance quoted links to a page the reader can check.
+function cityEarthHtml(c) {
+  const abs = Math.abs(c.lat);
+  const toEquator = earthHavKm(c.lat, c.lng, 0, c.lng);
+  const toPole = earthHavKm(c.lat, c.lng, c.lat >= 0 ? 90 : -90, c.lng);
+  const bandNote = latitudeBandHtml(abs)[1];
+  const longest = dayLengthHours(abs);
+  const noonEq = 90 - abs;
+  const spin = 1674 * Math.cos(earthRad(c.lat));
+  const peers = kt.CITIES.filter((x) => x.slug !== c.slug && x.lat != null && x.lng != null)
+    .map((x) => ({ x, d: earthHavKm(c.lat, c.lng, x.lat, x.lng) })).sort((a, b) => a.d - b.d);
+  const near = peers.slice(0, 4)
+    .map((p) => `<a href="/cities/${p.x.slug}">${escapeHtml(p.x.name)}</a> (${earthKm(p.d)} km to the ${compass16(earthBrg(c.lat, c.lng, p.x.lat, p.x.lng))})`);
+  const antLat = -c.lat;
+  const antLng = c.lng > 0 ? c.lng - 180 : c.lng + 180;
+  const anti = peers.map((p) => ({ x: p.x, d: earthHavKm(antLat, antLng, p.x.lat, p.x.lng) })).sort((a, b) => a.d - b.d)[0];
+  const antCoords = `${Math.abs(antLat).toFixed(2)}\u00b0${antLat >= 0 ? 'N' : 'S'}, ${Math.abs(antLng).toFixed(2)}\u00b0${antLng >= 0 ? 'E' : 'W'}`;
+  const dayTxt = longest >= 23.99
+    ? 'at the summer solstice the sun does not set at all, and six months later it does not rise'
+    : `its longest day lasts about ${longest.toFixed(1)} hours of daylight and its shortest about ${(24 - longest).toFixed(1)}`;
+  return `<h2 class="section-title">Where ${escapeHtml(c.name)} sits on the Earth</h2>
+  <p>At ${Math.abs(c.lat).toFixed(2)}\u00b0 ${c.lat >= 0 ? 'north' : 'south'} of the equator, ${escapeHtml(c.name)} is about <b>${earthKm(toEquator)} km</b> from the equator itself and <b>${earthKm(toPole)} km</b> from its nearest pole — and ${bandNote}. Latitude is only the sky&rsquo;s address, of course: altitude, oceans and winds write the actual weather, which is why two cities on the same parallel can need overcoats in one place and sun hats in the other. The numbers on this page come straight from the town&rsquo;s own coordinates.</p>
+  <p>Two consequences of that latitude anyone can test. On the equinox the midday sun stands <b>${noonEq.toFixed(1)}\u00b0</b> above the horizon here (straight up at the equator, lower the further you go). And because the Earth is a sphere turning once a day, a point at this latitude is carried around its axis at roughly <b>${Math.round(spin).toLocaleString('en-US')} km/h</b> — fastest at the equator, nothing at the poles. As for daylight: ${escapeHtml(c.name)} sees ${dayTxt}.</p>
+  ${near.length ? `<p><b>Nearest cities on our list:</b> ${near.join(', ')}. Every profile here carries the same arithmetic, so the distances between any two of them can be checked by opening both pages.</p>` : ''}
+  ${anti ? `<p><b>The other side of the world:</b> a straight line through the centre of the Earth from ${escapeHtml(c.name)} emerges at ${antCoords} — its antipode. The closest city on our list to that point is <a href="/cities/${anti.x.slug}">${escapeHtml(anti.x.name)}</a>, about ${earthKm(anti.d)} km away; whether the antipode itself is ocean or land is a good quiz question before you look it up.</p>` : ''}`;
+}
+
 function kotaPage(c, sum) {
   const coords = `${Math.abs(c.lat).toFixed(2)}\u00b0${c.lat >= 0 ? 'N' : 'S'}, ${Math.abs(c.lng).toFixed(2)}\u00b0${c.lng >= 0 ? 'E' : 'W'}`;
   const mapHref = `https://www.openstreetmap.org/?mlat=${c.lat}&mlon=${c.lng}#map=11/${c.lat}/${c.lng}`;
@@ -17089,6 +17259,7 @@ function kotaPage(c, sum) {
   ${hero}${readMore}
   <h2 class="section-title">Quick facts</h2><table class="world-table">${rows}</table>
   <p><b>${escapeHtml(c.name)}</b> is in <a href="/countries/${c.countrySlug}">${escapeHtml(c.country)}</a>, a country in ${escapeHtml(c.region)}. For the living forecast here, open <a href="/weather">World Weather</a>; ${escapeHtml(c.name)}’s population and history are described by the sourced introduction above (from Wikipedia).</p>
+  ${c.lat != null && c.lng != null ? cityEarthHtml(c) : ''}
   ${moreCity}
   <p class="meta">Coordinates are an approximate city centre. Introduction &amp; image: Wikipedia (CC BY-SA 4.0), cached 30 days; the page renders even if the feed is momentarily unreachable.</p>`;
   const ld = JSON.stringify([
@@ -22065,12 +22236,37 @@ function seniCollectionPage(req, c, objs, total, page) {
   }, seniNav());
 }
 
+// One honest sentence per curatorial department, keyed to the Met’s own
+// department names — what a visitor would be standing in a room of.
+const SENI_DEPTS = {
+  'European Paintings': 'The European paintings department holds the images most people picture when they hear “old masters” — panel and canvas from roughly 1250 to 1800, arranged by school and century, from Italian devotional gold grounds to late Impressionism.',
+  'Egyptian Art': 'The Egyptian collection is built from the museum’s own excavations as much as from purchases: painted reliefs and models from tomb chapels, jewellery, sculpture and everyday objects that survived the dry ground for thousands of years.',
+  'Greek and Roman Art': 'Classical antiquities — marble and bronze, terracotta vases with their black- and red-figure painting, portrait busts and grave markers: the visual vocabulary half of Western art keeps returning to.',
+  'Islamic Art': 'Art from the regions reached by Islam, from Spain to India, displayed as calligraphy, tilework, metalwork, ceramics and carpet — geometry and writing treated as the highest decorative arts.',
+  'Asian Art': 'The Asian wings run from Chinese bronzes and brush paintings to Japanese screens, Korean ceramics and South and Southeast Asian sculpture, each tradition shown on its own terms rather than as footnotes to Europe.',
+  'Photographs': 'The photograph department’s holdings trace the medium from the 1840s onward — early calotypes and albumen prints through pictorialism to modern street and documentary work.',
+  'Arms and Armor': 'The arms and armour galleries display field and tournament harness, swords, crossbows and firearms as what they are: precision engineering you can wear, decorated like jewellery.',
+  'Modern and Contemporary Art': 'The modern collection follows the break from resemblance — Fauvism, Cubism, abstraction and after — with works that argue about what a painting or sculpture is allowed to be.',
+  'European Sculpture and Decorative Arts': 'Sculpture and the decorated interior: bronzes, furniture, porcelain, tapestries and giltwood from the Renaissance to the nineteenth century, shown as one continuous art of living.',
+  'Drawings and Prints': 'Works on paper — the sketches, studies and printed images that survive because they were kept, not displayed. The most direct evidence of how an artwork was thought out.',
+  'The American Wing': 'American art from the colonial period to the early twentieth century: portraiture, history painting, decorative arts and period rooms that show a young nation decorating itself.',
+  'The Cloisters': 'The Cloisters collection — medieval art as displayed in the museum’s fortress-like branch above the Hudson: tapestries, stone sculpture and the hours’ devotional objects.',
+  'Musical Instruments': 'Instruments both playable and ornamental, from harpsichords with painted lids to brass and woodwind of two or three centuries — sound objects kept as sculpture too.',
+  'Robert Lehman Collection': 'The collection formed by Robert Lehman, presented as a house rather than a warehouse: panel paintings, bronzes, textiles and furniture from four centuries of taste.',
+  'Costume Institute': 'The art of dress: garments and accessories treated as design history, from surviving seventeenth-century gowns to the twentieth-century couture the famous seasonal exhibitions are built from.',
+};
 function seniObjectPage(req, o) {
   const title = String(o.objectTitle || o.title || 'Untitled work');
+  const meas = Array.isArray(o.measurements) ? o.measurements.map((x) => String(x.description || '')).filter(Boolean).slice(0, 6).join(' · ') : '';
+  const born = Number(o.artistBeginDate); const died = Number(o.artistEndDate);
+  const lifeSpan = born > 1000 && died >= born && died - born <= 120 ? ` (about ${born}\u2013${died}, a life of some ${Math.round(died - born)} years)` : '';
   const metaRows = [
     ['Artist / culture', [o.artistDisplayName, o.culture].filter(Boolean).join(' · ')],
-    ['Date', o.objectDate], ['Department', o.department], ['Medium', o.medium],
-    ['Dimensions', o.dimensions], ['Accession', o.objectID ? String(o.objectID) : ''],
+    ['Nationality / culture', [o.artistNationality, o.culture].filter(Boolean).join(' · ')],
+    ['Date', o.objectDate], ['Period', o.period], ['Dynasty', o.dynasty], ['Portfolio', o.portfolio],
+    ['Department', o.department], ['Medium', o.medium],
+    ['Dimensions', o.dimensions || meas], ['Excavation', o.excavation],
+    ['Accession number', o.accessionNumber || String(o.objectID || '')],
   ].filter((r) => r[1]).map((r) => `<tr><th>${escapeHtml(r[0])}</th><td>${escapeHtml(String(r[1]).slice(0, 300))}</td></tr>`).join('');
   const pd = o.isPublicDomain;
   const pdHtml = pd
@@ -22087,12 +22283,20 @@ function seniObjectPage(req, o) {
       { '@type': 'ListItem', position: 1, name: 'Art Gallery', item: 'https://tukuk.org/art' },
       { '@type': 'ListItem', position: 2, name: title, item: `https://tukuk.org/art/object/${o.objectID}` } ] },
   ]).replace(/</g, '\\u003c');
+  const makerBio = o.artistDisplayName && String(o.artistDisplayBio || '').trim()
+    ? `<h2 class="section-title">About the maker</h2><p>${escapeHtml(String(o.artistDisplayBio).trim().slice(0, 900))}${lifeSpan}</p>`
+    : (o.artistDisplayName && lifeSpan ? `<h2 class="section-title">About the maker</h2><p>The museum’s record gives ${escapeHtml(String(o.artistDisplayName))} the life dates${lifeSpan.replace(/^ \(/, ' of ')}</p>` : '');
+  const provHtml = o.provenance ? `<h2 class="section-title">How it got here</h2><p>${escapeHtml(String(o.provenance).slice(0, 900))}</p><p class="meta">Provenance is the museum’s own ownership history for this object, quoted from the catalogue record.</p>` : '';
+  const deptHtml = SENI_DEPTS[String(o.department || '')] ? `<h2 class="section-title">Where it sits in the museum</h2><p>${escapeHtml(SENI_DEPTS[String(o.department || '')])}</p>` : '';
+  const extras = (Array.isArray(o.additionalImages) ? o.additionalImages.filter((u) => u).slice(0, 4) : []).map((u) => `<a href="${escapeHtml(String(u))}" rel="noopener" class="btn ghost" style="margin:3px">detail image ${'→'}</a>`).join('');
+  const extraHtml = extras ? `<h2 class="section-title">Detail photographs</h2><p>${extras}</p><p class="meta">The museum publishes these additional views of the object; open them at full resolution.</p>` : '';
   const body = `<p class="back-link"><a href="/art">&larr; The Free Art Gallery</a></p>
   <figure style="margin:18px 0"><img src="${escapeHtml(String(o.primaryImage || o.primaryImageSmall))}" alt="${escapeHtml(title)} — ${escapeHtml(String(o.department || 'The Metropolitan Museum of Art'))}" loading="eager" style="width:100%;height:auto;border-radius:10px;border:1px solid var(--line)">${o.creditLine ? `<figcaption class="meta">${escapeHtml(String(o.creditLine))}</figcaption>` : ''}</figure>
   ${pdHtml}
   <h2 class="section-title">Record details</h2><table class="world-table">${metaRows}</table>
+  ${makerBio}${provHtml}${deptHtml}${extraHtml}
   <p class="back-link"><a rel="noopener nofollow" href="${escapeHtml(String(o.objectURL || 'https://www.metmuseum.org'))}">This object on metmuseum.org →</a></p>
-  <p class="meta">Source: The Metropolitan Museum of Art Collection API, object ${o.objectID}.</p>`;
+  <p class="meta">Everything on this page is the museum’s own catalogue record for object ${o.objectID}${o.repository ? ` (${escapeHtml(String(o.repository))})` : ''}, rendered without addition. Source: The Metropolitan Museum of Art Collection API.</p>`;
   return worldDoc({
     title: `${title} — Free Art Gallery | Tukuk-OS`,
     desc: `${title}${o.objectDate ? ` (${String(o.objectDate).slice(0, 40)})` : ''} — ${o.department || 'The Metropolitan Museum of Art'}. ${pd ? 'Public domain, free high-resolution download.' : 'Open educational record.'}`,
