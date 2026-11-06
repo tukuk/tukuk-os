@@ -12501,7 +12501,15 @@ main header h1{letter-spacing:-.015em;line-height:1.15}
 .tl-chip.tl-on{border-color:var(--accent,#4c8dff);background:rgba(76,141,255,.16);font-weight:700}
 .tl-pages{margin-top:6px}
 .tl-searchwrap{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin:14px 0}
-.tl-searchwrap .tl-search{flex:1 1 260px}`;
+.tl-searchwrap .tl-search{flex:1 1 260px}
+.tl-dir{display:flex;flex-wrap:wrap;gap:4px 16px;margin:8px 0 4px;padding:0;list-style:none}
+.tl-dir li{margin:0}
+.tl-dir a{font-size:.9rem;color:var(--text,#e6e9ef);text-decoration:none;white-space:nowrap;border-bottom:1px dotted transparent;display:inline-block;padding:2px 0}
+.tl-dir a:hover{color:var(--accent,#4c8dff);border-bottom-color:var(--accent,#4c8dff)}
+.tl-shelf-h{display:flex;align-items:center;gap:10px;margin:24px 0 2px;font-size:1.05rem}
+.tl-shelf-h a{color:var(--text,#e6e9ef);text-decoration:none}
+.tl-shelf-h a:hover{color:var(--accent,#4c8dff)}
+.tl-dir-n{font-size:.75rem;font-weight:700;color:var(--muted,#9aa3b2);background:rgba(148,163,184,.14);border-radius:999px;padding:1px 9px;font-variant-numeric:tabular-nums}`;
 
 // The shared enhancement layer, injected by worldDoc only when selfUrl is an
 // /alat tool page — three quiet touches every tool gets at once: Enter runs the
@@ -12618,6 +12626,30 @@ function toolHubShelves() {
 
 function toolCards(items) {
   return items.map((s) => `<a class="tl-card" href="${s.href}"><b><span class="tl-ic">${s.icon}</span>${escapeHtml(s.name)}</b><span class="tl-bl">${escapeHtml(s.blurb || '')}</span></a>`).join('\n  ');
+}
+
+// ── the hub's complete directory ──────────────────────────────────────────────
+// Nov 2026 (owner request): /alat must show every tool on the page it lands on,
+// not a shop window of shelves. A thousand tl-cards with blurbs is still a wall,
+// so the directory lists every tool as one compact link — icon and name, grouped
+// by shelf, alphabetical inside each group — with a jump row of chips, and each
+// shelf heading still links its /alat/c/:shelf page. Built once and memoised
+// like the item caches: on the 2 GB box, restitching ~1,900 links per hub hit is
+// pure waste. The searchable paginated list stays at /alat/all.
+let TL_DIRECTORY_CACHE = null;
+function toolDirectoryHtml() {
+  if (TL_DIRECTORY_CACHE) return TL_DIRECTORY_CACHE;
+  const shelves = toolHubShelves();
+  const filled = CATS.CATEGORIES
+    .map((c) => ({ cat: c, items: (shelves[c.id] || []).slice().sort((a, b) => a.name.localeCompare(b.name)) }))
+    .filter((s) => s.items.length);
+  const jump = filled.map((s) => `<a class="tl-chip" href="#shelf-${s.cat.id}">${s.cat.ic} ${escapeHtml(s.cat.name)}</a>`).join('');
+  const sections = filled.map((s) => {
+    const links = s.items.map((t) => `<li><a href="${t.href}">${t.icon} ${escapeHtml(t.name)}</a></li>`).join('');
+    return `<h3 class="tl-shelf-h" id="shelf-${s.cat.id}"><a href="/alat/c/${s.cat.id}">${s.cat.ic} ${escapeHtml(s.cat.name)}</a><span class="tl-dir-n">${s.items.length}</span></h3>\n<ul class="tl-dir">${links}</ul>`;
+  }).join('\n');
+  TL_DIRECTORY_CACHE = `<nav class="tl-nav" aria-label="Jump to a shelf">${jump}</nav>\n${sections}`;
+  return TL_DIRECTORY_CACHE;
 }
 
 function toolQuery(page, extra) {
@@ -12775,30 +12807,28 @@ function alatAllPage(page, q) {
 }
 
 function alatHubPage() {
-  // The hub is a shop window, not a phone directory. It used to print a card for
-  // every tool the registry knew — at a thousand of them that is a thousand cards
-  // nobody scrolls to the end of, so the hub indexes the shelves instead,
-  // keeps the genuinely popular shelf visible, and sends the rest of the surface
-  // to /alat/all, which is paginated and searched server-side (so it also works
-  // with JavaScript switched off, and a crawler can walk every tool in twenty
-  // requests instead of drowning in one 1,100-card page).
-  const shelves = toolHubShelves();
+  // The hub lists everything (Nov 2026, owner request): a visitor who arrives for
+  // tools should see tools immediately, not a shop window that makes them click
+  // through shelves first. Every registered tool is therefore listed right here in
+  // the compact directory (one link each, grouped by shelf), the searchable
+  // paginated list stays at /alat/all for crawlers and no-JS filtering, and the
+  // shelf cards below the directory remain the guided tour into the categorized
+  // pages. The card wall of blurbs is gone: at a thousand tools the directory is
+  // the readable form of the same links.
   const shelfCards = CATS.CATEGORIES.map((c) =>
-    `<a class="tl-card" href="/alat/c/${c.id}"><b><span class="tl-ic">${c.ic}</span>${escapeHtml(c.name)}<span class="tl-n">${shelves[c.id].length}</span></b><span class="tl-bl">${escapeHtml(c.blurb)}</span></a>`).join('\n  ');
+    `<a class="tl-card" href="/alat/c/${c.id}"><b><span class="tl-ic">${c.ic}</span>${escapeHtml(c.name)}<span class="tl-n">${toolHubShelves()[c.id].length}</span></b><span class="tl-bl">${escapeHtml(c.blurb)}</span></a>`).join('\n  ');
   const total = toolHubItems().length;
   const body = `<p><b>The honest kind of useful.</b> Over a thousand small tools that people actually search for — and that do their whole job <i>inside your browser</i>. Your text, your files, your dates, your passwords and your colours are processed on your own machine and never sent to us; there is no API to be down, no account, no download, and no tracking. The page works even after it has loaded on a plane.</p>
-  <h2 class="section-title">Browse by shelf</h2>
-  <div class="tl-grid">
-  ${shelfCards}
-  </div>
   <form class="tl-searchwrap" action="/alat/all" method="get" role="search">
     <input class="tl-search" id="tg-q" name="q" type="search" value="" placeholder="Search all ${total} tools — try qr, json, bmi, lagos… (press / to jump here)" autocomplete="off" aria-label="Search the toolbox">
     <button class="tl-btn primary" type="submit">Search</button>
   </form>
-  <h2 class="section-title">The classics</h2>
-  <p class="meta" id="tg-count">${total} tools on ${CATS.CATEGORIES.length} shelves · the ones people come back for, and <a href="/alat/all">the complete list</a> for everything else</p>
+  <h2 class="section-title">Every tool, listed</h2>
+  <p class="meta" id="tg-count">${total} tools on ${CATS.CATEGORIES.length} shelves · all of them listed below, grouped by shelf and in alphabetical order within each group · or <a href="/alat/all">search the complete list</a></p>
+  ${toolDirectoryHtml()}
+  <h2 class="section-title">Browse by shelf</h2>
   <div class="tl-grid" id="tg-grid">
-  ${toolCards(TOOL_HUB_FEATURED)}
+  ${shelfCards}
   </div>
   <h2 class="section-title">Why browser-local, and why it matters to you</h2>
   <p>Most “free tool” sites ship your input to a server, paste eight ads around it and remember nothing about how the maths works. Here every answer comes from arithmetic your browser can verify: unit factors from international definitions, date counts from the Gregorian calendar itself, contrast ratios from the published WCAG formula, passwords from the operating system’s random source. That makes them <b>private by construction</b> — a password page that runs locally is not a promise, it is a fact you can check in your network tab.</p>

@@ -159,17 +159,26 @@ for (const page of PAGES) {
   });
 }
 
-// The hub is no longer a wall of a thousand chips, and a tool page no longer advertises
-// every tool ever written: the hub indexes twelve shelves plus the classics, everything
-// else is reached through the paginated /alat/all, and the sitemap is split the same way.
-// These three tests are the contract that keeps that structure honest — nothing here
-// asserts a page count, only that the links a crawler needs are actually present.
-test('the hub links every shelf, and walking /alat/all reaches every tool', async () => {
+// The hub lists every tool on the page itself (Nov 2026, owner request): a visitor who
+// arrives at /alat must see the tools right away, not only shelf cards. The directory is
+// compact (icon + name per tool), grouped by shelf; the shelves, the paginated /alat/all
+// and the split sitemap stay exactly as they were. These tests are the contract that
+// keeps that structure honest — nothing here asserts a page count, only that the links
+// a visitor and a crawler need are actually present.
+test('the hub lists every tool itself, links every shelf, and walking /alat/all reaches every tool', async () => {
   const hub = await (await fetch(base + '/alat')).text();
   for (const c of CATS.CATEGORIES) {
     assert.ok(hub.includes(`href="/alat/c/${c.id}"`), `the hub does not link the ${c.id} shelf`);
   }
   assert.ok(hub.includes('href="/alat/all"'), 'the hub must link the complete list');
+  // The owner's rule: arriving at /alat shows the tools immediately — every
+  // registry tool and every hand-written classic must be linked on the hub itself.
+  for (const t of toolbox.TOOLKIT) {
+    assert.ok(hub.includes(`href="/alat/${t.slug}"`), `the hub does not list the registry tool ${t.slug}`);
+  }
+  for (const p of PAGES) {
+    assert.ok(hub.includes(`href="${p.path}"`), `the hub does not list ${p.path}`);
+  }
   // Walk the list page by page. The walk has to terminate on its own (a missing last page
   // would quietly orphan the tail of the registry) and inside a sane number of hops.
   const seen = new Set();
@@ -276,8 +285,9 @@ test('tool pages ship the shared polish layer and enhancer', async () => {
   // The hub itself is not a tool page — the enhancer is scoped to /alat/x only.
   const hub = await (await fetch(base + '/alat')).text();
   assert.ok(!hub.includes('copy result'), 'hub page should not ship the tool enhancer');
-  // The hub is a card grid with a live filter, not a wall of prose (Nov 2026).
-  assert.ok(hub.includes('class="tl-grid" id="tg-grid"'), 'hub must render the tool card grid');
+  // The hub is a directory of every tool plus a card grid of the shelves (Nov 2026).
+  assert.ok(hub.includes('class="tl-grid" id="tg-grid"'), 'hub must render the shelf card grid');
+  assert.ok(hub.includes('class="tl-dir"'), 'hub must render the complete tool directory');
   assert.ok(hub.includes('id="tg-q"'), 'hub must ship the toolbox search box');
   assert.ok(hub.includes('class="tl-card"'), 'hub cards must use the tl-card class');
 });
