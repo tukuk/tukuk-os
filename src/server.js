@@ -5276,9 +5276,19 @@ function clusterItemRobots(itemCount) {
 // its own form — so the same number applied to /alat would noindex an entire content wave that
 // was added to be found. Shared knob, wrong shape: two knobs, and each cluster keeps its own
 // threshold. Lower ALAT_INDEX_MAX_ITEMS to shrink the indexed tool surface without a deploy.
+//
+// Raised from 1500 to 2500 on 2026-11-06 for the fourth generated family (world clock), which put
+// the registry at roughly 1,890 tools. The raise is deliberate rather than a knob that drifted: a
+// clock page is a pair of offset LAWS, not a pair of cities — 341 cities collapse to about forty
+// rules and forty rules to 780 pages instead of the 57,970 city pairs a naive generator would
+// print — and test/toolkit-families.test.js fails if any two of them ever publish the same figures.
+// So the pages are not the repeated extract this guard was written for; the shape of what it
+// protects is a settlement page whose whole content is one encyclopaedia paragraph. If the registry
+// ever passes 2500, do not raise the number again by reflex — ask what the new pages each say that
+// no existing page says, and if that answer is not crisp, they belong on a noindexed shelf.
 const ALAT_INDEX_MAX_ITEMS = Number.isFinite(Number(process.env.ALAT_INDEX_MAX_ITEMS))
   ? Math.max(0, Number(process.env.ALAT_INDEX_MAX_ITEMS))
-  : 1500;
+  : 2500;
 function alatIsIndexable(itemCount) {
   return itemCount <= ALAT_INDEX_MAX_ITEMS;
 }
@@ -12543,7 +12553,7 @@ qs('.tl-res').forEach(function(r){
 // twenty-nine tools and is a liability at a thousand: ~1,100 internal links on
 // every page, most of the crawl graph pointing at whatever was pushed last, and a
 // hub nobody scrolled to the end of. The navigation model is now the category —
-// /alat indexes the twelve shelves, a shelf lists its own tools sixty at a time,
+// /alat indexes the shelves, a shelf lists its own tools sixty at a time,
 // and a tool page links the hub, every shelf and a few of its neighbours. Smaller
 // graph, and a better one, because the neighbours are topically related.
 const TL_PAGE_SIZE = 60;
@@ -12581,9 +12591,9 @@ const TOOL_HUB_FEATURED = [
     { href: '/alat/image-to-pdf', icon: '🖼️', name: 'Images to PDF', blurb: 'Put photos, scans or screenshots into one PDF — A4, US Letter or a page sized to each image — without uploading. JPEG and PNG files are embedded byte-for-byte, untouched.' },
 ];
 
-// Memoised on purpose: TOOLKIT is fixed once required, and this used to rebuild a
-// 1,107-element list on every page render — on the 2 GB box with a crawler on the
-// hub that is pure waste, and a hub request touched the list three times.
+// Memoised on purpose: TOOLKIT is fixed once required, and this used to rebuild the whole
+// registry-sized list on every page render — on the 2 GB box with a crawler on the hub that is
+// pure waste, and a hub request touched the list three times.
 let TL_ITEMS_CACHE = null;
 let TL_SHELF_CACHE = null;
 
@@ -12595,7 +12605,7 @@ function toolHubItems() {
   return TL_ITEMS_CACHE;
 }
 
-// slug → the twelve shelves, in the order CATEGORIES declares them.
+// slug → the shelves, in the order CATEGORIES declares them.
 function toolHubShelves() {
   if (TL_SHELF_CACHE) return TL_SHELF_CACHE;
   TL_SHELF_CACHE = {};
@@ -12767,7 +12777,7 @@ function alatAllPage(page, q) {
 function alatHubPage() {
   // The hub is a shop window, not a phone directory. It used to print a card for
   // every tool the registry knew — at a thousand of them that is a thousand cards
-  // nobody scrolls to the end of, so the hub indexes the twelve shelves instead,
+  // nobody scrolls to the end of, so the hub indexes the shelves instead,
   // keeps the genuinely popular shelf visible, and sends the rest of the surface
   // to /alat/all, which is paginated and searched server-side (so it also works
   // with JavaScript switched off, and a crawler can walk every tool in twenty

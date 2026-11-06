@@ -22,6 +22,7 @@
 // distances/antipodes a page states are the ones its own script recomputes in the browser.
 
 const CITIES = require('./kota-data.json');
+const CZ = require('./city-zones');
 
 // ── WGS84 / spherical geometry, shared by the builders and the browser scripts ──────
 const R_MEAN = 6371.0088;            // IUGG mean Earth radius, km
@@ -418,18 +419,390 @@ function buildAntipodes() {
   });
 }
 
+// ── family 4 — the clock difference between two places ─────────────────────────────────────
+// Why this one is keyed on behaviour instead of on city pairs: distance is a property of two
+// points, but an offset is a property of a LAW. Cairo and Alexandria are different cities with
+// one answer, and so are London and Dublin — a family built from city pairs would print 57,970
+// pages, most of them the same arithmetic under two different place names, which is precisely the
+// thin content the crawl-budget policy exists to refuse. So the unit here is the PAIR OF OFFSET
+// BEHAVIOURS: 341 cities collapse to forty rules, forty rules to 780 pairs, and every city that
+// shares a rule is named on the pages of that rule instead of getting a page of its own.
+//
+// The boundary of the economy is where the arithmetic stops being identical, and it is finer than
+// it looks. Two rule pairs can share their whole difference table, their working window and even
+// their clock-change instants — Lagos–Mexico City and Accra–Phoenix do exactly that, seven hours
+// apart all year in both cases — and still print different absolute offsets, which are the first
+// two rows and the lead sentence of every card. Merging those would tell a visitor looking up
+// Accra that its clock reads an hour ahead of where it actually reads. So nothing is merged past
+// the pair of behaviours, and the absorbed cities a page does claim are provable members of its
+// two classes rather than neighbours of a similar-looking table.
+//
+// Every figure comes from Intl.DateTimeFormat reading the time-zone database that is already
+// inside Node and inside the visitor's browser — no API, no lookup table of abbreviations, and
+// the copy says plainly that a stale tzdb gives a stale answer.
+
+// The day of the year a daily-signature index refers to, as ISO text.
+function segDate(year, dayIndex) {
+  const t = new Date(Date.UTC(year, 0, 1 + dayIndex));
+  return t.getUTCFullYear() + '-' + String(t.getUTCMonth() + 1).padStart(2, '0')
+    + '-' + String(t.getUTCDate()).padStart(2, '0');
+}
+
+// Runs of the year over which (A − B) is one constant number. Two zones that change on the same
+// day cancel out and the run continues; that is the whole reason this is worth computing, because
+// it is what tells a visitor that London–New York is 5 hours in August and 4 in June.
+function diffSegments(sigA, sigB, year) {
+  const out = [];
+  let cur = sigA[0] - sigB[0], start = 0;
+  for (let d = 1; d <= sigA.length; d += 1) {
+    const v = d < sigA.length ? sigA[d] - sigB[d] : null;
+    if (d === sigA.length || v !== cur) {
+      out.push({ from: segDate(year, start), to: segDate(year, d - 1), minutes: cur });
+      cur = v; start = d;
+    }
+  }
+  return out;
+}
+
+// "the next day", "the same day", "two days ahead" — the dateline answer a plain hour
+// subtraction hides.
+function dayPhrase(delta) {
+  if (delta === 0) return 'the same day';
+  if (delta === 1) return 'the next day';
+  if (delta === -1) return 'the previous day';
+  return (delta > 0 ? delta + ' days later' : (-delta) + ' days earlier');
+}
+
+function longDate(d) {
+  if (!d) return null;
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
+    'August', 'September', 'October', 'November', 'December'];
+  return days[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + months[d.getUTCMonth()] + ' ' + d.getUTCFullYear()
+    + ' at ' + String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0') + ' UTC';
+}
+
+// The ES5 twin of the build-time maths. It has to produce byte-identical text for the default
+// inputs, which is what test/toolkit-families.test.js checks, so the two implementations follow
+// the same steps in the same order and only the host of the clock differs.
+const SCRIPT_CLOCK = `
+var $=function(id){return document.getElementById(id);};
+var ZA=__ZONEA__,ZB=__ZONEB__,NA=__CITYA__,NB=__CITYB__;
+function pad(n){return n<10?'0'+n:''+n;}
+// One DateTimeFormat per zone, cached exactly as city-zones.js caches it. Without the cache this
+// loop builds 730 formatters per render — a third of a second of jank on a mid-range phone every
+// time anybody types a date, for the same object over and over.
+var FP={};
+function parts(t,tz){var f=FP[tz];if(!f)f=FP[tz]=new Intl.DateTimeFormat('en-GB',{timeZone:tz,hourCycle:'h23',year:'numeric',
+ month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});var o={},a=f.formatToParts(t);
+ for(var i=0;i<a.length;i++){if(a[i].type!=='literal')o[a[i].type]=a[i].value;}
+ o.y=+o.year;o.mo=+o.month;o.d=+o.day;o.h=(+o.hour)%24;o.mi=+o.minute;o.s=+o.second;return o;}
+function wall(t,tz){var p=parts(t,tz);return Date.UTC(p.y,p.mo-1,p.d,p.h,p.mi,p.s);}
+function off(tz,t){return Math.round((wall(t,tz)-t.getTime())/60000);}
+function at(tz,y,mo,d,hh,mi){var want=Date.UTC(y,mo,d,hh,mi),t=want-off(tz,new Date(want))*60000,k,p,got;
+ for(k=0;k<3;k++){p=parts(new Date(t),tz);got=Date.UTC(p.y,p.mo-1,p.d,p.h,p.mi);if(got===want)break;t-=got-want;}
+ return t;}
+function gmt(m){var s=m<0?'\u2212':'+';var a=Math.abs(m),h=Math.floor(a/60),mm=a%60;
+ return 'GMT'+(mm?s+h+':'+(mm<10?'0'+mm:mm):s+h);}
+function dlabel(m){var a=Math.abs(m),h=Math.floor(a/60),mm=Math.round(a%60);
+ if(!mm)return h+(h===1?' hour':' hours');if(!h)return mm+(mm===1?' minute':' minutes');return h+' h '+mm+' min';}
+function clk(m){var x=((m%1440)+1440)%1440;return pad(Math.floor(x/60))+':'+pad(x%60);}
+function shift(n){if(n===0)return 'the same day';if(n===1)return 'the next day';if(n===-1)return 'the previous day';
+ return n>0?n+' days later':(-n)+' days earlier';}
+function nextChange(tz,from){var end=from+200*86400000,base=off(tz,new Date(from));
+ if(off(tz,new Date(end))===base)return null;var lo=from,hi=end,mid;
+ while(hi-lo>1000){mid=Math.floor((lo+hi)/2);if(off(tz,new Date(mid))===base)lo=mid;else hi=mid;}
+ return Math.floor(hi/60000)*60000;}
+var MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+var DAY=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+function longDate(t){if(t===null)return null;var d=new Date(t);
+ return DAY[d.getUTCDay()]+' '+d.getUTCDate()+' '+MON[d.getUTCMonth()]+' '+d.getUTCFullYear()
+ +' at '+pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())+' UTC';}
+function iso(y,mo,d){return y+'-'+pad(mo+1)+'-'+pad(d);}
+function doy(y,i){var t=new Date(Date.UTC(y,0,1+i));return t.getUTCFullYear()+'-'+pad(t.getUTCMonth()+1)+'-'+pad(t.getUTCDate());}
+function segments(y,za,zb){var out=[],start=0,cur=off(za,new Date(Date.UTC(y,0,1,12)))-off(zb,new Date(Date.UTC(y,0,1,12))),
+ days=((y%4===0&&y%100!==0)||y%400===0)?366:365,v,d;
+ for(d=1;d<=days;d++){v=d<days?off(za,new Date(Date.UTC(y,0,1+d,12)))-off(zb,new Date(Date.UTC(y,0,1+d,12))):null;
+  if(d===days||v!==cur){out.push({from:doy(y,start),to:doy(y,d-1),minutes:cur});cur=v;start=d;}}
+ return out;}
+function bad(m){$('cl-out').innerHTML='<span class="tl-badge tl-no">check input</span> '+m;}
+function render(){var v=$('cl-date').value,hv=$('cl-time').value;
+ if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(v))return bad('Pick a date in the form 2026-07-15.');
+ if(!/^([01]?\\d|2[0-3]):[0-5]\\d$/.test(hv))return bad('The time must be HH:MM on a 24-hour clock.');
+ var y=+v.slice(0,4),mo=+v.slice(5,7)-1,d=+v.slice(8,10),h=+hv.slice(0,2),mi=+hv.slice(3,5);
+ var noon=Date.UTC(y,mo,d,12),oa=off(ZA,new Date(noon)),ob=off(ZB,new Date(noon)),diff=oa-ob;
+ var tA=at(ZA,y,mo,d,h,mi),pb=parts(new Date(tA),ZB),pa=parts(new Date(tA),ZA);
+ var want=clk(h*60+mi),got=clk(pa.h*60+pa.mi),oaA=off(ZA,new Date(tA)),obB=off(ZB,new Date(tA)),note='';
+ if(want!==got){note='<span class="tl-badge tl-no">that time did not exist</span> '+want+' is not a time '+NA+'’s clock showed on '+iso(y,mo,d)+' — that clock jumped forward past it — so the rows below are worked from '+got+' instead.';}
+ else{var bfr=parts(new Date(tA-3600000),ZA),aft=parts(new Date(tA+3600000),ZA);
+  var sb=clk(bfr.h*60+bfr.mi)===want,sa=clk(aft.h*60+aft.mi)===want;
+  if(sb||sa)note='<span class="tl-badge tl-no">that time happened twice</span> '+want+' is a time '+NA+'’s clock showed twice on '+iso(y,mo,d)+' — that clock fell back — so the rows below are worked from the '+(sb?'second':'first')+' of the two readings.';}
+ var dayDelta=Math.round((Date.UTC(pb.y,pb.mo-1,pb.d)-Date.UTC(pa.y,pa.mo-1,pa.d))/86400000);
+ var Bpb=pb.h*60+pb.mi,ov=[],x;
+ for(x=9;x<17;x++){var inB=((x*60+ob-oa)%1440+1440)%1440;if(inB>=540&&inB<1020)ov.push(x);}
+ var segs=segments(y,ZA,ZB),ca=nextChange(ZA,noon),cb=nextChange(ZB,noon),n=segs.length,i,nowSeg=null;
+ for(i=0;i<n;i++){if(segs[i].from<=v&&v<=segs[i].to)nowSeg=segs[i];}
+ var fixed=diff===0&&segs.length===1&&segs[0].minutes===0;
+ var head=fixed?NA+' and '+NB+' are on the same clock, all year':(diff===0?NA+' and '+NB+' show the same time on '+iso(y,mo,d):(diff>0?NA+' is '+dlabel(diff)+' ahead of '+NB:NB+' is '+dlabel(-diff)+' ahead of '+NA));
+ var html=note+'<div class="tl-big">'+head+'</div><table class="tl-tab"><tbody>';
+ html+='<tr><td>'+NA+' on '+iso(y,mo,d)+'</td><td>'+got+' ('+gmt(oaA)+')</td></tr>';
+ html+='<tr><td>'+NB+' at that instant</td><td>'+clk(Bpb)+' '+shift(dayDelta)+' ('+gmt(obB)+')</td></tr>';
+ html+='<tr><td>Difference on this date</td><td>'+(diff===0?'none':dlabel(diff))+(nowSeg?' ('+nowSeg.from+' to '+nowSeg.to+')':'')+'</td></tr>';
+ for(i=0;i<n;i+=1)html+='<tr><td>'+segs[i].from+' to '+segs[i].to+'</td><td>'+(segs[i].minutes===0?'same clock':dlabel(segs[i].minutes))+'</td></tr>';
+ html+='<tr><td>Next clock change, '+NA+'</td><td>'+(longDate(ca)||'none in the next 200 days')+'</td></tr>';
+ html+='<tr><td>Next clock change, '+NB+'</td><td>'+(longDate(cb)||'none in the next 200 days')+'</td></tr>';
+ html+='<tr><td>09:00 in '+NA+' is</td><td>'+clk((((9*60+ob-oa)%1440)+1440)%1440)+' in '+NB+'</td></tr>';
+ html+='<tr><td>12:00 in '+NA+' is</td><td>'+clk((((12*60+ob-oa)%1440)+1440)%1440)+' in '+NB+'</td></tr>';
+ html+='<tr><td>18:00 in '+NA+' is</td><td>'+clk((((18*60+ob-oa)%1440)+1440)%1440)+' in '+NB+'</td></tr>';
+ html+='<tr><td>Shared 09:00–17:00 working window</td><td>'+(ov.length?clk(ov[0]*60)+'–'+clk((ov[ov.length-1]+1)*60)+' in '+NA+', '+clk(ov[0]*60+ob-oa)+'–'+clk((ov[ov.length-1]+1)*60+ob-oa)+' in '+NB:'none — there is no hour that is inside 09:00–17:00 in both')+'</td></tr>';
+ html+='</tbody></table><p class="meta">Computed from the IANA zones '+ZA+' and '+ZB+' by this device’s own time-zone database, so nothing is fetched and nothing is sent. A database older than the last rule change gives the old answer; governments do move these dates at short notice.</p>';
+ $('cl-out').innerHTML=html;}
+$('cl-go').onclick=render;$('cl-date').oninput=render;$('cl-time').oninput=render;render();`;
+
+// The four families are built once at require time. The clock family also takes a reference date,
+// which the tests pin so a published figure never depends on when the suite ran; production passes
+// nothing and gets today.
+function buildClock(refDate) {
+  // Normalised to noon UTC of the reference day. The baked card and the browser script must read
+  // every offset at the same instant, and a boot at 23:50Z on a day some zone changes at 01:00Z
+  // would otherwise bake a winter offset over a date whose noon is already summer.
+  const seed = refDate || new Date();
+  const ref = new Date(Date.UTC(seed.getUTCFullYear(), seed.getUTCMonth(), seed.getUTCDate(), 12));
+  const year = ref.getUTCFullYear();
+
+  // behaviour class = the whole year's daily offset sequence, memoised per zone id
+  const sigOf = {};
+  const classes = [];
+  const indexByKey = {};
+  CITIES.forEach((c, i) => {
+    const zone = CZ.zoneFor(c);
+    if (!sigOf[zone]) sigOf[zone] = CZ.yearSignature(zone, year);
+    const key = sigOf[zone].join(',');
+    if (indexByKey[key] === undefined) {
+      const sig = sigOf[zone];
+      // Whether this rule moves its clocks at all, which the prose on the page turns on: "both
+      // sides step together" and "nothing moves here" are different explanations of the same
+      // flat difference table, and picking the wrong one is the kind of confident paragraph a
+      // generator writes when nobody reads it.
+      let changes = false;
+      for (let d = 1; d < sig.length; d += 1) if (sig[d] !== sig[d - 1]) changes = true;
+      indexByKey[key] = classes.length;
+      classes.push({ zone, sig, changes, rep: c, repIndex: i, members: [c] });
+    } else {
+      classes[indexByKey[key]].members.push(c);
+    }
+  });
+
+  // Every pair of behaviours is a page, and this order is what decides which of them a visitor
+  // reaches first: the hub lists sixty to a page and a tool page chips six of its neighbours, so
+  // without a ranking the front of the shelf would be whatever dataset order happened to put
+  // there. The famous cities are ranked and a pair is ordered by the rank of its representatives,
+  // with dataset order behind it as the tie-break.
+  const CLOCK_RANK = {};
+  ['New York City', 'London', 'Tokyo', 'Paris', 'Dubai', 'Sydney', 'Toronto', 'Los Angeles', 'Chicago',
+    'Berlin', 'Madrid', 'Rome', 'Mumbai', 'New Delhi', 'Singapore', 'Shanghai', 'Beijing', 'Istanbul',
+    'Cairo', 'Lagos', 'Johannesburg', 'Mexico City', 'São Paulo', 'Buenos Aires', 'Moscow', 'Riyadh',
+    'Karachi', 'Dhaka', 'Bangkok', 'Seoul', 'Auckland', 'Miami', 'Dublin', 'Amsterdam', 'Lisbon',
+    'Athens', 'Warsaw', 'Prague', 'Kyiv', 'Casablanca', 'Nairobi', 'Addis Ababa', 'Jakarta',
+    'Kuala Lumpur', 'Manila', 'Hanoi', 'Osaka', 'Doha', 'Abu Dhabi', 'Tel Aviv', 'Frankfurt',
+    'Melbourne', 'Cape Town'].forEach((n, i) => { CLOCK_RANK[n] = i + 1; });
+  // A typo in the ranking list would silently push that city to the back of the shelf, so every
+  // name in it has to be one the dataset actually holds. Checked per build rather than once at
+  // require time because the tests build the family against a pinned date.
+  const inDataset = {};
+  CITIES.forEach((c) => { inDataset[c.name] = true; });
+  Object.keys(CLOCK_RANK).forEach((n) => {
+    if (!inDataset[n]) throw new Error('buildClock: ranked city "' + n + '" is not in kota-data.json');
+  });
+  const rankOf = (cls) => CLOCK_RANK[cls.rep.name] || 999;
+
+  const pairs = [];
+  for (let i = 0; i < classes.length; i += 1) {
+    for (let j = i + 1; j < classes.length; j += 1) pairs.push([i, j]);
+  }
+  pairs.sort((p, q) => (rankOf(classes[p[0]]) + rankOf(classes[p[1]])
+    - rankOf(classes[q[0]]) - rankOf(classes[q[1]])) || (p[0] - q[0]) || (p[1] - q[1]));
+
+  return pairs.map((p) => {
+    const A = classes[p[0]], B = classes[p[1]];
+    const oa = CZ.offsetMinutes(A.zone, ref), ob = CZ.offsetMinutes(B.zone, ref);
+    return clockEntry(A, B, diffSegments(A.sig, B.sig, year), oa, ob,
+      CZ.nextChange(A.zone, ref), CZ.nextChange(B.zone, ref), CZ.workingOverlap(oa, ob), ref, year);
+  });
+}
+
+function clockEntry(A, B, segs, oa, ob, ca, cb, ov, ref, year) {
+  const a = A.rep, b = B.rep;
+  const slug = 'time-difference-' + CITY_SLUG[A.repIndex] + '-' + CITY_SLUG[B.repIndex];
+  const diff = oa - ob;
+  const refDate = ref.toISOString().slice(0, 10);
+  // Two zones can agree today without agreeing all year — a fixed +02:00 and a +01:00/+02:00 zone
+  // do exactly that in July. The headline has to say which of the two the visitor is looking at,
+  // because "same clock" unqualified would be a lie for half the calendar. The first branch cannot
+  // be reached by a published page: classes are keyed on their whole-year offset sequence, so two
+  // zones that never differ are one class and never form a pair. It stays because the browser
+  // script computes the same condition for a date the visitor picks, and the two sides have to
+  // agree row for row.
+  const sameAllYear = segs.length === 1 && segs[0].minutes === 0;
+  // Direction comes from the signed difference: an earlier draft printed the absolute value and
+  // told Lagos it was ahead of Tokyo.
+  const headLine = sameAllYear ? a.name + ' and ' + b.name + ' are on the same clock, all year'
+    : diff === 0 ? a.name + ' and ' + b.name + ' show the same time on ' + refDate
+    : diff > 0 ? a.name + ' is ' + dlabelFor(diff) + ' ahead of ' + b.name
+    : b.name + ' is ' + dlabelFor(-diff) + ' ahead of ' + a.name;
+  const relation = diff === 0
+    ? (sameAllYear ? 'identical, and they stay identical all year' : 'identical on this date, though not on every date of ' + year)
+    : 'apart by ' + dlabelFor(diff) + ', with ' + (diff > 0 ? a.name : b.name) + ' ahead';
+  // The cities this pair absorbs. Naming them is what makes the economy an improvement rather than
+  // a loss: a visitor after Alexandria gets the answer on the page that carries it, because
+  // Alexandria's clock is the same law Cairo's is, and the shelf does not have to mint a second
+  // page of identical arithmetic to cover the query.
+  const others = A.members.length + B.members.length - 2;
+  const otherNames = A.members.concat(B.members).filter((c) => c !== a && c !== b).slice(0, 5).map((c) => c.name);
+  // B-local of the instant that is h:00 A-local: the two readings of one instant differ by
+  // offB − offA, so the difference is subtracted. Getting this sign the other way round mirrors
+  // every published window through midday and still looks right, which is why the card's own
+  // "at that instant" row and test/city-zones.test.js both check it against a real conversion.
+  const anchor = (h) => ((((h * 60 - diff) % 1440) + 1440) % 1440);
+  const ovText = ov.length
+    ? clockText(ov[0] * 60) + '–' + clockText((ov[ov.length - 1] + 1) * 60) + ' in ' + a.name
+      + ', ' + clockText(anchor(ov[0])) + '–' + clockText(anchor(ov[ov.length - 1] + 1)) + ' in ' + b.name
+    : 'none — there is no hour that is inside 09:00–17:00 in both';
+  const segText = segs.map((s) => s.from + ' → ' + s.to + ': ' + (s.minutes === 0 ? 'same clock' : dlabelFor(s.minutes))).join('; ');
+  const changeA = ca ? longDate(ca) : 'none in the next 200 days';
+  const changeB = cb ? longDate(cb) : 'none in the next 200 days';
+  // The instant the card describes: noon in A on the reference date, read out in both zones — the
+  // same three calls SCRIPT_CLOCK makes, in the same order.
+  const tA = CZ.instantFor(A.zone, year, ref.getUTCMonth(), ref.getUTCDate(), 12, 0);
+  const pa = CZ.partsIn(A.zone, new Date(tA));
+  const pb = CZ.partsIn(B.zone, new Date(tA));
+  const dayDelta = Math.round((Date.UTC(pb.year, pb.month - 1, pb.day)
+    - Date.UTC(pa.year, pa.month - 1, pa.day)) / 86400000);
+  const nowSeg = segs.filter((s) => s.from <= refDate && refDate <= s.to).pop() || null;
+  // A wall clock can skip an hour (spring forward) or repeat one (fall back), so the time that was
+  // asked for is not always the time the conversion is worked from. Both notes are computed on this
+  // side too rather than assumed away: the baked card asks for noon, which no rule in the table
+  // jumps over, but the browser script answers whatever a visitor types, and the two strings have
+  // to be produced by the same logic for the two pages to be the same page.
+  const wantHm = clockText(12 * 60);
+  const gotHm = clockText(pa.hour * 60 + pa.minute);
+  const oaAt = CZ.offsetMinutes(A.zone, new Date(tA));
+  const obAt = CZ.offsetMinutes(B.zone, new Date(tA));
+  let noteHm = '';
+  if (wantHm !== gotHm) {
+    noteHm = '<span class="tl-badge tl-no">that time did not exist</span> ' + wantHm + ' is not a time '
+      + a.name + '’s clock showed on ' + refDate + ' — that clock jumped forward past it — so the rows'
+      + ' below are worked from ' + gotHm + ' instead.';
+  } else {
+    const bfr = CZ.partsIn(A.zone, new Date(tA - 3600000));
+    const aft = CZ.partsIn(A.zone, new Date(tA + 3600000));
+    const sb = clockText(bfr.hour * 60 + bfr.minute) === wantHm;
+    const sa = clockText(aft.hour * 60 + aft.minute) === wantHm;
+    if (sb || sa) {
+      noteHm = '<span class="tl-badge tl-no">that time happened twice</span> ' + wantHm + ' is a time '
+        + a.name + '’s clock showed twice on ' + refDate + ' — that clock fell back — so the rows below'
+        + ' are worked from the ' + (sb ? 'second' : 'first') + ' of the two readings.';
+    }
+  }
+  // Baked twin of render(). test/toolkit-families.test.js runs the script in a stub DOM and
+  // requires the two strings to be equal for every member, so a row cannot be added on one side
+  // alone and the page can never show one answer before interaction and another after.
+  const card = noteHm + '<div class="tl-big">' + headLine + '</div><table class="tl-tab"><tbody>'
+    + '<tr><td>' + a.name + ' on ' + refDate + '</td><td>' + gotHm + ' (' + gmtLabel(oaAt) + ')</td></tr>'
+    + '<tr><td>' + b.name + ' at that instant</td><td>' + clockText(pb.hour * 60 + pb.minute) + ' '
+      + dayPhrase(dayDelta) + ' (' + gmtLabel(obAt) + ')</td></tr>'
+    + '<tr><td>Difference on this date</td><td>' + (diff === 0 ? 'none' : dlabelFor(diff))
+      + (nowSeg ? ' (' + nowSeg.from + ' to ' + nowSeg.to + ')' : '') + '</td></tr>'
+    + segs.map((s) => '<tr><td>' + s.from + ' to ' + s.to + '</td><td>'
+      + (s.minutes === 0 ? 'same clock' : dlabelFor(s.minutes)) + '</td></tr>').join('')
+    + '<tr><td>Next clock change, ' + a.name + '</td><td>' + changeA + '</td></tr>'
+    + '<tr><td>Next clock change, ' + b.name + '</td><td>' + changeB + '</td></tr>'
+    + '<tr><td>09:00 in ' + a.name + ' is</td><td>' + clockText(anchor(9)) + ' in ' + b.name + '</td></tr>'
+    + '<tr><td>12:00 in ' + a.name + ' is</td><td>' + clockText(anchor(12)) + ' in ' + b.name + '</td></tr>'
+    + '<tr><td>18:00 in ' + a.name + ' is</td><td>' + clockText(anchor(18)) + ' in ' + b.name + '</td></tr>'
+    + '<tr><td>Shared 09:00–17:00 working window</td><td>' + ovText + '</td></tr>'
+    + '</tbody></table>' + clockMeta(A.zone, B.zone);
+  // The prose has to follow the arithmetic, not the other way round: a shelf that told every pair
+  // "the gap changes during the year" would be wrong for the majority of the world, where the gap
+  // is fixed because neither side moves its clocks.
+  const gapPhrase = diff === 0 ? 'the same clock' : dlabelFor(diff) + ' apart';
+  const whyHeading = segs.length > 1
+    ? 'Why the gap between ' + a.name + ' and ' + b.name + ' changes during ' + year
+    : 'Why ' + a.name + ' and ' + b.name + ' keep a fixed gap all year';
+  const whyPara = segs.length > 1
+    ? `<p>Two places drift apart and come back again whenever one of them changes its clocks and the other does not — which is the situation between a place that observes daylight saving and one that does not, or between two that pick different Sundays for it. In ${year} the difference between ${a.name} and ${b.name} runs: ${segText}. A meeting arranged in the middle of one of those runs is safe; one arranged across a boundary is the classic four-hours-late call, so the table names the boundaries instead of leaving you to remember them.</p>`
+    : (A.changes && B.changes
+      ? `<p>Both places do change their clocks, and the gap still never moves, because the two moves are the same size on the same instant — ${a.name} and ${b.name} sit under rules that step together, which is what keeps them <b>${gapPhrase}</b> through ${year}. It is the most common arrangement inside a single bloc: the whole of the European Union, for example, turns its clocks at the same UTC moment, so no pair inside it ever has a moving difference despite both sides observing daylight saving.</p>`
+      : `<p>Nothing moves here. ${a.name} keeps ${gmtLabel(oa)} and ${b.name} keeps ${gmtLabel(ob)} the whole year round, because neither jurisdiction changes its clocks — the arrangement most of the world's population lives under, since daylight saving has been abandoned or never adopted across much of Asia, Africa and the Americas outside the United States and Canada, and near the equator there is little daylight to shift in the first place. So the two are <b>${gapPhrase}</b> in January and in July alike, and choosing a date on this page changes the arithmetic, not the answer.</p>`);
+  const changeSentence = (c, city, zone) => (c
+    ? city + ' uses the zone <code>' + zone + '</code>, and its next change after ' + refDate + ' is <b>' + longDate(c) + '</b>'
+    : city + ' uses the zone <code>' + zone + '</code>, which does not change its clocks');
+  const overlapPara = ov.length
+    ? `Both places are inside their own 09:00–17:00 on <b>${ov.length} hour${ov.length === 1 ? '' : 's'}</b> of the day: ${ovText} — outside those hours somebody is starting early, finishing late or taking the call at midnight.`
+    : `There is <b>no hour</b> that falls inside 09:00–17:00 on both sides — ${ovText} — so any call is somebody’s out-of-hours and the honest thing is to rotate it.`;
+  return {
+    slug, ic: '🕒', cat: 'clock',
+    name: a.name + ' ↔ ' + b.name + ' Time Difference',
+    title: a.name + ' vs ' + b.name + ' Time Difference — Clock Change Dates & Best Call Window | Tukuk-OS',
+    desc: (sameAllYear
+      ? a.name + ' and ' + b.name + ' keep one clock (' + gmtLabel(oa) + ') all year. '
+      : diff === 0
+        ? a.name + ' and ' + b.name + ' show the same time on ' + refDate + ', but not on every date. '
+        : (diff > 0 ? a.name + ' is ' + dlabelFor(diff) + ' ahead of ' + b.name
+          : b.name + ' is ' + dlabelFor(-diff) + ' ahead of ' + a.name) + ' on ' + refDate + '. ')
+      + 'Change dates, call window and any date you pick, in your browser.',
+    hero: a.name + ' to ' + b.name + ' time',
+    sub: headLine + ' · ' + gmtLabel(oa) + ' vs ' + gmtLabel(ob),
+    navBlurb: 'The clock difference between ' + a.name + ' and ' + b.name + ' on any date, with both change dates and the shared working hours.',
+    hubBlurb: headLine + ' — the instant each side changes its clocks and the hours they overlap',
+    lead: 'On <b>' + refDate + '</b> the two clocks are <b>' + relation + '</b>. ' + a.name + ' runs on <b>'
+      + gmtLabel(oa) + '</b> and ' + b.name + ' on <b>' + gmtLabel(ob) + '</b>. Across '
+      + year + ' the difference runs: ' + segText + '. Pick any date and time below and the page reworks the whole table from your own device.',
+    form: `<div class="tl-form">
+  <label>Date in ${a.name} <input id="cl-date" type="date" value="${refDate}"></label>
+  <label>Time in ${a.name} <input id="cl-time" type="text" inputmode="numeric" value="12:00" autocomplete="off" spellcheck="false"></label>
+  <button class="tl-btn primary" id="cl-go" type="button">Convert</button>
+</div>
+<div class="tl-res" id="cl-out">${card}</div>`,
+    script: SCRIPT_CLOCK
+      .replace('__ZONEA__', JSON.stringify(A.zone)).replace('__ZONEB__', JSON.stringify(B.zone))
+      .replace('__CITYA__', JSON.stringify(a.name)).replace('__CITYB__', JSON.stringify(b.name)),
+    seo: `<h2 class="section-title">${whyHeading}</h2>
+  ${whyPara}
+  <h2 class="section-title">The clock changes, and who decides them</h2>
+  <p>${changeSentence(ca, a.name, A.zone)}. ${changeSentence(cb, b.name, B.zone)}. Neither figure is a physical fact: an offset is legislation, and the same fifteen degrees of longitude can sit under three zones because a border runs through it. That is why this page reads its offsets out of the time-zone database built into your own browser instead of hardcoding a table of abbreviations — it is the database your operating system already keeps current, and it is what puts ${a.name} and ${b.name} in the right relation even when a government moves a date at short notice. A device whose database predates the last change gets the old answer, which is the one caveat worth knowing.</p>
+  <h2 class="section-title">What it is actually like to work across the two</h2>
+  <p>${overlapPara} ${others > 0 ? 'The two clock rules here are not unique to these two places: ' + others + ' other cities in our dataset keep the same clock as one of them, including ' + otherNames.join(', ') + ', so looking any of those up against the city on the other side of the pair gives this page’s answers.' : 'No other city in our dataset keeps either of these two clock rules, which is why this pair stands on its own.'} The arithmetic is the three lines the page runs in front of you: read each zone’s offset for the date you picked, subtract, and let the modulo handle the dateline.</p>`,
+  };
+}
+
+// Text helpers kept here so the baked card and the browser script cannot drift into two formats.
+function dlabelFor(minutes) { return CZ.diffLabel(minutes); }
+function gmtLabel(minutes) { return CZ.gmtLabel(minutes); }
+function clockText(minutes) { return CZ.clockText(minutes); }
+
+// The disclosure line, identical to the one SCRIPT_CLOCK appends inside the same result card.
+function clockMeta(zoneA, zoneB) {
+  return '<p class="meta">Computed from the IANA zones ' + zoneA + ' and ' + zoneB
+    + ' by this device’s own time-zone database, so nothing is fetched and nothing is sent. A database older than the last rule change gives the old answer; governments do move these dates at short notice.</p>';
+}
+
 const DISTANCES = buildDistances();
 const COORDS = buildCoords();
 const ANTIPODES = buildAntipodes();
+const CLOCK = buildClock();
 
 module.exports = {
-  FAMILY_ENTRIES: DISTANCES.concat(COORDS, ANTIPODES),
+  FAMILY_ENTRIES: DISTANCES.concat(COORDS, ANTIPODES, CLOCK),
   COUNTS: {
     distances: DISTANCES.length,
     coordinates: COORDS.length,
     antipodes: ANTIPODES.length,
+    clock: CLOCK.length,
     cities: CITIES.length,
   },
   // exposed for the tests so the maths is provable independently of the pages
-  _internals: { gcKm, bearingDeg, meridianKm, parallelRadiusKm, geohash, dms, slugify, CITIES, normLon },
+  _internals: { gcKm, bearingDeg, meridianKm, parallelRadiusKm, geohash, dms, slugify, CITIES, normLon,
+    buildClock, buildDistances, diffSegments, segDate, longDate, dayPhrase, clockMeta, CITY_SLUG,
+    SCRIPT_CLOCK },
 };

@@ -73,9 +73,10 @@ test('crawl budget: the master sitemap never lists a cluster item', async () => 
 });
 
 test('crawl budget: the toolbox has its own ceiling, not the geo one', () => {
-  // Both knobs default to 1500, so equality here is not a tautology - it is the shared default.
-  // What matters is that the two are read from two variables: production runs CRAWL at 250 for
-  // the encyclopaedia shards, and one line must not be able to noindex the tool registry too.
+  // The two knobs no longer share a default: the geo one is 1500 and the toolbox one is 2500,
+  // raised for the fourth generated family. What matters is that they are two variables at all —
+  // production runs CRAWL at 250 for the encyclopaedia shards, and one line must not be able to
+  // noindex the tool registry too.
   assert.equal(typeof ALAT_INDEX_MAX_ITEMS, 'number');
   assert.ok(ALAT_INDEX_MAX_ITEMS >= toolbox.TOOLKIT.length,
     `ALAT_INDEX_MAX_ITEMS is ${ALAT_INDEX_MAX_ITEMS}; the registry has ${toolbox.TOOLKIT.length} tools and every one of\n` +
