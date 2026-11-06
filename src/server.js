@@ -2020,6 +2020,19 @@ app.get('/alat/unit', (req, res) => {
     res.status(503).type('html').send(toolsBusy());
   }
 });
+// ── /index — the whole site's own table of contents (HTML sitemap) ──────────
+// One crawlable page that lists every section, shelf, track, subject and place
+// directory on tukuk.org, generated from the registries themselves. A visitor
+// who cannot find a cluster gets one page to scan instead of a search box; a
+// crawler gets a single hop from any entry to every hub.
+app.get('/index', (req, res) => {
+  try {
+    res.status(200).type('html').send(siteIndexPage());
+  } catch (e) {
+    console.warn('[index] render failed:', e.message);
+    res.status(503).type('html').send('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Site index briefly unavailable | Tukuk-OS</title><body style="font-family:system-ui,Arial,sans-serif;max-width:640px;margin:64px auto;padding:20px;line-height:1.6"><h1>Site Index</h1><p>The index failed to render while the server reloaded. Please refresh in a moment.</p><p><a href="/">Back to Tukuk-OS</a></p></body>');
+  }
+});
 // ── Legacy Malay tool slugs → their English canonical URL ──
 // Every tool on this site is written in English, so its URL is English too. These older
 // paths are still in search results and old bookmarks, so each one redirects permanently
@@ -4688,6 +4701,9 @@ app.get('/sitemap.xml', async (req, res) => {
   // child sitemaps (sitemap-nutrition/cricket/olympics.xml, declared in robots.txt); here we
   // list the hubs so the master sitemap points crawlers at each cluster's front door.
   staticPages.push('/nutrition', '/cricket', '/olympics');
+  // The human-readable table of contents is a live page like any hub, and the
+  // same no-drift rule applies: it is declared here, not typed in twice.
+  staticPages.push('/index');
   const posts = store.getAllPosts(200);
   
   const urls = [];
@@ -6378,6 +6394,7 @@ const SITE_NAV = [
     { href: '/wiki', label: 'Wiki', short: 'Wiki', key: 'wiki', top: true },
     { href: '/docs', label: 'Documentation', short: 'Docs', key: 'docs', top: true },
     { href: '/about', label: 'About Tukuk-OS', short: 'About', key: 'about', top: true },
+    { href: '/index', label: 'Site Index' },
   ] },
   { title: 'World &amp; live', links: [
     { href: '/nasa', label: 'NASA Space', short: 'NASA', key: 'nasa', top: true },
@@ -6524,6 +6541,120 @@ function siteFooter() {
   </div>
 </div></footer>
 <script src="/read-aloud.js" defer></script>`;
+}
+
+// ── /index — the site's own table of contents ──────────────────────────
+// Everything here is GENERATED from the tables that already drive the nav, the
+// hubs and the sitemaps — SITE_NAV, the tool shelves, the academy tracks, the
+// study sections, the book subjects, the recipe shelves and the geo registry —
+// so a cluster enters the index the moment it enters its registry, and the two
+// can never drift apart (the same rule the books and recipes sitemaps follow).
+// The two big A–Z blocks (±600 place/landmark/administrative hubs and 878 book
+// subjects) reuse the hub directory's .tl-dir styling and are memoised as one
+// string: static data, and the 2 GB box must not restitch a thousand links per hit.
+function idxLinkItems(items) {
+  return items.map((x) => `<li><a href="${x.href}">${x.label}</a></li>`).join('');
+}
+
+function idxBlock(title, items) {
+  return `<h3 class="tl-shelf-h">${title}</h3>\n<ul class="tl-dir">${idxLinkItems(items)}</ul>`;
+}
+
+// Entries in an A–Z directory: jump chips over letter groups, counts per letter.
+function idxLetterBlocks(entries, nameOf, itemOf) {
+  const letters = {};
+  entries.forEach((c) => {
+    const ch = String(nameOf(c).charAt(0) || '').toUpperCase();
+    const k = ch >= 'A' && ch <= 'Z' ? ch : '#';
+    (letters[k] = letters[k] || []).push(itemOf(c));
+  });
+  const keys = Object.keys(letters).sort();
+  const jump = keys.map((k) => `<a class="tl-chip" href="#idx-${k}">${k}</a>`).join('');
+  const parts = keys.map((k) =>
+    `<h3 class="tl-shelf-h" id="idx-${k}">${k}<span class="tl-dir-n">${letters[k].length}</span></h3>\n<ul class="tl-dir">${letters[k].join('')}</ul>`).join('\n');
+  return `<nav class="tl-nav" aria-label="Jump to a letter">${jump}</nav>\n${parts}`;
+}
+
+let SITE_INDEX_CACHE = null;
+function siteIndexBody() {
+  if (SITE_INDEX_CACHE) return SITE_INDEX_CACHE;
+  const navBlocks = SITE_NAV.map((g) => idxBlock(g.title, g.links.map((l) => ({ href: l.href, label: l.label })))).join('\n');
+  const toolItems = [{ href: '/alat', label: `🧰 Everyday Tools — all ${toolHubItems().length} listed` }, { href: '/alat/all', label: '🔎 Search the whole toolbox' }]
+    .concat(CATS.CATEGORIES.map((c) => ({ href: `/alat/c/${c.id}`, label: `${c.ic} ${escapeHtml(c.name)}` })));
+  const learnItems = [{ href: '/academy', label: '🎓 Academy — 50 micro-lessons' }]
+    .concat(akad.TRACKS.map((t) => ({ href: `/academy/${t.s}`, label: `${t.icon} ${escapeHtml(t.name)}` })))
+    .concat(STUDY_SECTIONS.map((s) => ({ href: s.href, label: `${s.icon} ${escapeHtml(s.name)}` })));
+  const recipeItems = [{ href: '/recipes', label: '🍳 World Recipes — all shelves' }]
+    .concat(rcp.SECTIONS.map((s) => ({ href: `/recipes/${s.slug}`, label: escapeHtml(s.title) })));
+  const bookSubjects = books.SUBJECTS.slice().sort((a, b) => a.title.localeCompare(b.title));
+  const geoCfgs = Object.keys(GEO_CFG_BY_BASE).map((b) => GEO_CFG_BY_BASE[b])
+    .filter((c) => c.base && c.titleCase)
+    .sort((a, b) => a.titleCase.localeCompare(b.titleCase));
+  const deeper = [
+    { href: '/today', label: '📰 Today — the daily briefing' },
+    { href: '/history', label: '📜 On This Day in History' },
+    { href: '/proverbs', label: '🗣️ Proverbs of the World' },
+    { href: '/records', label: '🏅 World Records' },
+    { href: '/elements', label: '⚛️ Periodic Table' },
+    { href: '/constellations', label: '✨ Constellations' },
+    { href: '/messier', label: '🔭 Messier Objects' },
+    { href: '/cities', label: '🌆 Cities of the World' },
+    { href: '/heritage', label: '🏛️ World Heritage Sites' },
+    { href: '/conservation-areas', label: '🦏 Conservation Areas' },
+    { href: '/earthquakes/explained', label: '🌀 Earthquakes, explained' },
+    { href: '/maps/distance', label: '🗺️ Distance between cities' },
+    { href: '/maps/clock', label: '🕰️ World clock' },
+    { href: '/maps/sun', label: '🌅 Sun &amp; daylight times' },
+    { href: '/maps/sky', label: '🌌 Night sky' },
+    { href: '/maps/live', label: '📡 Live map' },
+    { href: '/maps/storm', label: '🌪️ Storm watch' },
+    { href: '/air-quality/oxygen', label: '🫁 Oxygen explained' },
+    { href: '/air-quality/breath', label: '🌬️ How we breathe' },
+    { href: '/air-quality/carbon', label: '📈 Carbon dioxide today' },
+    { href: '/holidays/2026', label: '📅 Public holidays 2026' },
+    { href: '/holidays/2027', label: '📅 Public holidays 2027' },
+    { href: '/holidays/long-weekends', label: '🎉 Long weekends' },
+    { href: '/holidays/explained', label: '📖 How holidays work' },
+    { href: '/technology/new', label: '🧪 Technology — new' },
+    { href: '/technology/show', label: '🖥️ Technology — show' },
+    { href: '/technology/ask', label: '❓ Technology — ask' },
+    { href: '/cari', label: '🔍 Search the whole site' },
+  ];
+  const flagItems = [{ href: '/flags', label: '🚩 Flags of the World' }, { href: '/flags/quiz', label: '🎯 Guess the Flag Quiz' }, { href: '/flags/studio', label: '🎨 Flag Studio' }]
+    .concat(['/united-states', '/united-kingdom', '/japan', '/brazil', '/india', '/nigeria', '/germany', '/france', '/malaysia', '/singapore', '/australia', '/netherlands', '/south-korea', '/mexico', '/saudi-arabia']
+      .map((s) => ({ href: `/flags${s}`, label: s.slice(1).replace(/-/g, ' ').replace(/\b[a-z]/g, (m) => m.toUpperCase()) })));
+  SITE_INDEX_CACHE = `<p>This is the <b>complete table of contents</b> for tukuk.org — every section, shelf, track, subject and directory in one list. Nothing here is a dead end: each link is a live hub, and the hubs reach everything beneath them.</p>
+  ${navBlocks}
+  ${idxBlock('Everyday Tools — the toolbox shelves', toolItems)}
+  ${idxBlock('Learning — academy tracks &amp; study sections', learnItems)}
+  ${idxBlock('Reading &amp; cooking', [{ href: '/books', label: '📚 Books by Subject — the reading lists' }].concat(recipeItems))}
+  <h2 class="section-title">Flags &amp; deeper pages</h2>
+  ${idxBlock('Flags', flagItems)}
+  ${idxBlock('Also worth a click', deeper)}
+  <h2 class="section-title">Every place &amp; landmark directory, A–Z</h2>
+  <p class="meta">${geoCfgs.length} directories of natural places, built structures, institutions and administrative divisions — every one a live hub with profiles and maps.</p>
+  ${idxLetterBlocks(geoCfgs, (c) => c.titleCase, (c) => `<li><a href="/${c.base}">${c.icon || '📍'} ${escapeHtml(c.titleCase)}</a></li>`)}
+  <h2 class="section-title">Every reading subject, A–Z</h2>
+  <p class="meta">${bookSubjects.length} book subjects — curated reading lists with author, year and edition count.</p>
+  ${idxLetterBlocks(bookSubjects, (s) => s.title, (s) => `<li><a href="/books/${encodeURIComponent(s.slug)}">${escapeHtml(s.title)}</a></li>`)}
+  <p class="meta">Legal &amp; site: ${SITE_LEGAL.map((l) => `<a href="${l.href}">${l.label}</a>`).join(' · ')} · <a href="/">Home</a></p>`;
+  return SITE_INDEX_CACHE;
+}
+
+function siteIndexPage() {
+  return worldDoc({
+    title: 'Site Index — Every Section, Directory & Tool on tukuk.org | Tukuk-OS',
+    desc: 'The complete table of contents for tukuk.org: everyday tools, weather, maps, earthquakes, holidays, flags, learning tracks, books by subject, recipes and every place and landmark directory — all in one index page.',
+    selfUrl: 'https://tukuk.org/index',
+    heroTitle: '🗂️ Site Index', heroSub: 'Everything on tukuk.org, in one table of contents',
+    css: TOOLS_CSS, body: siteIndexBody(),
+    ld: JSON.stringify({
+      '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Site Index — tukuk.org',
+      description: 'The complete table of contents of tukuk.org: every section, shelf, subject and directory.',
+      url: 'https://tukuk.org/index',
+      isPartOf: { '@type': 'WebSite', name: 'Tukuk-OS', url: 'https://tukuk.org' },
+    }).replace(/</g, '\\u003c'),
+  }, '');
 }
 
 // Google renders ~155–160 characters of a meta description before truncating with its own
