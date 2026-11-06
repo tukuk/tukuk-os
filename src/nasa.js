@@ -1232,6 +1232,29 @@ function moonPhaseInfo(nowMs) {
   };
 }
 
+// Mean lunar phase events for one calendar year, computed from the same reference
+// new moon as moonPhaseInfo — pure local maths, zero API calls. MEAN phases: the
+// Moon's eccentric orbit moves the true moment by up to ~14 h, so callers label
+// the dates approximate and never promise an exact time.
+function moonCalendar(year) {
+  const y = Math.min(Math.max(Number(year) || 0, 1996), 2100);
+  if (!Number.isFinite(Number(year))) return [];
+  const start = Date.UTC(y, 0, 1);
+  const end = Date.UTC(y + 1, 0, 1);
+  const PHASES = [['New Moon', '\uD83C\uDF11', 0], ['First Quarter', '\uD83C\uDF13', 0.25], ['Full Moon', '\uD83C\uDF15', 0.5], ['Last Quarter', '\uD83C\uDF17', 0.75]];
+  const out = [];
+  const kStart = Math.floor((start - KNOWN_NEW_MOON) / (SYNODIC * 86400000)) - 1;
+  const kEnd = Math.ceil((end - KNOWN_NEW_MOON) / (SYNODIC * 86400000)) + 1;
+  for (let k = kStart; k <= kEnd; k++) {
+    for (const [name, emoji, frac] of PHASES) {
+      const t = KNOWN_NEW_MOON + (k + frac) * SYNODIC * 86400000;
+      if (t >= start && t < end) out.push({ date: new Date(t).toISOString().slice(0, 10), name, emoji });
+    }
+  }
+  out.sort((a, b) => a.date.localeCompare(b.date));
+  return out;
+}
+
 async function getSkyTonight({ lat, lng } = {}) {
   const la = Number.isFinite(Number(lat)) ? Math.min(Math.max(Number(lat), -90), 90) : 3.139;   // default: Kuala Lumpur
   const ln = Number.isFinite(Number(lng)) ? Math.min(Math.max(Number(lng), -180), 180) : 101.687;
@@ -1452,6 +1475,8 @@ module.exports = {
   getNasaAssetUrl,
   getAsteroidTrend,
   getSolarActivity,
+  moonPhaseInfo,
+  moonCalendar,
   getSkyTonight,
   getExoplanets,
   getSentryRisk,
