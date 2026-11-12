@@ -54,28 +54,49 @@ function load() {
   } catch {
     data = { ...defaults };
   }
-  if (!data.posts || data.posts.length === 0) {
-    try {
-      const journeyA = require('./articles/journey-a');
-      const journeyB = require('./articles/journey-b');
-      const tukukA = require('./articles/tukuk-a');
-      const tukukB = require('./articles/tukuk-b');
-      const extra = require('./articles/extra');
-      const allArticles = [...journeyA, ...journeyB, ...tukukA, ...tukukB, ...extra];
-      data.posts = allArticles.map((item, idx) => ({
-        id: (Date.now() + idx).toString(36),
-        slug: item.slug || item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60),
-        title: item.title,
-        content: item.content,
-        excerpt: item.excerpt || (item.content || '').slice(0, 200),
-        author: item.author || 'Fevian Donald',
-        tags: item.tags || [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }));
-    } catch {
-      data.posts = [];
+  // Always sync content/blog/*.md files into posts on every load so new/archived markdown files appear immediately!
+  try {
+    const files = fs.readdirSync(CONTENT_DIR).filter((f) => f.endsWith('.md')).sort();
+    const existingSlugs = new Set(data.posts.map(p => p.slug));
+    for (const file of files) {
+      let raw;
+      try { raw = fs.readFileSync(path.join(CONTENT_DIR, file), 'utf8'); } catch { continue; }
+      const lines = raw.split(/\r?\n/);
+      const header = {};
+      let i = 0;
+      for (; i < lines.length; i += 1) {
+        const match = lines[i].match(/^(SLUG|TITLE|EXCERPT|TAGS):\s*(.*)$/);
+        if (!match) break;
+        header[match[1]] = match[2].trim();
+      }
+      const body = lines.slice(i).join('\n').replace(/^\s*\n/, '').trimEnd();
+      if (body.split(/\s+/).filter(Boolean).length < 20) continue;
+      const slug = header.SLUG || file.replace(/\.md$/, '');
+      const title = header.TITLE || slug;
+      const excerpt = header.EXCERPT || body.slice(0, 200);
+      const tags = (header.TAGS || '').split(',').map((t) => t.trim()).filter(Boolean);
+
+      const existing = data.posts.find(p => p.slug === slug);
+      if (existing) {
+        existing.title = title;
+        existing.excerpt = excerpt;
+        existing.tags = tags;
+        existing.content = body + '\n';
+      } else {
+        data.posts.unshift({
+          id: (Date.now() + Math.random()).toString(36),
+          slug, title,
+          content: body + '\n',
+          excerpt,
+          author: 'Fevian Donald',
+          tags,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
     }
+  } catch (err) {
+    console.error('Error syncing markdown files:', err);
   }
   syncPostsFromContent();
   return data;
@@ -94,7 +115,12 @@ function syncPostsFromContent(dir = CONTENT_DIR) {
   try {
     files = fs.readdirSync(dir).filter((f) => f.endsWith('.md')).sort();
   } catch {
-    return; // no content folder — leave the store as it is
+    // Fallback try absolute or relative check
+    try {
+      files = fs.readdirSync(path.join(__dirname, 'content', 'blog')).filter((f) => f.endsWith('.md')).sort();
+    } catch {
+      return; // no content folder — leave the store as it is
+    }
   }
   let changed = false;
   for (const file of files) {

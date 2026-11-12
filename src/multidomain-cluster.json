@@ -1,0 +1,22 @@
+{
+  "version": "4.0.0",
+  "clusterName": "tukuk-global-cluster-400gb",
+  "totalIndexedDocuments": 50000,
+  "endpoints": [
+    {
+      "region": "asia-southeast",
+      "url": "https://my.tukuk.org",
+      "priority": 1
+    },
+    {
+      "region": "global-anycast",
+      "url": "https://tukuk.org",
+      "priority": 0
+    }
+  ],
+  "cachingPolicy": {
+    "ttlSeconds": 86400,
+    "staleWhileRevalidate": true
+  },
+  "updatedAt": "2026-11-12T03:43:22.766Z"
+}

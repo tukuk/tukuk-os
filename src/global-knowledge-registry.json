@@ -1,0 +1,23 @@
+{
+  "version": "2.5.0",
+  "totalIndexedNodes": 250000,
+  "storageCapacityGB": 400,
+  "activeNodes": [
+    {
+      "zone": "Asia-Pacific",
+      "status": "optimal",
+      "latencyMs": 12
+    },
+    {
+      "zone": "North-America",
+      "status": "optimal",
+      "latencyMs": 45
+    },
+    {
+      "zone": "Europe-Central",
+      "status": "optimal",
+      "latencyMs": 28
+    }
+  ],
+  "updatedAt": "2026-11-12T02:30:00.269Z"
+}
