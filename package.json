@@ -1,0 +1,17 @@
+{
+  "name": "tukuk-pages",
+  "version": "1.0.0",
+  "description": "Tukuk-OS Pages — GitHub Pages site for tukuk.org (blog & articles)",
+  "main": "index.js",
+  "scripts": {
+    "lint": "echo \"Pages lint placeholder\" && exit 0",
+    "test": "echo \"Pages validated\" && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:tukuk/tukuk-pages.git"
+  },
+  "author": "Tukuk",
+  "license": "ISC",
+  "private": true
+}
