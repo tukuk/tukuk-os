@@ -730,6 +730,7 @@ const chat = require('./chat');
 const sms = require('./sms');
 const agent = require('./agent');
 const agentEditor = require('./agent-editor');
+const openAgentWeb = require('./open-agent-web');
 const blogRedirects = require('./blog-redirects');
 const publish = require('./publish');
 const { exec } = require('child_process');
@@ -6820,7 +6821,7 @@ function renderMarkdown(md) {
 }
 
 const COMMON_CSS = `
-  :root { --bg:#0f1115; --panel:#171a21; --line:#262b36; --text:#e6e9ef; --muted:#9aa3b2; --accent:#4c8dff; --code-bg:#12151c; }
+  :root { --bg:#0b0d12; --panel:rgba(23, 26, 33, 0.88); --line:#222836; --text:#e6e9ef; --muted:#9aa3b2; --accent:#4c8dff; --code-bg:#12151c; }
   @media (prefers-color-scheme: light) { :root { --bg:#f7f8fa; --panel:#fff; --line:#e3e6ec; --text:#151922; --muted:#5c6472; --accent:#1a63d4; --code-bg:#f0f3f8; } }
   * { box-sizing:border-box; }
   :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
@@ -13893,7 +13894,16 @@ function toolDirectoryHtml() {
   const jump = filled.map((s) => `<a class="tl-chip" href="#shelf-${s.cat.id}">${s.cat.ic} ${escapeHtml(s.cat.name)}</a>`).join('');
   const sections = filled.map((s) => {
     const links = s.items.map((t) => `<li><a href="${t.href}">${t.icon} ${escapeHtml(t.name)}</a></li>`).join('');
-    return `<h3 class="tl-shelf-h" id="shelf-${s.cat.id}"><a href="/alat/c/${s.cat.id}">${s.cat.ic} ${escapeHtml(s.cat.name)}</a><span class="tl-dir-n">${s.items.length}</span></h3>\n<ul class="tl-dir">${links}</ul>`;
+    return `<details class="tl-shelf-fold">
+      <summary class="tl-shelf-h" id="shelf-${s.cat.id}">
+        <span>${s.cat.ic} ${escapeHtml(s.cat.name)}</span>
+        <span class="tl-dir-n">${s.items.length} tools</span>
+      </summary>
+      <div class="tl-dir-wrap">
+        <ul class="tl-dir">${links}</ul>
+        <div class="tl-shelf-footer"><a href="/alat/c/${s.cat.id}">View full ${escapeHtml(s.cat.name)} shelf →</a></div>
+      </div>
+    </details>`;
   }).join('\n');
   TL_DIRECTORY_CACHE = `<nav class="tl-nav" aria-label="Jump to a shelf">${jump}</nav>\n${sections}`;
   return TL_DIRECTORY_CACHE;
@@ -24347,6 +24357,10 @@ app.get('/logout', (req, res) => res.redirect(302, '/agent/logout' + (req._parse
 // The Tukuk Agent editor (a local code-server) is hosted at tukuk.org/agent —
 // reusing the existing tunnel; no Cloudflare changes. The WS is mounted in index.js.
 agentEditor.mount(app, { config });
+
+// Web Ejen Terbuka / Open Agent Web — carian, baca laman, tanya soalan (RAG),
+// dan panggilan alat MCP melalui HTTP JSON. Terbuka untuk semua agen di web.
+openAgentWeb.mount(app, { config, rateLimit: config.rateLimit.enabled ? rateLimit : null });
 
 
 // ── Auto-generate: ONE word/description → an app + a game (/builder ✨ Generate). ──────
