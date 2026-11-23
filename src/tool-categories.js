@@ -97,7 +97,7 @@ const CAT_BY_SLUG = {
   json: 'dev', jwt: 'dev', hash: 'dev', base64: 'dev', uuid: 'dev', cron: 'dev', regex: 'dev',
   csv: 'dev', diff: 'dev', url: 'dev', char: 'dev', entity: 'dev', markdown: 'dev', case: 'dev',
   slug: 'dev', subnet: 'dev', kbd: 'dev', pwstrength: 'dev', password: 'dev', ip: 'dev',
-  ean13: 'dev', cssunits: 'dev',
+  ean13: 'dev', cssunits: 'dev', yaml: 'dev', 'json-to-csv': 'dev', 'sql-formatter': 'dev', 'html-to-markdown': 'dev',
 
   // registry: text, words & writing
   text: 'text', readability: 'text', lorem: 'text', summarizer: 'text', typing: 'text',
@@ -106,7 +106,7 @@ const CAT_BY_SLUG = {
   'cloze-test': 'text', morse: 'text', phonetic: 'text', dna: 'learn',
 
   // registry: study & learning
-  flashcards: 'learn', 'quiz-maker': 'learn', 'times-tables': 'learn', 'clock-reading': 'learn',
+  smartboard: 'learn', flashcards: 'learn', 'quiz-maker': 'learn', 'times-tables': 'learn', 'clock-reading': 'learn',
   'periodic-table': 'learn', 'flags-quiz': 'learn', 'word-scramble': 'learn', worksheet: 'learn',
   'solar-system': 'learn', 'study-planner': 'learn', 'word-guess': 'learn', 'memory-kit': 'learn',
   'assignment-planner': 'learn', 'weekly-plan': 'learn', 'study-log': 'learn', gpa: 'learn',

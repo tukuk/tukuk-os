@@ -4977,6 +4977,318 @@ run();`,
 // the slug map in tool-categories.js. An unknown id resolves to the default category rather
 // than throwing, because a typo in a taxonomy must not 503 the whole toolbox — the
 // test/tool-categories.test.js invariant is what catches the typo instead.
+// ── 96. /alat/yaml — YAML ↔ JSON Converter ──────────────────────────────────
+TOOLKIT.push({
+  slug: 'yaml', ic: '📋', name: 'YAML ↔ JSON Converter',
+  title: 'YAML ↔ JSON Converter — Parse & Format Instantly | Tukuk-OS',
+  desc: 'Convert YAML to JSON and JSON to YAML right in your browser. Fully offline, instant syntax validation, nothing uploaded.',
+  hero: 'YAML ↔ JSON Converter', sub: 'paste YAML or JSON → formatted output instantly · 100% browser-local',
+  navBlurb: 'Convert config files between YAML and JSON instantly without any third-party server seeing your data.',
+  hubBlurb: 'convert between YAML and JSON instantly in your browser with live syntax validation',
+  lead: 'Configuration files often switch between YAML and JSON depending on the tool — Kubernetes, Docker, GitHub Actions, or Node APIs. This tool parses and converts your text instantly right in your browser with zero server uploads.',
+  form: `<div class="tl-form">
+  \${field('Input (JSON or YAML)', '<textarea class="tl-in" id="ym-in" spellcheck="false">server:\\n  port: 3000\\n  host: "0.0.0.0"\\n  enabled: true</textarea>')}
+  <div style="display:flex;gap:10px;margin-top:10px;">
+    <button class="tl-btn primary" id="ym-tojson" type="button">YAML → JSON</button>
+    <button class="tl-btn" id="ym-toyaml" type="button">JSON → YAML</button>
+  </div>
+</div>
+<div class="tl-res" id="ym-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function runJson(){
+  try {
+    var val = $('ym-in').value.trim();
+    if (!val) { $('ym-out').innerHTML = '<span class="tl-badge tl-no">Empty input</span>'; return; }
+    var obj;
+    try { obj = JSON.parse(val); } catch(e) {
+      obj = {};
+      val.split('\\n').forEach(function(line){
+        var parts = line.split(':');
+        if(parts.length >= 2) {
+          var k = parts[0].trim();
+          var v = parts.slice(1).join(':').trim();
+          if(v === 'true') v = true;
+          else if(v === 'false') v = false;
+          else if(!isNaN(v) && v !== '') v = Number(v);
+          else if((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
+          obj[k] = v;
+        }
+      });
+    }
+    var res = JSON.stringify(obj, null, 2);
+    $('ym-out').innerHTML = '<pre class="u-out">'+esc(res)+'</pre><button class="tl-copy" onclick="navigator.clipboard.writeText(' + JSON.stringify(res) + ')">Copy JSON</button>';
+  } catch(err) {
+    $('ym-out').innerHTML = '<span class="tl-badge tl-no">Error</span> ' + esc(err.message);
+  }
+}
+function runYaml(){
+  try {
+    var val = $('ym-in').value.trim();
+    if (!val) { $('ym-out').innerHTML = '<span class="tl-badge tl-no">Empty input</span>'; return; }
+    var obj = JSON.parse(val);
+    var yaml = '';
+    function toY(o, indent){
+      var sp = ' '.repeat(indent);
+      for(var k in o){
+        if(o.hasOwnProperty(k)){
+          var v = o[k];
+          if(v && typeof v === 'object' && !Array.isArray(v)){
+            yaml += sp + k + ':\\n';
+            toY(v, indent + 2);
+          } else {
+            yaml += sp + k + ': ' + JSON.stringify(v) + '\\n';
+          }
+        }
+      }
+    }
+    toY(obj, 0);
+    $('ym-out').innerHTML = '<pre class="u-out">'+esc(yaml)+'</pre><button class="tl-copy" onclick="navigator.clipboard.writeText(' + JSON.stringify(yaml) + ')">Copy YAML</button>';
+  } catch(err) {
+    $('ym-out').innerHTML = '<span class="tl-badge tl-no">Error</span> ' + esc(err.message);
+  }
+}
+$('ym-tojson').onclick = runJson;
+$('ym-toyaml').onclick = runYaml;
+runJson();`,
+  seo: `<h2 class="section-title">Why client-side conversion matters</h2>
+  <p>Configuration files frequently contain internal IP addresses, secret keys, or database credentials. Performing conversions entirely within your browser guarantees absolute data privacy.</p>`,
+});
+
+// ── 97. /alat/json-to-csv — JSON to CSV Converter ─────────────────────────────
+TOOLKIT.push({
+  slug: 'json-to-csv', ic: '📊', name: 'JSON to CSV Converter',
+  title: 'JSON to CSV Converter — Transform Data Instantly | Tukuk-OS',
+  desc: 'Convert JSON arrays into tabular CSV format right in your browser. 100% offline, privacy-first, instant download.',
+  hero: 'JSON to CSV Converter', sub: 'paste JSON array → formatted CSV table & download · 100% browser-local',
+  navBlurb: 'Transform JSON data structures into clean CSV spreadsheets instantly inside your browser.',
+  hubBlurb: 'convert JSON arrays to CSV spreadsheets in your browser with instant download support',
+  lead: 'Exporting structured data for spreadsheet software like Excel or Google Sheets is effortless with this tool. Paste your JSON array and convert it to comma-separated values instantly with zero server uploads.',
+  form: `<div class="tl-form">
+  \${field('JSON Array Input', '<textarea class="tl-in" id="jc-in" spellcheck="false">[\\n  {"name": "Ahmad", "role": "Developer", "score": 95},\\n  {"name": "Siti", "role": "Designer", "score": 90}\\n]</textarea>')}
+  <div style="margin-top:10px;">
+    <button class="tl-btn primary" id="jc-go" type="button">Convert to CSV ↓</button>
+  </div>
+</div>
+<div class="tl-res" id="jc-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function run(){
+  try {
+    var val = $('jc-in').value.trim();
+    if (!val) { $('jc-out').innerHTML = '<span class="tl-badge tl-no">Empty input</span>'; return; }
+    var arr = JSON.parse(val);
+    if (!Array.isArray(arr)) arr = [arr];
+    if (arr.length === 0) { $('jc-out').innerHTML = '<span class="tl-badge tl-no">Empty array</span>'; return; }
+    var keys = Object.keys(arr[0]);
+    var csv = keys.join(',') + '\\n';
+    arr.forEach(function(item){
+      var row = keys.map(function(k){
+        var v = item[k] !== undefined ? item[k] : '';
+        return '"' + String(v).replace(/"/g, '""') + '"';
+      }).join(',');
+      csv += row + '\\n';
+    });
+    $('jc-out').innerHTML = '<pre class="u-out">'+esc(csv)+'</pre><button class="tl-copy" onclick="navigator.clipboard.writeText(' + JSON.stringify(csv) + ')">Copy CSV</button>';
+  } catch(err) {
+    $('jc-out').innerHTML = '<span class="tl-badge tl-no">Error</span> ' + esc(err.message);
+  }
+}
+$('jc-go').onclick = run;
+$('jc-in').oninput = run;
+run();`,
+  seo: `<h2 class="section-title">Seamless data portability</h2>
+  <p>Moving data between web applications and spreadsheet tools should not require intermediary servers. Client-side conversion guarantees fast, private spreadsheet exports.</p>`,
+});
+
+// ── 98. /alat/sql-formatter — SQL Formatter & Beautifier ─────────────────────────
+TOOLKIT.push({
+  slug: 'sql-formatter', ic: '🗄️', name: 'SQL Formatter',
+  title: 'SQL Formatter & Beautifier — Format Queries Instantly | Tukuk-OS',
+  desc: 'Format, uppercase keywords, and beautify SQL queries right in your browser. 100% offline, privacy-first.',
+  hero: 'SQL Formatter', sub: 'paste raw SQL query → neatly indented & formatted output · 100% browser-local',
+  navBlurb: 'Format and beautify complex SQL queries instantly inside your browser.',
+  hubBlurb: 'format and uppercase SQL queries with clean indentation in your browser',
+  lead: 'Messy SQL queries are hard to read and debug. This tool automatically formats keywords, adds proper indentation, and cleans up your database queries instantly in your browser with zero server uploads.',
+  form: `<div class="tl-form">
+  \${field('Raw SQL Query', '<textarea class="tl-in" id="sq-in" spellcheck="false">select id, name, email from users where active = 1 order by created_at desc;</textarea>')}
+  <div style="margin-top:10px;">
+    <button class="tl-btn primary" id="sq-go" type="button">Format SQL ↓</button>
+  </div>
+</div>
+<div class="tl-res" id="sq-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function run(){
+  try {
+    var val = $('sq-in').value.trim();
+    if (!val) { $('sq-out').innerHTML = '<span class="tl-badge tl-no">Empty input</span>'; return; }
+    var formatted = val
+      .replace(/\\s+/g, ' ')
+      .replace(/\\b(SELECT|FROM|WHERE|AND|OR|ORDER BY|GROUP BY|LIMIT|JOIN|LEFT JOIN|RIGHT JOIN|INSERT INTO|UPDATE|DELETE)\\b/gi, function(match) { return '\\n' + match.toUpperCase(); })
+      .replace(/,/g, ',\\n  ')
+      .trim();
+    $('sq-out').innerHTML = '<pre class="u-out">'+esc(formatted)+'</pre><button class="tl-copy" onclick="navigator.clipboard.writeText(' + JSON.stringify(formatted) + ')">Copy SQL</button>';
+  } catch(err) {
+    $('sq-out').innerHTML = '<span class="tl-badge tl-no">Error</span> ' + esc(err.message);
+  }
+}
+$('sq-go').onclick = run;
+$('sq-in').oninput = run;
+run();`,
+  seo: `<h2 class="section-title">Clean database queries</h2>
+  <p>Readable SQL queries prevent errors and speed up database debugging. Client-side formatting ensures your database schema remains strictly private.</p>`,
+});
+
+// ── 99. /alat/html-to-markdown — HTML to Markdown Converter ────────────────────
+TOOLKIT.push({
+  slug: 'html-to-markdown', ic: '📝', name: 'HTML to Markdown Converter',
+  title: 'HTML to Markdown Converter — Convert Web Content Instantly | Tukuk-OS',
+  desc: 'Convert HTML markup into clean Markdown format right in your browser. 100% offline, instant preview.',
+  hero: 'HTML to Markdown Converter', sub: 'paste HTML → clean Markdown text · 100% browser-local',
+  navBlurb: 'Convert HTML snippets into clean, readable Markdown format instantly inside your browser.',
+  hubBlurb: 'convert HTML markup to clean Markdown text in your browser',
+  lead: 'Migrating content or cleaning up web snippets is fast and effortless with this HTML to Markdown converter. Paste your HTML and get clean Markdown instantly with zero server uploads.',
+  form: `<div class="tl-form">
+  \${field('HTML Input', '<textarea class="tl-in" id="hm-in" spellcheck="false"><h1>Hello World</h1><p>This is <b>bold</b> text and a <a href="https://tukuk.org">link</a>.</p></textarea>')}
+  <div style="margin-top:10px;">
+    <button class="tl-btn primary" id="hm-go" type="button">Convert to Markdown ↓</button>
+  </div>
+</div>
+<div class="tl-res" id="hm-out">—</div>`,
+  script: `
+var $=function(id){return document.getElementById(id);};
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function run(){
+  try {
+    var val = $('hm-in').value.trim();
+    if (!val) { $('hm-out').innerHTML = '<span class="tl-badge tl-no">Empty input</span>'; return; }
+    var md = val
+      .replace(/<h1[^>]*>([\\s\\S]*?)<\\/h1>/gi, '# $1\\n\\n')
+      .replace(/<h2[^>]*>([\\s\\S]*?)<\\/h2>/gi, '## $1\\n\\n')
+      .replace(/<h3[^>]*>([\\s\\S]*?)<\\/h3>/gi, '### $1\\n\\n')
+      .replace(/<p[^>]*>([\\s\\S]*?)<\\/p>/gi, '$1\\n\\n')
+      .replace(/<b[^>]*>([\\s\\S]*?)<\\/b>/gi, '**$1**')
+      .replace(/<strong[^>]*>([\\s\\S]*?)<\\/strong>/gi, '**$1**')
+      .replace(/<i[^>]*>([\\s\\S]*?)<\\/i>/gi, '*$1*')
+      .replace(/<em[^>]*>([\\s\\S]*?)<\\/em>/gi, '*$1*')
+      .replace(/<a[^>]+href="([^"]+)"[^>]*>([\\s\\S]*?)<\\/a>/gi, '[$2]($1)')
+      .replace(/<code[^>]*>([\\s\\S]*?)<\\/code>/gi, '\`$1\`')
+      .replace(/<[^>]+>/g, '')
+      .trim();
+    $('hm-out').innerHTML = '<pre class="u-out">'+esc(md)+'</pre><button class="tl-copy" onclick="navigator.clipboard.writeText(' + JSON.stringify(md) + ')">Copy Markdown</button>';
+  } catch(err) {
+    $('hm-out').innerHTML = '<span class="tl-badge tl-no">Error</span> ' + esc(err.message);
+  }
+}
+$('hm-go').onclick = run;
+$('hm-in').oninput = run;
+run();`,
+  seo: `<h2 class="section-title">Clean documentation workflows</h2>
+  <p>Transforming web markup into structured Markdown helps maintain documentation and blog archives efficiently without relying on external APIs.</p>`,
+});
+
+
+// ── 100. /alat/smartboard — Smartboard & Study Whiteboard ────────────────────
+TOOLKIT.push({
+  slug: 'smartboard', ic: '🧑‍🏫', name: 'Smartboard & Whiteboard',
+  title: 'Smartboard & Study Whiteboard — Interactive Digital Blackboard | Tukuk-OS',
+  desc: 'An interactive digital blackboard for studying, solving math equations, and taking freehand notes. 100% offline, export notes as PNG.',
+  hero: 'Smartboard & Study Whiteboard', sub: 'interactive digital blackboard · draw, solve math, take notes · save as PNG',
+  navBlurb: 'An interactive digital blackboard for studying, solving equations and taking freehand notes right in your browser.',
+  hubBlurb: 'interactive digital blackboard for studying, solving equations and taking freehand notes with PNG export',
+  lead: 'Whether you are practicing math equations, brainstorming ideas, or taking visual study notes, this interactive smartboard provides a clean blackboard and whiteboard canvas. Draw, sketch, erase, and download your study notes instantly with zero server uploads.',
+  form: `<div class="tl-form" style="margin-bottom:12px;gap:12px;align-items:center;">
+  <label>Color: <input type="color" id="sb-color" value="#4c8dff"></label>
+  <label>Brush Size: <select id="sb-size"><option value="2">Fine</option><option value="5" selected>Medium</option><option value="12">Thick</option></select></label>
+  <button class="tl-btn" id="sb-eraser" type="button">Eraser</button>
+  <button class="tl-btn" id="sb-clear" type="button">Clear Board</button>
+  <button class="tl-btn primary" id="sb-save" type="button">Download PNG 💾</button>
+</div>
+<div style="position:relative;border:2px solid var(--line);border-radius:14px;overflow:hidden;background:#111622;">
+  <canvas id="sb-canvas" width="800" height="500" style="width:100%;height:auto;display:block;touch-action:none;cursor:crosshair;"></canvas>
+</div>`,
+  script: `
+var canvas = document.getElementById('sb-canvas');
+var ctx = canvas.getContext('2d');
+var drawing = false;
+var erasing = false;
+
+ctx.fillStyle = '#111622';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+function getPos(e) {
+  var rect = canvas.getBoundingClientRect();
+  var clientX = e.clientX || (e.touches && e.touches[0].clientX);
+  var clientY = e.clientY || (e.touches && e.touches[0].clientY);
+  return {
+    x: (clientX - rect.left) * (canvas.width / rect.width),
+    y: (clientY - rect.top) * (canvas.height / rect.height)
+  };
+}
+
+function startDraw(e) {
+  drawing = true;
+  var pos = getPos(e);
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y);
+  e.preventDefault();
+}
+
+function draw(e) {
+  if (!drawing) return;
+  var pos = getPos(e);
+  ctx.lineWidth = document.getElementById('sb-size').value;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (erasing) {
+    ctx.strokeStyle = '#111622';
+  } else {
+    ctx.strokeStyle = document.getElementById('sb-color').value;
+  }
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+  e.preventDefault();
+}
+
+function stopDraw() {
+  drawing = false;
+}
+
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousemove', draw);
+window.addEventListener('mouseup', stopDraw);
+
+canvas.addEventListener('touchstart', startDraw);
+canvas.addEventListener('touchmove', draw);
+window.addEventListener('touchend', stopDraw);
+
+document.getElementById('sb-eraser').onclick = function() {
+  erasing = !erasing;
+  this.style.background = erasing ? '#38bdf8' : '';
+  this.style.color = erasing ? '#000' : '';
+};
+
+document.getElementById('sb-clear').onclick = function() {
+  if (confirm('Clear the entire board?')) {
+    ctx.fillStyle = '#111622';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+};
+
+document.getElementById('sb-save').onclick = function() {
+  var link = document.createElement('a');
+  link.download = 'study-smartboard.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+};`,
+  seo: `<h2 class="section-title">Digital studying without friction</h2>
+  <p>Visual problem-solving is proven to improve concept retention during study sessions. This browser-local smartboard lets you sketch diagrams and solve equations instantly.</p>`,
+});
+
 TOOLKIT.push.apply(TOOLKIT, FAMILIES.FAMILY_ENTRIES);
 TOOLKIT.forEach(function (t) {
   if (!t.cat) t.cat = CATS.catOf(t.slug);

@@ -54,51 +54,52 @@ function load() {
   } catch {
     data = { ...defaults };
   }
-  // Always sync content/blog/*.md files into posts on every load so new/archived markdown files appear immediately!
-  try {
-    const files = fs.readdirSync(CONTENT_DIR).filter((f) => f.endsWith('.md')).sort();
-    const existingSlugs = new Set(data.posts.map(p => p.slug));
-    for (const file of files) {
-      let raw;
-      try { raw = fs.readFileSync(path.join(CONTENT_DIR, file), 'utf8'); } catch { continue; }
-      const lines = raw.split(/\r?\n/);
-      const header = {};
-      let i = 0;
-      for (; i < lines.length; i += 1) {
-        const match = lines[i].match(/^(SLUG|TITLE|EXCERPT|TAGS):\s*(.*)$/);
-        if (!match) break;
-        header[match[1]] = match[2].trim();
-      }
-      const body = lines.slice(i).join('\n').replace(/^\s*\n/, '').trimEnd();
-      if (body.split(/\s+/).filter(Boolean).length < 20) continue;
-      const slug = header.SLUG || file.replace(/\.md$/, '');
-      const title = header.TITLE || slug;
-      const excerpt = header.EXCERPT || body.slice(0, 200);
-      const tags = (header.TAGS || '').split(',').map((t) => t.trim()).filter(Boolean);
+  if (!Array.isArray(data.posts)) data.posts = [];
 
-      const existing = data.posts.find(p => p.slug === slug);
-      if (existing) {
-        existing.title = title;
-        existing.excerpt = excerpt;
-        existing.tags = tags;
-        existing.content = body + '\n';
-      } else {
-        data.posts.unshift({
-          id: (Date.now() + Math.random()).toString(36),
-          slug, title,
-          content: body + '\n',
-          excerpt,
-          author: 'Fevian Donald',
-          tags,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
+  // Fast idempotent sync for new markdown files using O(1) Set lookup
+  try {
+    if (data.posts.length === 0) {
+      syncPostsFromContent();
+    } else {
+      const existingSlugs = new Set(data.posts.map((p) => p.slug));
+      const files = fs.readdirSync(CONTENT_DIR).filter((f) => f.endsWith('.md'));
+      const newFiles = files.filter((f) => !existingSlugs.has(f.replace(/\.md$/, '')));
+      if (newFiles.length > 0) {
+        for (const file of newFiles) {
+          let raw;
+          try { raw = fs.readFileSync(path.join(CONTENT_DIR, file), 'utf8'); } catch { continue; }
+          const lines = raw.split(/\r?\n/);
+          const header = {};
+          let i = 0;
+          for (; i < lines.length; i += 1) {
+            const match = lines[i].match(/^(SLUG|TITLE|EXCERPT|TAGS):\s*(.*)$/);
+            if (!match) break;
+            header[match[1]] = match[2].trim();
+          }
+          const body = lines.slice(i).join('\n').replace(/^\s*\n/, '').trimEnd();
+          if (body.split(/\s+/).filter(Boolean).length < 20) continue;
+          const slug = header.SLUG || file.replace(/\.md$/, '');
+          if (existingSlugs.has(slug)) continue;
+          const title = header.TITLE || slug;
+          const excerpt = header.EXCERPT || body.slice(0, 200);
+          const tags = (header.TAGS || '').split(',').map((t) => t.trim()).filter(Boolean);
+          data.posts.unshift({
+            id: (Date.now() + Math.random()).toString(36),
+            slug, title,
+            content: body + '\n',
+            excerpt,
+            author: 'Fevian Donald',
+            tags,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+          existingSlugs.add(slug);
+        }
       }
     }
   } catch (err) {
     console.error('Error syncing markdown files:', err);
   }
-  syncPostsFromContent();
   return data;
 }
 
@@ -123,6 +124,7 @@ function syncPostsFromContent(dir = CONTENT_DIR) {
     }
   }
   let changed = false;
+  const postsBySlug = new Map((data.posts || []).map((p) => [p.slug, p]));
   for (const file of files) {
     let raw;
     try { raw = fs.readFileSync(path.join(dir, file), 'utf8'); } catch { continue; }
@@ -141,7 +143,7 @@ function syncPostsFromContent(dir = CONTENT_DIR) {
     const excerpt = header.EXCERPT || body.slice(0, 200);
     const tags = (header.TAGS || '').split(',').map((t) => t.trim()).filter(Boolean);
     const content = body + '\n';
-    const existing = data.posts.find((p) => p.slug === slug);
+    const existing = postsBySlug.get(slug);
     if (existing) {
       const rawNorm = raw.trimEnd() + '\n';
       if (existing.content !== content && existing.content !== rawNorm) {
@@ -149,13 +151,15 @@ function syncPostsFromContent(dir = CONTENT_DIR) {
         changed = true;
       }
     } else {
-      data.posts.unshift({
+      const newPost = {
         id: (Date.now() + Math.random()).toString(36),
         slug, title, content, excerpt,
         author: 'Fevian Donald', tags,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      });
+      };
+      data.posts.unshift(newPost);
+      postsBySlug.set(slug, newPost);
       contentNewSlugs.push(slug); // boot-time IndexNow ping (see server.js)
       changed = true;
     }

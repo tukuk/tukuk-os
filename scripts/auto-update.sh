@@ -59,6 +59,7 @@ BRANCH="${BRANCH:-main}"
 # no python3, a flaky page — the mirror keeps serving its previous snapshot and
 # the update itself must never fail because of it.
 mirror_refresh() {
+  [[ -f scripts/sync-to-pages.sh ]] && bash scripts/sync-to-pages.sh >/dev/null 2>&1 || true
   [[ -f scripts/mirror-export.sh && -f scripts/mirror-deploy.sh ]] || return 0
   if [[ -f /tmp/tukuk-mirror.stamp && -n "$(find /tmp/tukuk-mirror.stamp -mmin -60 2>/dev/null)" ]]; then
     return 0   # refreshed within the hour — every other cycle can skip

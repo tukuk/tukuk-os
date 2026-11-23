@@ -34,7 +34,7 @@ if [[ "${TUKUK_FORCE_RSYNC_DEPLOY:-}" != "1" ]]; then
 fi
 
 SERVER_USER="tukuk"
-SERVER_IP="${TUKUK_HOST:-192.168.8.100}"
+SERVER_IP="${TUKUK_HOST:-192.168.8.103}"
 REMOTE_DIR="/opt/tukuk-os"
 
 if [[ -z "${SSHPASS:-}" ]]; then

@@ -1,0 +1,9 @@
+{
+  "version": "100.0.0",
+  "targetDocuments": 100000000,
+  "shardsCount": 1000,
+  "documentsPerShard": 100000,
+  "clusterCapacityTB": 400,
+  "architecture": "distributed-virtual-sharding-node",
+  "updatedAt": "2026-11-12T05:04:13.306Z"
+}
