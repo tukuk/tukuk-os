@@ -252,11 +252,9 @@ function mount(app, deps) {
   const useLimit = rateLimit || rateLimiter;
 
   // CORS preamble untuk semua endpoint /api/open-agent/*
-  app.use(`${PREFIX}/*`, (req, res, next) => {
-    setCorsHeaders(res);
-    if (req.method === 'OPTIONS') return res.writeHead(204).end();
-    next();
-  });
+  // Express 5 / path-to-regexp tidak terima '*' boleh tanpa parameter nama,
+  // jadi setiap route handler set CORS sendiri (setCorsHeaders dipanggil dalam
+  // semua handler atas). Tiada catch-all diperlukan di sini.
 
   const searchLimit = useLimit ? useLimit({ windowMs: 60 * 1000, max: 60, keyPrefix: 'openagent:search:' }) : (req, res, next) => next();
   const readLimit = useLimit ? useLimit({ windowMs: 60 * 1000, max: 120, keyPrefix: 'openagent:read:' }) : (req, res, next) => next();
