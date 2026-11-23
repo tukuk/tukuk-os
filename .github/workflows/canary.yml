@@ -23,7 +23,7 @@ jobs:
     name: tukuk.org is reachable and honest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The probe's exit status is the whole point, and `| tee` hands the step's status to tee,
       # so rc is recorded explicitly. That record replaces a real bug: this workflow used to read
