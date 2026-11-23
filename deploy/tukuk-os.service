@@ -1,18 +1,18 @@
 [Unit]
-Description=Tukuk-OS search engine (Express + Meilisearch)
-Documentation=https://github.com/meilisearch/meilisearch
+Description=Tukuk-OS Search Engine & Open Agent Web
 After=network-online.target meilisearch.service
 Wants=network-online.target meilisearch.service
-# NOT Requires/PartOf — if Meilisearch dies, the search engine MUST stay alive
-# to still answer from the fallback cache (see src/fallback.js).
+# NOT Requires/PartOf — if Meilisearch dies, search engine MUST stay alive
+# to still answer from fallback cache (see src/fallback.js).
 StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-WorkingDirectory=/home/tukuk/tukuk-os
-EnvironmentFile=/home/tukuk/.config/tukuk-os/env
+User=tukuk
+WorkingDirectory=/opt/tukuk-os
+EnvironmentFile=/opt/tukuk-os/.env
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/node index.js
+ExecStart=/usr/bin/node /opt/tukuk-os/index.js
 
 # --- Never stay dead ---
 Restart=always
@@ -33,7 +33,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=read-only
-ReadWritePaths=/home/tukuk/tukuk-os/meili_data /home/tukuk/tukuk-os/snapshots /home/tukuk/tukuk-os/dumps
+ReadWritePaths=/opt/tukuk-os/meili_data /opt/tukuk-os/snapshots /opt/tukuk-os/dumps
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
