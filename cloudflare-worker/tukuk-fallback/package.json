@@ -16,6 +16,6 @@
 		"wrangler": "^4.86.0"
 	},
 	"dependencies": {
-		"@cloudflare/kv-asset-handler": "^0.4.2"
+		"@cloudflare/kv-asset-handler": "^0.5.1"
 	}
 }
