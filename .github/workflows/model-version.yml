@@ -1,0 +1,33 @@
+name: Model Version Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      action-type:
+        description: 'Action type'
+        required: true
+        default: 'check'
+        options:
+          - check
+          - update
+
+env:
+  ACTION_TYPE: ${{ github.event.inputs.action-type || 'check' }}
+
+jobs:
+  manage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install
+        run: npm ci --omit=dev --no-audit --no-fund
+      - name: Check models
+        run: |
+          echo "Action: $ACTION_TYPE"
+          echo "Checking model versions..."
+          grep -q litert src/config.js && echo "LiteRT-LM configured" || echo "LiteRT-LM not configured"
+          grep 'LLM_CHAIN' src/config.js | head -1

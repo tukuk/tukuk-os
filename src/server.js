@@ -3729,10 +3729,21 @@ for (const name of APPS) {
 app.get(['/apps', '/apps/'], (req, res) => res.redirect(301, '/'));
 // The old /store storefront was folded into the OS shell (/os) — keep old links alive instead of 404ing.
 app.get(['/store', '/store/'], (req, res) => res.redirect(301, '/os'));
-// tukuk.org/chat is the URL most people guess for the messenger, but T Chat really lives on
-// its own host (tchat.tukuk.org, see the TCHAT middleware above). Send the guess there with a
-// crawlable 301 instead of a dead 404; keep the query string so any deep link still survives.
-if (TCHAT_HOST) app.get(['/chat', '/chat/'], (req, res) => res.redirect(301, `https://${TCHAT_HOST}/`));
+// tukuk.org/chat is the URL most people guess for the messenger.
+// If TCHAT_HOST is set to a different host, redirect there.
+// Otherwise serve chat directly on tukuk.org.
+if (process.env.TCHAT_HOST && process.env.TCHAT_HOST !== 'tukuk.org') {
+  // Redirect to dedicated chat host if explicitly configured and not the main domain
+  app.get(['/chat', '/chat/'], (req, res) => res.redirect(301, `https://${process.env.TCHAT_HOST}/`));
+} else {
+  // Serve chat directly on tukuk.org (default behavior when TCHAT_HOST not set
+  // or set to tukuk.org)
+  app.get(['/chat', '/chat/'], (req, res) => {
+    res.sendFile(path.join(PUBLIC_DIR, 'apps', 'chat.html'), SEND_FILE_OPTS, (error) => {
+      if (error) res.status(404).json({ error: 'Chat page not found', path: req.originalUrl });
+    });
+  });
+}
 
 // Language aliases so the existing links do not 404
 const PAGE_ALIASES = { tentang: 'about', hubungi: 'contact', terma: 'terms', privasi: 'privacy', dokumen: 'docs' };
@@ -4514,7 +4525,7 @@ app.get('/books/:slug', limiter.search, async (req, res, next) => {
 const WORD_CSS = `.wd-head{display:flex;gap:20px;align-items:baseline;flex-wrap:wrap;margin:14px 0}
 .wd-word{font-size:2.6rem;font-weight:800;margin:0;letter-spacing:-.02em}
 .wd-phon{font-size:1.05rem;color:var(--muted,#9aa3b2)}
-.wd-pos{margin:18px 0 4px;font-size:1.02rem}.wd-pos .wd-tag{display:inline-block;background:var(--accent,#4c8dff);color:#fff;border-radius:6px;padding:2px 10px;font-size:.8rem;font-weight:700;margin-right:8px}
+.wd-pos{margin:18px 0 4px;font-size:1.02rem}.wd-pos .wd-tag{display:inline-block;background:var(--accent-fill,#4c8dff);color:#fff;border-radius:6px;padding:2px 10px;font-size:.8rem;font-weight:700;margin-right:8px}
 .wd-def{margin:10px 0 0;padding-left:18px}.wd-def li{margin:6px 0}
 .wd-ex{color:var(--muted,#9aa3b2);font-style:italic;display:block;font-size:.92rem;margin-top:2px}
 .wd-syn a{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-size:.85rem;margin:3px 4px 3px 0;text-decoration:none}
@@ -4625,9 +4636,9 @@ function healthHubPage() {
   const cards = sihat.TOPICS.map((t) => `<div class="world-card"><h3>${t.icon} <a href="/health/${t.slug}">${escapeHtml(t.title)}</a></h3><p>${escapeHtml(t.blurb)}</p></div>`).join('');
   const n = sihat.TOPICS.length;
   const body = `<p>${n} ordinary topics about the human body — hours of sleep, litres of water, steps, pulse, breaths, degrees, eyes, teeth, headaches, pollen, a desk chair, a runny nose — written to one rule: <b>only figures that established health authorities publish, each named on the page, and a doctor's referral wherever a fact stops being general.</b></p>
-  ${HEALTH_DISCLAIMER}
-  <div class="world-grid">${cards}</div>
   <h2 class="section-title">Why so few topics?</h2>
+  <div class="world-grid">${cards}</div>
+  <p>${HEALTH_DISCLAIMER}</p>
   <p>Because health pages earn or lose trust on specificity. A site that auto-generates thousands of "benefits of X" pages says nothing a reader can check; these ${n} pages each carry a table of sourced numbers, the primary sources linked at the bottom, and an urgent-signs list written first. The related hands-on tools live next door: <a href="/alat/bmi">BMI calculator</a>, <a href="/nutrition">nutrition facts</a>, and the <a href="/academy/body">Academy body track</a> for the physiology behind it all. For the living planet rather than your own, there is <a href="/life">the Wildlife Atlas</a>.</p>`;
   return worldDoc({
     title: 'Health Basics — Sleep, Water, Steps, Pulse, Breathing & Temperature, With Sources | Tukuk-OS',
@@ -4736,8 +4747,8 @@ function dictHubPage() {
   const cards = diction.COLLECTIONS.map((c) => `<div class="world-card"><h3>${c.icon} <a href="/dictionary/c/${c.slug}">${escapeHtml(c.name)}</a></h3><p>${escapeHtml(c.blurb)}</p><p class="meta">${c.words.length} words</p></div>`).join('');
   const body = `<p><b>The interactive dictionary is <a href="/alat/dictionary">the tool at /alat/dictionary</a> — it answers any word on request.</b> This shelf is different: six themed collections of hand-picked headwords, ${diction.ALL_WORDS.length} in all, each one a permanent page rendered from tukuk.org\u2019s own word bank — no account, no ad-gated definition, no AI paraphrase.</p>
   ${DICT_SEARCH_FORM}
+<h2 class="section-title">Why only section-title</h2>
   <div class="world-grid">${cards}</div>
-  <h2 class="section-title">Why only ${diction.ALL_WORDS.length} words have pages?</h2>
   <p>Because a dictionary site that mirrors someone else\u2019s API for all 200,000 words is a wall of doorway pages — technically indexed, editorially empty. These are the words chosen on purpose, grouped the way a reader browses: feelings, weather, the mind, the landscape, the office and the kitchen shelf. Every page carries the word\u2019s sound, senses, examples and synonyms, sits in its collection with a neighbour before and after it, and says where its data comes from. New shelves appear when they are actually curated — not scraped.</p>
   <p>For one word a day with a permanent archive, see <a href="/word">Word of the Day</a>; for playful encoders and dozens of languages, the <a href="/alat/dictionary">dictionary &amp; translator tool</a> covers what this shelf does not.</p>
   ${dictCreditHtml()}`;
@@ -4822,7 +4833,7 @@ app.get('/dictionary/:word', limiter.search, async (req, res, next) => {
 // being entertainment. The site claims no sky causes anything.
 const HORO_CSS = `.hs-frame{border:1px solid var(--line);border-radius:10px;padding:12px 16px;background:var(--panel,#171a21);font-size:.92rem;margin:14px 0}
 .hs-line{border-left:3px solid var(--accent,#4c8dff);padding:14px 18px;margin:16px 0;font-size:1.1rem;font-style:italic;background:var(--panel,#171a21);border-radius:0 12px 12px 0}
-.hs-badge{display:inline-block;background:var(--accent,#4c8dff);color:#fff;border-radius:6px;padding:2px 10px;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle;margin-right:8px}
+.hs-badge{display:inline-block;background:var(--accent-fill,#4c8dff);color:#fff;border-radius:6px;padding:2px 10px;font-size:.75rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle;margin-right:8px}
 .hs-profile{margin:10px 0 0}`;
 
 const HORO_FRAME = '<p class="hs-frame"><b>Read this as a fun page, not a forecast.</b> Astrology is culture — thousands of years of sky-watching and pattern-making — not science: nothing on these pages claims the stars predict anything. What <em>is</em> factual here — the constellations, the myths, the calendar history and the precession that moved the signs off their own stars — is stated as fact.</p>';
@@ -4831,8 +4842,8 @@ function horoHubPage() {
   const cards = bintang.SIGNS.map((s) => `<div class="world-card"><h3>${s.icon} <a href="/horoscope/${s.slug}">${s.symbol} ${s.name}</a></h3><p>${s.dates} · ${s.element} · ruled by ${escapeHtml(s.ruler)}</p></div>`).join('');
   const body = `<p>The zodiac in one honest place: every sign\u2019s <b>real constellation, actual mythology and traditional temperament</b>, with the daily line labelled for exactly what it is. Start with the sky itself:</p>
   ${HORO_FRAME}
-  <div class="world-grid">${cards}</div>
   <h2 class="section-title">The astronomy the calendar forgot</h2>
+  <div class="world-grid">${cards}</div>
   <p>The twelve signs were fixed in Babylon around the 5th century BC, when the spring equinox rose in Aries and each sign matched the constellation it was named for. Earth\u2019s axis slowly wobbles — a circle in about 26,000 years, called <b>precession of the equinoxes</b> — and the equinox point has since slid almost a full month backwards along the ecliptic. Today the Sun actually sits in Pisces at the start of "Aries season," takes only about six days to cross tiny Scorpius, and spends eighteen days in <b>Ophiuchus, the Serpent-Bearer</b> — a thirteenth constellation the ecliptic crosses that the Babylonians left out to keep their calendar at twelve. The tropical zodiac astrology uses was never meant to track the stars: it marks the seasons, starting at the vernal equinox, and has kept perfect astronomical time on <em>that</em> contract for two millennia — it is simply a different contract from "the sign equals the constellation."</p>
   <p>Each sign page carries its own piece of this: where the Sun really is, what the ancients saw in the stars, and the traditional attributes stated as tradition. The <a href="/nasa/sky">Sky Tonight</a> pages show the actual sky for tonight.</p>`;
   return worldDoc({
@@ -5011,8 +5022,8 @@ app.get('/thesaurus/:word', (req, res, next) => {
 function rhymHubPage() {
   const cards = rima.FAMILIES.map((f) => `<div class="world-card"><h3><a href="/rhymes/f/${f.slug}">${escapeHtml(f.slug)} rhymes</a></h3><p><span class="rm-sound">${escapeHtml(f.sound)}</span>${f.words.length} words · ${escapeHtml(f.ends)}</p></div>`).join('');
   const body = `<p><b>Rhyme lives in the sound, not the spelling.</b> Write rhymes with night, said does not rhyme with bead, and love does not rhyme with move. These ${rima.FAMILIES.length} families are each keyed to one real final sound — every member checked by ear — and each family page keeps a note on the traps its spelling hides. ${rima.ALL_WORDS.length} words in all.</p>
-  <div class="world-grid">${cards}</div>
   <h2 class="section-title">Perfect, slant, and what the poets argue about</h2>
+  <div class="world-grid">${cards}</div>
   <p>A <b>perfect rhyme</b> matches the final stressed vowel and everything after it (sound/ground) while the onset differs — day/day is repetition and rain/reign is a homophone, neither is a rhyme. A <b>slant rhyme</b> keeps the consonant frame but changes the vowel (rain/wren), which is what most pop lyrics lean on without naming it. A <b>masculine rhyme</b> lands on a stressed final syllable (attack/back); a <b>feminine rhyme</b> spills onto an unstressed one (grieving/leaving). Syllable count is no bar either: mistake and wake rhyme perfectly, because only the ending sound counts.</p>
   <p>Why so few words? The same reason as <a href="/dictionary">the dictionary shelf</a>: our word bank stores no pronunciations, so any \"rhyme any word\" page would be a guess dressed as a lookup. These families are checked by a human ear instead — and words like reign and wren show why the ear wins: one rhymes with rain, the other does not, however similar the spellings look.</p>`;
   return worldDoc({
@@ -5104,8 +5115,8 @@ app.get('/rhymes/:word', (req, res, next) => {
 function idmHubPage() {
   const cards = ungkapan.THEMES.map((t) => `<div class="world-card"><h3>${t.icon} <a href="/idioms/t/${t.slug}">${escapeHtml(t.name)}</a></h3><p>${escapeHtml(t.blurb)}</p><p class="meta">${ungkapan.idiomsOfTheme(t.slug).length} idioms</p></div>`).join('');
   const body = `<p><b>An idiom is a small piece of frozen history.</b> You cannot read \"spill the beans\" off its words, and half the pleasure is knowing why the phrase is shaped the way it is. Most idiom sites copy each other's lists and invent etymologies to fill space; these ${ungkapan.IDIOMS.length} are kept by hand — meaning, a real example, and an origin dated where the evidence allows and hedged where it does not.</p>
-  <div class="world-grid">${cards}</div>
   <h2 class="section-title">The hedging is the point</h2>
+  <div class="world-grid">${cards}</div>
   <p>Where a favourite story about a phrase has no evidence — cats falling off thatched roofs, a Danish nose tax — the page says so and leaves the tale where it belongs, in the folklorists' drawer. Where the print trail is solid (the drawing board is a 1941 New Yorker cartoon; extra miles are Matthew 5:41), the date is given so you can look it up. Related shelves: <a href="/proverbs">proverbs</a> give the whole sayings these phrases live inside; <a href="/dictionary">the dictionary shelf</a> covers the single words.</p>`;
   return worldDoc({
     title: 'Idioms — Common English Phrases With Honest Origins | Tukuk-OS',
@@ -5122,8 +5133,8 @@ function idmThemePage(t) {
   const others = ungkapan.THEMES.filter((x) => x.slug !== t.slug)
     .map((x) => `<a class="rc-pill" href="/idioms/t/${x.slug}">${x.icon} ${escapeHtml(x.name)}</a>`).join('');
   const body = `<p>${escapeHtml(t.blurb)}</p>
-  <div class="world-grid">${cards}</div>
   <h2 class="section-title">The other themes</h2>
+  <div class="world-grid">${cards}</div>
   <p>${others}</p>`;
   return worldDoc({
     title: `${t.name} Idioms — Meanings & Origins | Tukuk-OS Idioms`,
@@ -8587,7 +8598,9 @@ function cuacaNav() {
 }
 
 function cuacaDoc(o) {
-  const robots = o.robots || 'index,follow,max-image-preview:large';
+  // Weather & air quality pages must remain indexable for Google Search
+  const isWeatherAir = o.selfUrl && o.selfUrl.includes('/weather/') && o.selfUrl.endsWith('/air');
+  const robots = o.robots && !isWeatherAir ? o.robots : 'index,follow,max-image-preview:large';
   const ogImage = o.image || 'https://tukuk.org/og.png';
   const ld = autoBreadcrumb(o, o.ld || JSON.stringify({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: o.title,

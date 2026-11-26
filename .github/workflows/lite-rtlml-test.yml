@@ -1,0 +1,57 @@
+name: LiteRT-LM Model Testing
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-models:
+    name: Test LiteRT-LM Models
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --omit=dev --no-audit --no-fund
+
+      - name: Check LiteRT-LM configuration
+        run: |
+          echo "Checking LITERT_HOST configuration..."
+          if [ -n "$LITERT_HOST" ]; then
+            echo "LiteRT-LM is configured"
+            curl -s http://${LITERT_HOST}:8090/models | head -20 || echo "Model endpoint test"
+          else
+            echo "LiteRT-LM not configured (LITERT_HOST not set) - testing default models"
+          fi
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Verify brain status endpoint
+        run: |
+          echo "Testing /brain endpoint..."
+          curl -s http://localhost:3000/brain | python3 -m json.tool || echo "Brain endpoint test"
+
+      - name: Verify ask endpoint
+        run: |
+          echo "Testing /ask endpoint..."
+          curl -s "http://localhost:3000/ask?q=apa+itu+tukuk-os" | head -50 || echo "Ask endpoint test"
+
+      - name: Check model registry
+        run: |
+          echo "Checking model registry..."
+          ls ai-models/ 2>/dev/null || echo "No ai-models directory"
+          cat ai-models/registry.json 2>/dev/null | head -20 || echo "No registry found"

@@ -1,4 +1,4 @@
-# ─── Dependencies ────────────────────────────────────────────
+gab# ─── Dependencies ────────────────────────────────────────────
 node_modules/
 package-lock.json.bak
 
@@ -199,3 +199,5 @@ aliyun/credentials
 # path out of the repo, not by keeping the repo out of the box.
 # test/repo-ignore-hygiene.test.js pins this list against the box's measured state.
 etc-netplan-reference/
+node_modules
+node_modules

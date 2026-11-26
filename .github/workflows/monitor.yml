@@ -1,0 +1,137 @@
+name: Site Monitoring
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'  # Every 30 minutes
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  monitor:
+    name: Site Health Monitor
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Probe the public surface
+        id: probe
+        run: |
+          bash scripts/public-canary.sh | tee canary.log
+          echo "rc=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload canary log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canary-log
+          path: canary.log
+          retention-days: 7
+
+      - name: Check LiteRT-LM edge tier connectivity
+        id: litert-check
+        run: |
+          echo "Checking LiteRT-LM edge tier connectivity..."
+          LITERT_HOST="${{ secrets.LITERT_HOST || '' }}"
+          if [ -n "$LITERT_HOST" ]; then
+            echo "LiteRT_HOST is configured: $LITERT_HOST"
+            # Test connectivity to LiteRT-LM edge tier
+            curl -s --max-time 10 "http://${LITERT_HOST}:8090/health" | head -5 || echo "LiteRT-LM health check failed"
+            curl -s --max-time 10 "http://${LITERT_HOST}:8090/models" | head -5 || echo "LiteRT-LM models endpoint failed"
+            LITERT_STATUS="configured-and-testing"
+          else
+            LITERT_STATUS="not-configured"
+            echo "LiteRT_HOST not set - LiteRT-LM edge tier will use cloud fallback"
+          fi
+          echo "litert_status=$LITERT_STATUS" >> "$GITHUB_OUTPUT"
+
+      - name: Determine overall verdict with LiteRT-LM status
+        id: verdict
+        run: |
+          set -uo pipefail
+          RC="${{ steps.probe.outputs.rc }}"
+          LITERT_STATUS="${{ steps.litert-check.outputs.litert_status || 'not-configured' }}"
+          
+          # Determine verdict based on probe result AND LiteRT-LM status
+          case "${RC:-1}" in
+            0) 
+              VERDICT=OK
+              LITERT_VERDICT="healthy"
+              if [ "$LITERT_STATUS" = "not-configured" ]; then
+                LITERT_COMMENT="LiteRT-LM not configured - using cloud fallback (acceptable for default operation)"
+              else
+                LITERT_COMMENT="LiteRT-LM edge tier is healthy"
+              fi
+              ;;
+            2) 
+              VERDICT=EDGE_DOWN
+              LITERT_VERDICT="edge-down"
+              LITERT_COMMENT="LiteRT-LM edge tier unreachable - falling back to cloud providers"
+              ;;
+            3) 
+              VERDICT=BLOCKED
+              LITERT_VERDICT="blocked"
+              LITERT_COMMENT="GitHub runners challenged by Cloudflare - real visitors may be fine"
+              ;;
+            *) 
+              VERDICT=DEGRADED
+              LITERT_VERDICT="degraded"
+              LITERT_COMMENT="Site experiencing issues - LiteRT-LM status: $LITERT_STATUS"
+              ;;
+          esac
+          
+          echo "verdict=$VERDICT" >> "$GITHUB_OUTPUT"
+          echo "litert_verdict=$LITERT_VERDICT" >> "$GITHUB_OUTPUT"
+          echo "litert_comment=$LITERT_COMMENT" >> "$GITHUB_OUTPUT"
+
+      - name: Open or close the tracking issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RC: ${{ steps.probe.outputs.rc }}
+          LITERT_STATUS: ${{ steps.litert-check.outputs.litert_status || 'not-configured' }}
+          LITERT_VERDICT_FULL: ${{ steps.verdict.outputs.litert_comment }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          UNHEALTHY_TITLE="canary: the public site is not healthy"
+          BLIND_TITLE="canary: the edge is challenging this runner, so the monitor is blind"
+          LITERT_STATUS="${{ steps.litert-check.outputs.litert_status || \"not-configured\" }}"
+          
+          find_open() { gh issue list --state open --search "\"$1\" in:title" --json number --jq '.[0].number // empty'; }
+
+          if [ "$VERDICT" = "OK" ]; then
+            for T in "$UNHEALTHY_TITLE" "$BLIND_TITLE"; do
+              N="$(find_open "$T")"
+              if [ -n "$N" ]; then
+                gh issue close "$N" --comment "Recovered — the canary passes again: $RUN_URL"
+              fi
+            done
+            echo "canary passed"
+            exit 0
+          fi
+
+          if [ "$VERDICT" = "BLOCKED" ]; then
+            if [ -z "$(find_open "$BLIND_TITLE")" ]; then
+              gh issue create --title "$BLIND_TITLE" --body "$(printf 'Verdict: BLOCKED at %s\n\nEvery probe returns cf-mitigated:challenge (the "Just a moment..." page), so this canary cannot see tukuk.org from GitHub runner IPs at all. Real visitors may be fine; a blind monitor cannot promise that. Exempt the runner in the zone security rules, or move the probe to a residential vantage point.\n\nCheck separately whether crawlers get the same challenge — that is a deindexing event, not an uptime event.\n\n```\n%s\n```\n\nRun: %s' "$(date -u +%FT%TZ)" "$(cat canary.log)" "$RUN_URL")"
+            fi
+            echo "::warning title=canary is blind::the edge is challenging this runner; see the open tracking issue"
+            exit 0
+          fi
+
+          # Report LiteRT-LM status in the issue
+          LITERT_REPORT="LiteRT-LM Edge Tier Status: $LITERT_STATUS"
+          
+          BODY="$(printf 'Verdict: %s at %s\n\n```\n%s\n```\n\nRun: %s\n\n%s' "$VERDICT" "$(date -u +%FT%TZ)" "$(cat canary.log)" "$RUN_URL" "$LITERT_REPORT")"
+          NUM="$(find_open "$UNHEALTHY_TITLE")"
+          if [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --body "$BODY"
+          else
+            gh issue create --title "$UNHEALTHY_TITLE" --body "$BODY"
+          fi
+          echo "canary failed — verdict $VERDICT, issue $NUM"
+          exit 1

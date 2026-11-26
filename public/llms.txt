@@ -52,6 +52,16 @@ arcade (`/games`) and an app hub on the homepage, a live NASA data hub
 - [health](https://tukuk.org/health): liveness check.
 - [Onion mirror](http://d33axv7iaq4sp5hlwjn7i2tovkuxmxc53xl2drjhve7mboitsoicdfid.onion/): Tor copy of the site (advertised via the `Onion-Location` header).
 
+## LiteRT-LM Integration
+- [LiteRT-LM](https://google.github.io/litert-lm/): Google's layer for running LLMs with LiteRT
+- [LiteRT-LM CLI](https://google.github.io/litert-lm/cli): Command-line tool for running models
+- [Models](https://github.google.com/litert-lm/models): Supported models including Gemma, Llama, Phi-4, Qwen and more
+- [SDKs](https://google.github.io/litert-lm/sdk): Python, Kotlin, JavaScript, Swift APIs
+- [Function Calling](https://google.github.io/litert-lm/function-calling): Tool use support for agent workflows
+- [Multimodal](https://google.github.io/litert-lm/multimodal): Image and audio input support
+- [Cross-platform](https://google.github.io/litert-lm/platforms): Android, iOS, Web, Desktop, IoT (Raspberry Pi)
+- [Performance](https://google.github.io/litert-lm/performance): GPU/NPU acceleration with speculative decoding (MTP)
+
 ## Notes for agents
 - All endpoints return JSON unless the request `Accept`s `text/html` (content negotiation on `/search`, `/ask`, etc.).
 - `/api/image?url=` is a same-origin image proxy for cross-origin media.
