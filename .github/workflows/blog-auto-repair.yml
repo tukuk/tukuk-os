@@ -1,0 +1,61 @@
+name: Blog Auto-Repair
+
+on:
+  schedule:
+    # Run daily at 02:00 UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Also allow manual triggering
+
+jobs:
+  repair-blogs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # needed to commit changes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: Run blog crawler repair
+        env:
+          # Ensure we're running in the right directory
+          BLOG_DIR: /home/fevian/tukuk-os/content/blog
+        run: |
+          cd /home/fevian/tukuk-os
+          python scripts/blog_crawler.py
+
+      - name: Check for changes
+        id: changes
+        run: |
+          cd /home/fevian/tukuk-os
+          if git diff --quiet; then
+            echo "no_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "no_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit fixes
+        if: steps.changes.outputs.no_changes == 'false'
+        run: |
+          cd /home/fevian/tukuk-os
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add content/blog/
+          git commit -m "chore: auto-repair blog posts to ensure minimum 1000 words"
+          git push
+
+      - name: Summary
+        if: steps.changes.outputs.no_changes == 'true'
+        run: echo "All blog posts already have 1000+ words or more."

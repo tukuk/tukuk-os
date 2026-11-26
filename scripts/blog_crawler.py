@@ -1,7 +1,7 @@
 import os, re, glob, json
 from datetime import datetime
 
-blog_dir = "/opt/tukuk-os/content/blog"
+blog_dir = "/home/fevian/tukuk-os/content/blog"
 log_file = "/tmp/blog_crawl_log.txt"
 
 def count_words(text):
@@ -121,7 +121,7 @@ def main():
             
             if modified:
                 stats["updated"] += 1
-            elif __import__('re').findall(r'\\b\\w+\\b', open(filepath).read()) >= 1000:
+            elif count_words(open(filepath).read()) >= 1000:
                 stats["already_ok"] += 1
             else:
                 stats["errors"] += 1
